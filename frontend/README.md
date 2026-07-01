@@ -95,5 +95,5 @@ src/
 
 ---
 
-**Project:** Ready Set STEM  
+**Project:** Ready Set STEM
 **Organization:** APS Data Technologies

@@ -16,8 +16,9 @@ import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = BASE_DIR.parent
 env = environ.Env()
-environ.Env.read_env(BASE_DIR / ".env")
+environ.Env.read_env(PROJECT_ROOT / ".env")
 
 
 # Quick-start development settings - unsuitable for production
@@ -35,19 +36,26 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'corsheaders',
+    'rest_framework',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    "rest_framework",
-    "corsheaders",
+    'apps.sites',
+    'apps.accounts',
+    'apps.leads',
+    'apps.tours',
+    'apps.pipeline',
+    'apps.analytics',
+    'apps.reports',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    "corsheaders.middleware.CorsMiddleware",
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -128,6 +136,7 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+AUTH_USER_MODEL = 'accounts.User'
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",

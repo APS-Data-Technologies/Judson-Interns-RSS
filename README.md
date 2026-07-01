@@ -140,6 +140,8 @@ Helper scripts for local development, setup, testing, or maintenance belong here
 
 ## Environment Variables
 
+Detailed model design, migration, setup, and verification instructions are available in [Data Models and Database Migrations](docs/data-models-and-migrations.md).
+
 Start by copying the example environment file:
 
 ```bash
@@ -150,7 +152,9 @@ Current variables:
 
 ```env
 ENVIRONMENT=local
-DATABASE_URL=
+SECRET_KEY=replace-with-a-long-random-value
+DEBUG=True
+DATABASE_URL=postgresql://postgres:password@localhost:5432/ready_set_stem
 API_BASE_URL=
 ```
 
