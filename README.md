@@ -142,6 +142,8 @@ Helper scripts for local development, setup, testing, or maintenance belong here
 
 Detailed model design, migration, setup, and verification instructions are available in [Data Models and Database Migrations](docs/data-models-and-migrations.md).
 
+Accounts API, role permissions, and frontend login behavior are documented in [Accounts and Authentication](docs/authentication.md).
+
 Start by copying the example environment file:
 
 ```bash
