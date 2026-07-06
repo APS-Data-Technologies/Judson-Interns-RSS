@@ -1,0 +1,115 @@
+.auth-layout {
+  height: 100dvh;
+  overflow: hidden;
+  display: grid;
+  background: var(--color-background);
+}
+
+/* Desktop */
+@media (min-width: 1100px) {
+  .auth-layout {
+    grid-template-columns: minmax(0, 58%) minmax(25rem, 42%);
+  }
+
+  .auth-left-panel {
+    height: 100dvh;
+    display: grid;
+    grid-template-rows:
+      minmax(6rem, 20%)
+      minmax(5rem, 18%)
+      minmax(0, 62%);
+    row-gap: clamp(0.5rem, 1vw, 1.25rem);
+    padding: clamp(1rem, 2.5vw, 2.5rem) clamp(1.5rem, 3.5vw, 4rem);
+    background:
+      radial-gradient(circle at top left, rgba(245, 180, 0, 0.18), transparent 30%),
+      linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  }
+
+  .auth-right-panel {
+    height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(2rem, 4vw, 4rem);
+    background: var(--color-surface-soft);
+    box-shadow: -18px 0 50px rgba(15, 23, 42, 0.06);
+  }
+}
+
+/* Tablet + Mobile */
+@media (max-width: 1099px) {
+  .auth-layout {
+    height: 100dvh;
+    grid-template-rows:
+      minmax(4.5rem, 16%)
+      minmax(4rem, 14%)
+      minmax(17rem, 35%)
+      minmax(0, 35%);
+    row-gap: clamp(0.25rem, 0.7vh, 0.65rem);
+    padding: clamp(0.35rem, 1.3vw, 0.9rem);
+    background:
+      radial-gradient(circle at top left, rgba(245, 180, 0, 0.14), transparent 30%),
+      linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  }
+
+  .auth-left-panel {
+    display: contents;
+  }
+
+  .auth-brand-section {
+    grid-row: 1;
+  }
+
+  .auth-product-section {
+    grid-row: 2;
+  }
+
+  .auth-right-panel {
+    grid-row: 3;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .auth-hero-section {
+    grid-row: 4;
+    min-height: 0;
+  }
+}
+
+/* Tablet portrait */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .auth-layout {
+    grid-template-rows:
+      minmax(5rem, 15%)
+      minmax(4.5rem, 13%)
+      minmax(18rem, 34%)
+      minmax(0, 38%);
+  }
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+  .auth-layout {
+    grid-template-rows:
+      minmax(4.2rem, 15%)
+      minmax(3.7rem, 13%)
+      minmax(18rem, 40%)
+      minmax(0, 32%);
+    padding: 0.4rem;
+  }
+}
+
+/* Short screens */
+@media (max-height: 720px) and (max-width: 1099px) {
+  .auth-layout {
+    grid-template-rows:
+      minmax(3.8rem, 16%)
+      minmax(3.2rem, 13%)
+      minmax(16rem, 42%)
+      minmax(0, 29%);
+    row-gap: 0.2rem;
+    padding: 0.25rem;
+  }
+}
