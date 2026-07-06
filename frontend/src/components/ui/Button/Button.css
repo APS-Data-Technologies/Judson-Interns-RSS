@@ -1,0 +1,50 @@
+.btn {
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.btn--primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn--secondary {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: #2563eb;
+}
+
+.btn--sm {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+
+.btn--md {
+  padding: 10px 16px;
+  font-size: 0.95rem;
+}
+
+.btn--lg {
+  padding: 12px 20px;
+  font-size: 1rem;
+}
+
+.btn--full {
+  width: 100%;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
