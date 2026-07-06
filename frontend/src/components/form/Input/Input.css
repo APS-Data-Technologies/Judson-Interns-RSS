@@ -1,0 +1,74 @@
+.rss-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.rss-input {
+  height: 44px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.rss-input--full {
+  width: 100%;
+}
+
+.rss-input--has-left-icon {
+  padding-left: 44px;
+}
+
+.rss-input--has-right-element {
+  padding-right: 44px;
+}
+
+.rss-input-icon,
+.rss-input-right {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rss-input-icon {
+  left: 14px;
+}
+
+.rss-input-right {
+  right: 14px;
+}
+
+.rss-input::placeholder {
+  color: #94a3b8;
+}
+
+.rss-input:hover {
+  border-color: #94a3b8;
+}
+
+.rss-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.rss-input--error {
+  border-color: #dc2626;
+}
+
+.rss-input--error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.rss-input:disabled {
+  background: #f1f5f9;
+  cursor: not-allowed;
+}

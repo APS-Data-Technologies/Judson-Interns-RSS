@@ -1,0 +1,48 @@
+.rss-page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.rss-page-header__title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #0f172a;
+}
+
+.rss-page-header__subtitle {
+  margin: 8px 0 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.rss-page-header__actions {
+  display: flex;
+  width: 100%;
+}
+
+.rss-page-header__actions .btn,
+.rss-page-header__actions .rss-button {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .rss-page-header {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  .rss-page-header__actions {
+    width: auto;
+  }
+
+  .rss-page-header__actions .btn,
+  .rss-page-header__actions .rss-button {
+    width: auto;
+  }
+}

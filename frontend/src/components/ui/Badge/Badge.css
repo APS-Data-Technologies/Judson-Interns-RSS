@@ -1,0 +1,70 @@
+.rss-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  border-radius: 9999px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.rss-badge--sm {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.rss-badge--md {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.rss-badge--default {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.rss-badge--booked {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.rss-badge--toured {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.rss-badge--enrolled {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.rss-badge--churned {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.rss-badge--no-show {
+  background: #ffedd5;
+  color: #ea580c;
+}
+
+.rss-badge--info {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.rss-badge--success {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.rss-badge--warning {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.rss-badge--danger {
+  background: #fee2e2;
+  color: #dc2626;
+}

@@ -18,8 +18,7 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = BASE_DIR.parent
 env = environ.Env()
-environ.Env.read_env(PROJECT_ROOT / ".env")
-
+environ.Env.read_env(BASE_DIR / ".env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
