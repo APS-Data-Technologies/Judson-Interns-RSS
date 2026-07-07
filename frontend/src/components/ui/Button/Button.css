@@ -1,0 +1,54 @@
+.btn {
+  border: none;
+  border-radius: clamp(0.65rem, 1.6vmin, 0.95rem);
+
+  font-weight: 800;
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+.btn--primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn--secondary {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: #2563eb;
+}
+
+.btn--sm {
+  padding: clamp(0.45rem, 1.2vmin, 0.65rem) clamp(0.7rem, 1.8vmin, 1rem);
+  font-size: clamp(0.78rem, 1.7vmin, 0.9rem);
+}
+
+.btn--md {
+  min-height: clamp(2.35rem, 5.7vmin, 3.1rem);
+  padding: 0 clamp(0.9rem, 2.2vmin, 1.25rem);
+  font-size: clamp(0.9rem, 2.1vmin, 1.05rem);
+}
+
+.btn--lg {
+  min-height: clamp(2.65rem, 6.4vmin, 3.4rem);
+  padding: 0 clamp(1rem, 2.5vmin, 1.4rem);
+  font-size: clamp(0.95rem, 2.3vmin, 1.1rem);
+}
+
+.btn--full {
+  width: 100%;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
