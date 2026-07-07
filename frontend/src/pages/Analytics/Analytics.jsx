@@ -1,5 +1,9 @@
 function Analytics() {
-  return <h1>Analytics</h1>;
+  return (
+    <section>
+      <p>Analytics page content will come here.</p>
+    </section>
+  );
 }
 
 export default Analytics;

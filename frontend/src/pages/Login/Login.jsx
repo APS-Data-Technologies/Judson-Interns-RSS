@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import useAuth from "../../features/auth/useAuth";
+import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
 
 import BrandSection from "../../components/auth/BrandSection";
 import ProductSection from "../../components/auth/ProductSection";
@@ -24,6 +25,9 @@ function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const destination = location.state?.from?.pathname || "/";
+  const hasUnsavedLogin = Boolean(email || password);
+
+  useUnsavedChangesPrompt(hasUnsavedLogin && !isSubmitting && !isAuthenticated);
 
   useEffect(() => {
     if (isAuthenticated) {

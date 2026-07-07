@@ -1,0 +1,108 @@
+.app-shell {
+  width: 100vw;
+  height: 100svh;
+  height: 100dvh;
+  background: #f4f7fb;
+  overflow: hidden;
+  max-width: none;
+  margin: 0;
+}
+
+.app-shell,
+.app-shell * {
+  box-sizing: border-box;
+}
+
+.app-shell__main {
+  min-width: 0;
+  min-height: 0;
+}
+
+.app-shell__content {
+  min-width: 0;
+  min-height: 0;
+  background: #ffffff;
+  padding: clamp(0.9rem, 2vmin, 1.4rem);
+  overflow: auto;
+}
+
+/* Same responsive philosophy as login page: portrait-like screens */
+@media (max-aspect-ratio: 11/10) {
+  .app-shell {
+    display: grid;
+    grid-template-rows: 1fr;
+    gap: clamp(0.35rem, 1vmin, 0.6rem);
+    padding: clamp(0.35rem, 1vmin, 0.65rem);
+  }
+
+  .app-shell__sidebar {
+    display: none;
+  }
+
+  .app-shell__main {
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    gap: clamp(0.35rem, 1vmin, 0.6rem);
+    min-height: 0;
+    padding-bottom: clamp(4.9rem, 10vmin, 6rem);
+  }
+
+  .app-shell__top-banner {
+    display: block;
+  }
+
+  .app-shell__bottom-nav {
+    display: block;
+    position: fixed;
+    right: clamp(0.35rem, 1vmin, 0.65rem);
+    bottom: clamp(0.35rem, 1vmin, 0.65rem);
+    left: clamp(0.35rem, 1vmin, 0.65rem);
+    z-index: 10;
+    min-width: 0;
+  }
+
+  .app-shell__content {
+    border-radius: 0.75rem;
+  }
+}
+
+/* Landscape-like screens */
+@media (min-aspect-ratio: 11/10) {
+  .app-shell {
+    display: grid;
+    grid-template-columns: clamp(10rem, 15vw, 15rem) minmax(0, 1fr);
+    grid-template-rows: 1fr;
+    gap: 0;
+    padding: 0;
+  }
+
+  .app-shell__sidebar {
+    display: block;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .app-shell__main {
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    gap: 0;
+    min-height: 0;
+  }
+
+  .app-shell__top-banner {
+    display: block;
+  }
+
+  .app-shell__bottom-nav {
+    display: none !important;
+  }
+
+  .app-shell__content {
+    border-radius: 0;
+  }
+
+  .top-banner {
+    border-radius: 0;
+    box-shadow: none;
+  }
+}

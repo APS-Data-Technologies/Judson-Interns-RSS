@@ -15,16 +15,16 @@
   gap: clamp(0.25rem, 0.9vmin, 0.8rem);
 
   padding:
-    clamp(0.22rem, 0.7vmin, 0.65rem)
+    clamp(0.42rem, 1vmin, 0.85rem)
     clamp(0.55rem, 1.7vmin, 1.35rem);
 
-  background: linear-gradient(180deg, #fff6cf 0%, #ffe8a1 100%);
-  border: 1px solid #f4c54a;
+  background: linear-gradient(135deg, #0f62fe 0%, #0a58d8 100%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: clamp(0.7rem, 1.6vmin, 1.2rem);
 
   box-shadow:
-    0 6px 18px rgba(245, 180, 0, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.75);
+    0 0.8rem 1.8rem rgba(15, 98, 254, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
 }
 
 .auth-brand-logo {
@@ -33,14 +33,15 @@
   display: block;
   object-fit: contain;
   flex-shrink: 0;
+  filter: drop-shadow(0 0.35rem 0.75rem rgba(0, 0, 0, 0.18));
 }
 
 .auth-brand-text {
   margin: 0;
-  color: #1d4ed8;
+  color: #ffffff;
   font-size: clamp(1.75rem, 7.4vmin, 5rem);
-  font-weight: 900;
+  font-weight: 950;
   line-height: 1;
-  letter-spacing: -0.035em;
+  letter-spacing: 0;
   white-space: nowrap;
 }

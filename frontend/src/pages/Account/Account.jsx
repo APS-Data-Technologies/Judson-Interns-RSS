@@ -1,15 +1,19 @@
 import { useState } from "react";
 import useAuth from "../../features/auth/useAuth";
+import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
 import "./Account.css";
 
 function Account() {
-  const { user, changePassword } = useAuth();
+  const { user, changePassword, logout } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasUnsavedPassword = Boolean(currentPassword || newPassword || confirmPassword);
+
+  useUnsavedChangesPrompt(hasUnsavedPassword && !isSubmitting);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -27,10 +31,10 @@ function Account() {
         current_password: currentPassword,
         new_password: newPassword,
       });
+      setMessage("Password changed successfully.");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setMessage("Password changed successfully.");
     } catch (requestError) {
       const data = requestError.response?.data;
       const responseMessage = data?.current_password?.[0] || data?.new_password?.[0];
@@ -42,11 +46,6 @@ function Account() {
 
   return (
     <section className="account-page">
-      <header className="page-heading">
-        <h2>Account</h2>
-        <p>{user.email}</p>
-      </header>
-
       <dl className="account-details">
         <div><dt>Name</dt><dd>{`${user.first_name} ${user.last_name}`.trim()}</dd></div>
         <div><dt>Role</dt><dd>{user.role.replace("_", " ")}</dd></div>
@@ -65,6 +64,12 @@ function Account() {
         {message && <p className="form-success" role="status">{message}</p>}
         <button type="submit" disabled={isSubmitting}>{isSubmitting ? "Updating..." : "Update password"}</button>
       </form>
+
+      <section className="account-actions" aria-label="Account actions">
+        <button className="logout-action" type="button" onClick={logout}>
+          Logout
+        </button>
+      </section>
     </section>
   );
 }

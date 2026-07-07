@@ -1,5 +1,9 @@
 function Pipeline() {
-  return <h1>Pipeline</h1>;
+  return (
+    <section>
+      <p>Pipeline page content will come here.</p>
+    </section>
+  );
 }
 
 export default Pipeline;
