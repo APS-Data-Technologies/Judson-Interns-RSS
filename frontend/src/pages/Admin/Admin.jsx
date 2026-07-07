@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import useAuth from "../../features/auth/useAuth";
 import {
   createUser,
@@ -7,6 +8,7 @@ import {
   listUsers,
   updateUser,
 } from "../../features/auth/userApi";
+import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
 import "./Admin.css";
 
 const emptyForm = {
@@ -32,11 +34,25 @@ function getErrorMessage(error) {
   return Array.isArray(firstValue) ? firstValue[0] : String(firstValue);
 }
 
+function getUserForm(user) {
+  return {
+    email: user.email,
+    first_name: user.first_name,
+    last_name: user.last_name,
+    role: user.role,
+    location: user.location || "",
+    password: "",
+  };
+}
+
 function Admin() {
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [users, setUsers] = useState([]);
   const [locations, setLocations] = useState([]);
   const [form, setForm] = useState(emptyForm);
+  const [initialForm, setInitialForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,6 +61,13 @@ function Admin() {
 
   const canManageUsers = currentUser.role === "super_admin";
   const editingSelf = editingId === currentUser.id;
+  const userParam = searchParams.get("user");
+  const isUserFormDirty = useMemo(
+    () => isFormOpen && JSON.stringify(form) !== JSON.stringify(initialForm),
+    [form, initialForm, isFormOpen],
+  );
+
+  useUnsavedChangesPrompt(isUserFormDirty && !isSaving);
 
   const loadData = useCallback(async () => {
     if (!canManageUsers) {
@@ -89,22 +112,32 @@ function Admin() {
   function openCreateForm() {
     setEditingId(null);
     setForm(emptyForm);
+    setInitialForm(emptyForm);
     setError("");
     setIsFormOpen(true);
+    navigate("/admin?user=new");
   }
 
   function openEditForm(user) {
+    const nextForm = getUserForm(user);
     setEditingId(user.id);
-    setForm({
-      email: user.email,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      role: user.role,
-      location: user.location || "",
-      password: "",
-    });
+    setForm(nextForm);
+    setInitialForm(nextForm);
     setError("");
     setIsFormOpen(true);
+    navigate(`/admin?user=${user.id}`);
+  }
+
+  function closeForm() {
+    if (isUserFormDirty && !window.confirm("You have unsaved changes. Close this form?")) {
+      return;
+    }
+
+    setIsFormOpen(false);
+    setForm(emptyForm);
+    setInitialForm(emptyForm);
+    setEditingId(null);
+    navigate("/admin");
   }
 
   function updateForm(field, value) {
@@ -134,7 +167,9 @@ function Admin() {
       }
       setIsFormOpen(false);
       setForm(emptyForm);
+      setInitialForm(emptyForm);
       setEditingId(null);
+      navigate("/admin", { replace: true });
       await loadData();
     } catch (requestError) {
       setError(getErrorMessage(requestError));
@@ -156,6 +191,45 @@ function Admin() {
       setError(getErrorMessage(requestError));
     }
   }
+
+  useEffect(() => {
+    if (!canManageUsers) return;
+
+    queueMicrotask(() => {
+      if (userParam === "new") {
+        if (!isFormOpen || editingId !== null) {
+          setEditingId(null);
+          setForm(emptyForm);
+          setInitialForm(emptyForm);
+          setError("");
+          setIsFormOpen(true);
+        }
+        return;
+      }
+
+      if (userParam) {
+        const selectedUser = users.find((user) => String(user.id) === userParam);
+        if (!selectedUser) return;
+
+        if (!isFormOpen || editingId !== selectedUser.id) {
+          const nextForm = getUserForm(selectedUser);
+          setEditingId(selectedUser.id);
+          setForm(nextForm);
+          setInitialForm(nextForm);
+          setError("");
+          setIsFormOpen(true);
+        }
+        return;
+      }
+
+      if (isFormOpen) {
+        setIsFormOpen(false);
+        setForm(emptyForm);
+        setInitialForm(emptyForm);
+        setEditingId(null);
+      }
+    });
+  }, [canManageUsers, editingId, isFormOpen, userParam, users]);
 
   if (!canManageUsers) {
     return (
@@ -179,7 +253,7 @@ function Admin() {
         <form className="user-form" onSubmit={handleSubmit}>
           <div className="form-heading">
             <h3>{editingId ? "Edit user" : "Add user"}</h3>
-            <button type="button" onClick={() => setIsFormOpen(false)}>Cancel</button>
+            <button type="button" onClick={closeForm}>Cancel</button>
           </div>
           <label htmlFor="user-first-name">First name</label>
           <input id="user-first-name" value={form.first_name} onChange={(event) => updateForm("first_name", event.target.value)} required />

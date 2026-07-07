@@ -1,0 +1,20 @@
+.title-bar {
+  width: 100%;
+  background: #ffffff;
+  border-radius: clamp(0.9rem, 2vmin, 1.4rem);
+  min-height: clamp(3.2rem, 7vmin, 4.75rem);
+  padding: clamp(0.7rem, 1.7vmin, 1.1rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0.2rem 0.7rem rgba(15, 23, 42, 0.05);
+}
+
+.title-bar h1 {
+  margin: 0;
+  color: #111827;
+  font-size: clamp(1.5rem, 4vmin, 2.4rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  text-align: center;
+}
