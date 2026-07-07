@@ -1,10 +1,30 @@
 from django.utils import timezone
 from rest_framework import serializers
 
+from apps.accounts.models import User
 from apps.leads.models import Family
 from apps.leads.models import LeadSource
 from apps.sites.models import Location
 from apps.tours.models import Tour, TourEvent, TourStatus
+
+
+class HomeSummaryQuerySerializer(serializers.Serializer):
+    date = serializers.DateField(required=False)
+    location = serializers.PrimaryKeyRelatedField(
+        queryset=Location.objects.filter(is_active=True),
+        required=False,
+    )
+    lead_source = serializers.PrimaryKeyRelatedField(
+        queryset=LeadSource.objects.filter(is_active=True),
+        required=False,
+    )
+    search = serializers.CharField(required=False, allow_blank=True, max_length=150)
+
+    def validate_location(self, location):
+        user = self.context["request"].user
+        if user.role == User.Role.STAFF and location.pk != user.location_id:
+            raise serializers.ValidationError("You do not have access to this location.")
+        return location
 
 
 class TourSerializer(serializers.ModelSerializer):

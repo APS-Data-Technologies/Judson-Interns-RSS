@@ -3,11 +3,18 @@ from rest_framework import generics, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.accounts.models import User
+from apps.accounts.permissions import filter_queryset_by_location
 from apps.leads.models import LeadSource
 from apps.sites.models import Location
 from apps.tours.models import Tour, TourStatus
 
-from .serializers import HomeTourSerializer, TourCreateSerializer, TourSerializer
+from .serializers import (
+    HomeSummaryQuerySerializer,
+    HomeTourSerializer,
+    TourCreateSerializer,
+    TourSerializer,
+)
 
 
 class TourViewSet(viewsets.ModelViewSet):
@@ -50,18 +57,27 @@ class HomeSummaryView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        date_value = request.query_params.get("date")
-        base_date = self._parse_date(date_value)
+        query_serializer = HomeSummaryQuerySerializer(
+            data=request.query_params,
+            context={"request": request},
+        )
+        query_serializer.is_valid(raise_exception=True)
+        filters = query_serializer.validated_data
+        base_date = filters.get("date", timezone.localdate())
         yesterday = base_date - timezone.timedelta(days=1)
 
-        booked_tours = self._filtered_tours(request).filter(
+        booked_tours = self._filtered_tours(request.user, filters).filter(
             scheduled_tour_date__date=base_date,
             current_status=TourStatus.SCHEDULED,
         )
-        no_show_tours = self._filtered_tours(request).filter(
+        no_show_tours = self._filtered_tours(request.user, filters).filter(
             scheduled_tour_date__date=yesterday,
             current_status=TourStatus.NO_SHOW,
         )
+
+        locations = Location.objects.filter(is_active=True)
+        if request.user.role == User.Role.STAFF:
+            locations = locations.filter(pk=request.user.location_id)
 
         return Response(
             {
@@ -70,8 +86,7 @@ class HomeSummaryView(generics.GenericAPIView):
                 "no_show_tours": HomeTourSerializer(no_show_tours, many=True).data,
                 "filters": {
                     "locations": list(
-                        Location.objects.filter(is_active=True)
-                        .order_by("location_name")
+                        locations.order_by("location_name")
                         .values("id", "location_name")
                     ),
                     "lead_sources": list(
@@ -87,27 +102,23 @@ class HomeSummaryView(generics.GenericAPIView):
             }
         )
 
-    def _parse_date(self, date_value):
-        if not date_value:
-            return timezone.localdate()
-        return timezone.datetime.fromisoformat(date_value).date()
-
-    def _filtered_tours(self, request):
+    def _filtered_tours(self, user, filters):
         queryset = Tour.objects.select_related(
             "family",
             "location",
             "lead_source",
             "assigned_staff",
         ).order_by("scheduled_tour_date", "family__family_name")
+        queryset = filter_queryset_by_location(queryset, user)
 
-        location = request.query_params.get("location")
-        lead_source = request.query_params.get("lead_source")
-        search = request.query_params.get("search")
+        location = filters.get("location")
+        lead_source = filters.get("lead_source")
+        search = filters.get("search")
 
         if location:
-            queryset = queryset.filter(location_id=location)
+            queryset = queryset.filter(location=location)
         if lead_source:
-            queryset = queryset.filter(lead_source_id=lead_source)
+            queryset = queryset.filter(lead_source=lead_source)
         if search:
             queryset = queryset.filter(family__family_name__icontains=search)
 
