@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, NavLink, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import useAuth from "../../features/auth/useAuth";
 import {
   createUser,
@@ -48,6 +48,8 @@ function getUserForm(user) {
 function Admin() {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = useParams();
   const [searchParams] = useSearchParams();
   const [users, setUsers] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -60,8 +62,19 @@ function Admin() {
   const [error, setError] = useState("");
 
   const canManageUsers = currentUser.role === "super_admin";
+  const canManageAdmin = ["admin", "super_admin"].includes(currentUser.role);
+  const adminSection = location.pathname.includes("/admin/locations")
+    ? "locations"
+    : location.pathname.includes("/admin/lead-sources")
+      ? "leadSources"
+      : "users";
   const editingSelf = editingId === currentUser.id;
-  const userParam = searchParams.get("user");
+  const userParam =
+    location.pathname === "/admin/users/new"
+      ? "new"
+      : location.pathname.includes("/admin/users/") && location.pathname.endsWith("/edit")
+        ? params.id
+        : searchParams.get("user");
   const isUserFormDirty = useMemo(
     () => isFormOpen && JSON.stringify(form) !== JSON.stringify(initialForm),
     [form, initialForm, isFormOpen],
@@ -115,7 +128,7 @@ function Admin() {
     setInitialForm(emptyForm);
     setError("");
     setIsFormOpen(true);
-    navigate("/admin?user=new");
+    navigate("/admin/users/new");
   }
 
   function openEditForm(user) {
@@ -125,7 +138,7 @@ function Admin() {
     setInitialForm(nextForm);
     setError("");
     setIsFormOpen(true);
-    navigate(`/admin?user=${user.id}`);
+    navigate(`/admin/users/${user.id}/edit`);
   }
 
   function closeForm() {
@@ -137,7 +150,7 @@ function Admin() {
     setForm(emptyForm);
     setInitialForm(emptyForm);
     setEditingId(null);
-    navigate("/admin");
+    navigate("/admin/users");
   }
 
   function updateForm(field, value) {
@@ -169,7 +182,7 @@ function Admin() {
       setForm(emptyForm);
       setInitialForm(emptyForm);
       setEditingId(null);
-      navigate("/admin", { replace: true });
+      navigate("/admin/users", { replace: true });
       await loadData();
     } catch (requestError) {
       setError(getErrorMessage(requestError));
@@ -231,7 +244,11 @@ function Admin() {
     });
   }, [canManageUsers, editingId, isFormOpen, userParam, users]);
 
-  if (!canManageUsers) {
+  if (location.pathname === "/admin") {
+    return <Navigate to="/admin/users" replace />;
+  }
+
+  if (!canManageAdmin) {
     return (
       <section className="admin-page">
         <header className="page-heading"><h2>Administration</h2></header>
@@ -240,8 +257,63 @@ function Admin() {
     );
   }
 
+  function renderAdminNavigation() {
+    return (
+      <nav className="admin-tabs" aria-label="Admin sections">
+        {canManageUsers && <NavLink to="/admin/users">Users</NavLink>}
+        <NavLink to="/admin/locations">Locations</NavLink>
+        <NavLink to="/admin/lead-sources">Lead Sources</NavLink>
+      </nav>
+    );
+  }
+
+  if (adminSection === "locations") {
+    return (
+      <section className="admin-page">
+        {renderAdminNavigation()}
+        <header className="admin-heading">
+          <div><h2>Manage locations</h2><p>Location navigation</p></div>
+          <Link className="admin-primary-link" to="/admin/locations/new">Add location</Link>
+        </header>
+        <div className="admin-route-list">
+          <Link to="/admin/locations/new">Add location</Link>
+          <Link to="/admin/locations/1/edit">Edit location</Link>
+        </div>
+        <p className="empty-state">Location management content will be built here.</p>
+      </section>
+    );
+  }
+
+  if (adminSection === "leadSources") {
+    return (
+      <section className="admin-page">
+        {renderAdminNavigation()}
+        <header className="admin-heading">
+          <div><h2>Manage lead sources</h2><p>Lead source navigation</p></div>
+          <Link className="admin-primary-link" to="/admin/lead-sources/new">Add lead source</Link>
+        </header>
+        <div className="admin-route-list">
+          <Link to="/admin/lead-sources/new">Add lead source</Link>
+          <Link to="/admin/lead-sources/1/edit">Edit lead source</Link>
+        </div>
+        <p className="empty-state">Lead source management content will be built here.</p>
+      </section>
+    );
+  }
+
+  if (!canManageUsers) {
+    return (
+      <section className="admin-page">
+        {renderAdminNavigation()}
+        <header className="page-heading"><h2>Manage users</h2></header>
+        <p className="empty-state">Only Super Admin users can manage users.</p>
+      </section>
+    );
+  }
+
   return (
     <section className="admin-page">
+      {renderAdminNavigation()}
       <header className="admin-heading">
         <div><h2>User management</h2><p>{users.length} accounts</p></div>
         <button type="button" onClick={openCreateForm}>Add user</button>

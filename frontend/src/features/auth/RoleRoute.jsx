@@ -5,7 +5,7 @@ function RoleRoute({ allowedRoles }) {
   const { user } = useAuth();
 
   if (!allowedRoles.includes(user.role)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/home" replace />;
   }
 
   return <Outlet />;

@@ -24,7 +24,7 @@ function Login() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const destination = location.state?.from?.pathname || "/";
+  const destination = location.state?.from?.pathname || "/home";
   const hasUnsavedLogin = Boolean(email || password);
 
   useUnsavedChangesPrompt(hasUnsavedLogin && !isSubmitting && !isAuthenticated);

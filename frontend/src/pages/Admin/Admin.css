@@ -4,6 +4,36 @@
   gap: var(--spacing-lg);
 }
 
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.admin-tabs a,
+.admin-primary-link,
+.admin-route-list a {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-weight: 800;
+}
+
+.admin-tabs a {
+  padding: 0 14px;
+  background: var(--color-surface-soft);
+  color: var(--color-text-secondary);
+}
+
+.admin-tabs a.active {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
 .admin-heading,
 .form-heading,
 .user-status-actions {
@@ -21,6 +51,7 @@
 }
 
 .admin-heading button,
+.admin-primary-link,
 .form-heading button,
 .user-status-actions button {
   border: 0;
@@ -36,6 +67,25 @@
   border-radius: var(--radius-sm);
   background: var(--color-primary);
   color: #ffffff;
+}
+
+.admin-primary-link {
+  min-height: 40px;
+  padding: 0 12px;
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.admin-route-list {
+  display: grid;
+  gap: var(--spacing-sm);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.admin-route-list a {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-primary);
 }
 
 .user-form {

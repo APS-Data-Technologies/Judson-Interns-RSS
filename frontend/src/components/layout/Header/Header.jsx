@@ -18,7 +18,7 @@ function Header() {
         <h1>Dashboard</h1>
       </div>
       <div className="header-account">
-        <Link to="/account">{user.first_name || user.email}</Link>
+        <Link to="/settings">{user.first_name || user.email}</Link>
         <button type="button" onClick={handleLogout}>Sign out</button>
       </div>
     </header>

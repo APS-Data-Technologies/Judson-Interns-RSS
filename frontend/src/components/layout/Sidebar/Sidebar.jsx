@@ -1,18 +1,19 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { BarChart3, CalendarCheck, Home, ListChecks, LogOut, Settings } from "lucide-react";
 import useAuth from "../../../features/auth/useAuth";
 import "./Sidebar.css";
 
 const navItems = [
-  { label: "Home", to: "/", icon: Home },
+  { label: "Home", to: "/home", icon: Home },
   { label: "Tours", to: "/tours", icon: CalendarCheck },
   { label: "Pipeline", to: "/pipeline", icon: ListChecks },
   { label: "Analytics", to: "/analytics", icon: BarChart3 },
-  { label: "Settings", to: "/account", icon: Settings },
+  { label: "Settings", to: "/settings", icon: Settings },
 ];
 
 function Sidebar() {
   const { logout } = useAuth();
+  const location = useLocation();
 
   return (
     <aside className="app-sidebar" aria-label="Application navigation">
@@ -24,10 +25,13 @@ function Sidebar() {
             <NavLink
               key={item.label}
               to={item.to}
-              end={item.to === "/"}
-              className={({ isActive }) =>
-                `sidebar-nav-item ${isActive ? "active" : ""}`
-              }
+              end={item.to === "/home"}
+              className={({ isActive }) => {
+                const isSettingsArea =
+                  item.to === "/settings" &&
+                  location.pathname.startsWith("/admin");
+                return `sidebar-nav-item ${isActive || isSettingsArea ? "active" : ""}`;
+              }}
             >
               <Icon className="sidebar-nav-icon" aria-hidden="true" />
               <span className="sidebar-nav-label">{item.label}</span>
