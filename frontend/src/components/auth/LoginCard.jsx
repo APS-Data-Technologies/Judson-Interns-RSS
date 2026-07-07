@@ -1,4 +1,5 @@
-import { Eye, Lock, Mail } from "lucide-react";
+import { useState } from "react";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Button, Card } from "../ui";
 import { Input } from "../form";
 
@@ -11,11 +12,13 @@ function LoginCard({
   onPasswordChange,
   onSubmit,
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <section className="auth-login-section">
       <Card padding="lg" shadow="md" className="auth-login-card">
         <form className="auth-login-form" onSubmit={onSubmit}>
-          <h2>Welcome</h2>
+          <h2>Welcome !</h2>
 
           <Input
             id="email"
@@ -32,7 +35,7 @@ function LoginCard({
 
           <Input
             id="password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             label="Password"
             placeholder="Enter your password"
             autoComplete="current-password"
@@ -40,7 +43,16 @@ function LoginCard({
             onChange={onPasswordChange}
             required
             leftIcon={<Lock size={20} />}
-            rightElement={<Eye size={20} />}
+            rightElement={
+              <button
+                type="button"
+                className="auth-password-toggle"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            }
           />
 
           <a className="auth-forgot-link" href="#forgot-password">

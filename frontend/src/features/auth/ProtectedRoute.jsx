@@ -1,5 +1,15 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { AppShell } from "../../components/layout";
 import useAuth from "./useAuth";
+
+const routeTitles = {
+  "/": "Staff Home",
+  "/tours": "Tours",
+  "/pipeline": "Pipeline",
+  "/analytics": "Analytics",
+  "/admin": "Admin",
+  "/account": "Account",
+};
 
 function ProtectedRoute() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -13,7 +23,11 @@ function ProtectedRoute() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  return <Outlet />;
+  return (
+    <AppShell title={routeTitles[location.pathname] || "Ready Set STEM"}>
+      <Outlet />
+    </AppShell>
+  );
 }
 
 export default ProtectedRoute;

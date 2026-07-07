@@ -1,5 +1,9 @@
 function Tours() {
-  return <h1>Tours</h1>;
+  return (
+    <section>
+      <p>Tours page content will come here.</p>
+    </section>
+  );
 }
 
 export default Tours;
