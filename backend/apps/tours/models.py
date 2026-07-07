@@ -13,6 +13,7 @@ class TourStatus(models.TextChoices):
 
 
 class Tour(models.Model):
+    external_id = models.CharField(max_length=40, unique=True, null=True, blank=True)
     family = models.ForeignKey("leads.Family", on_delete=models.PROTECT, related_name="tours")
     location = models.ForeignKey("sites.Location", on_delete=models.PROTECT, related_name="tours")
     lead_source = models.ForeignKey("leads.LeadSource", on_delete=models.PROTECT, related_name="tours")
@@ -46,6 +47,7 @@ class Tour(models.Model):
 
 
 class TourEvent(models.Model):
+    external_id = models.CharField(max_length=40, unique=True, null=True, blank=True)
     tour = models.ForeignKey(Tour, on_delete=models.CASCADE, related_name="events")
     status = models.CharField(max_length=20, choices=TourStatus.choices)
     event_timestamp = models.DateTimeField()
@@ -66,4 +68,3 @@ class TourEvent(models.Model):
 
     def __str__(self):
         return f"{self.tour_id} - {self.get_status_display()} at {self.event_timestamp:%Y-%m-%d %H:%M}"
-

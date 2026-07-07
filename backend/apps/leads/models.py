@@ -2,6 +2,7 @@ from django.db import models
 
 
 class LeadSource(models.Model):
+    external_id = models.CharField(max_length=40, unique=True, null=True, blank=True)
     source_name = models.CharField(max_length=150, unique=True)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
@@ -19,6 +20,7 @@ class LeadSource(models.Model):
 
 
 class Family(models.Model):
+    external_id = models.CharField(max_length=40, unique=True, null=True, blank=True)
     family_name = models.CharField(max_length=150)
     contact_email = models.EmailField(blank=True)
     contact_phone = models.CharField(max_length=20, blank=True)
@@ -36,4 +38,3 @@ class Family(models.Model):
 
     def __str__(self):
         return self.family_name
-

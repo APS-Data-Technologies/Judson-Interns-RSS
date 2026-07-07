@@ -144,6 +144,8 @@ Detailed model design, migration, setup, and verification instructions are avail
 
 Accounts API, role permissions, and frontend login behavior are documented in [Accounts and Authentication](docs/authentication.md).
 
+PostgreSQL seed scripts and execution instructions are documented in [Database](database/README.md).
+
 Start by copying the example environment file:
 
 ```bash
