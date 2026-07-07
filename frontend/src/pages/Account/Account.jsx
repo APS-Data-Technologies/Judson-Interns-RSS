@@ -14,6 +14,7 @@ function Account() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const hasUnsavedPassword = Boolean(currentPassword || newPassword || confirmPassword);
   const canOpenAdmin = ["admin", "super_admin"].includes(user.role);
+  const canManageUsers = user.role === "super_admin";
 
   useUnsavedChangesPrompt(hasUnsavedPassword && !isSubmitting);
 
@@ -57,7 +58,7 @@ function Account() {
       {canOpenAdmin ? (
         <section className="settings-navigation" aria-label="Admin navigation">
           <h3>Administration</h3>
-          <Link to="/admin/users">Manage users</Link>
+          {canManageUsers && <Link to="/admin/users">Manage users</Link>}
           <Link to="/admin/locations">Manage locations</Link>
           <Link to="/admin/lead-sources">Manage lead sources</Link>
         </section>
