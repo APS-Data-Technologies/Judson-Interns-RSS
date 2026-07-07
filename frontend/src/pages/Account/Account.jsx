@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import useAuth from "../../features/auth/useAuth";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
 import "./Account.css";
@@ -12,6 +13,7 @@ function Account() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const hasUnsavedPassword = Boolean(currentPassword || newPassword || confirmPassword);
+  const canOpenAdmin = ["admin", "super_admin"].includes(user.role);
 
   useUnsavedChangesPrompt(hasUnsavedPassword && !isSubmitting);
 
@@ -51,6 +53,20 @@ function Account() {
         <div><dt>Role</dt><dd>{user.role.replace("_", " ")}</dd></div>
         {user.location_name && <div><dt>Location</dt><dd>{user.location_name}</dd></div>}
       </dl>
+
+      {canOpenAdmin ? (
+        <section className="settings-navigation" aria-label="Admin navigation">
+          <h3>Administration</h3>
+          <Link to="/admin/users">Manage users</Link>
+          <Link to="/admin/locations">Manage locations</Link>
+          <Link to="/admin/lead-sources">Manage lead sources</Link>
+        </section>
+      ) : (
+        <section className="settings-navigation" aria-label="Staff settings">
+          <h3>Assigned location</h3>
+          <p>{user.location_name || "No location assigned"}</p>
+        </section>
+      )}
 
       <form className="password-form" onSubmit={handleSubmit}>
         <h3>Change password</h3>

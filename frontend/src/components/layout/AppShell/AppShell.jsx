@@ -5,7 +5,7 @@ import TopBanner from "../TopBanner";
 import TitleBar from "../TitleBar";
 import BottomNavigation from "../BottomNavigation";
 
-function AppShell({ title = "Staff Home", children }) {
+function AppShell({ title = "Home", children }) {
   return (
     <div className="app-shell">
       <div className="app-shell__sidebar">

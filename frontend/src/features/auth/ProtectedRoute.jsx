@@ -3,16 +3,23 @@ import { AppShell } from "../../components/layout";
 import useAuth from "./useAuth";
 
 const routeTitles = {
-  "/": "Staff Home",
+  "/home": "Home",
   "/tours": "Tours",
+  "/tours/new": "New Tour",
   "/pipeline": "Pipeline",
   "/analytics": "Analytics",
+  "/settings": "Settings",
   "/admin": "Admin",
-  "/account": "Account",
+  "/admin/users": "Manage Users",
+  "/admin/users/new": "Add User",
+  "/admin/locations": "Manage Locations",
+  "/admin/locations/new": "Add Location",
+  "/admin/lead-sources": "Manage Lead Sources",
+  "/admin/lead-sources/new": "Add Lead Source",
 };
 
 function ProtectedRoute() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -23,8 +30,19 @@ function ProtectedRoute() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  const firstName = user?.first_name || user?.email?.split("@")[0] || "there";
+  const dynamicTitle = location.pathname.match(/^\/tours\/[^/]+\/edit$/)
+    ? "Edit Tour"
+    : location.pathname.match(/^\/tours\/[^/]+$/)
+      ? "Tour Details"
+      : null;
+  const pageTitle =
+    location.pathname === "/home"
+      ? `Hello ${firstName}`
+      : dynamicTitle || routeTitles[location.pathname] || "Ready Set STEM";
+
   return (
-    <AppShell title={routeTitles[location.pathname] || "Ready Set STEM"}>
+    <AppShell title={pageTitle}>
       <Outlet />
     </AppShell>
   );
