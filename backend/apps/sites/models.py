@@ -2,6 +2,7 @@ from django.db import models
 
 
 class Location(models.Model):
+    external_id = models.CharField(max_length=40, unique=True, null=True, blank=True)
     location_name = models.CharField(max_length=150, unique=True)
     address = models.CharField(max_length=255)
     city = models.CharField(max_length=100)
@@ -21,4 +22,3 @@ class Location(models.Model):
 
     def __str__(self):
         return self.location_name
-

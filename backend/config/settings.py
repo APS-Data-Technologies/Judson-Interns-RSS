@@ -18,7 +18,7 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = BASE_DIR.parent
 env = environ.Env()
-environ.Env.read_env(BASE_DIR / ".env")
+environ.Env.read_env(PROJECT_ROOT / ".env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -91,8 +91,10 @@ DATABASES = {
     "default": dj_database_url.parse(
         env("DATABASE_URL"),
         conn_health_checks=True,
+        conn_max_age=60,
     )
 }
+DATABASES["default"].setdefault("OPTIONS", {})["connect_timeout"] = 10
 
 
 # Password validation

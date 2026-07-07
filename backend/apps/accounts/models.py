@@ -38,6 +38,7 @@ class User(AbstractUser):
         STAFF = "staff", "Staff"
 
     username = None
+    external_id = models.CharField(max_length=40, unique=True, null=True, blank=True)
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.STAFF)
     location = models.ForeignKey(

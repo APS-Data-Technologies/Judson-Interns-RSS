@@ -6,6 +6,8 @@ This document explains how the Ready Set STEM data model was designed, where the
 
 Django model classes are the source of truth for the application schema. Django migrations translate changes in those classes into database operations that PostgreSQL can apply.
 
+Core imported models also include a nullable, unique `external_id`. This preserves stable source-system identifiers while Django's integer primary keys remain the internal relationship keys.
+
 ```text
 Project requirements
         |
@@ -315,4 +317,3 @@ Do not commit:
 - `__pycache__/`
 - `*.pyc`
 - Private key and credential files
-

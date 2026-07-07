@@ -30,6 +30,13 @@ staticfiles/
 media/
 db.sqlite3
 
+# Seed source files and database exports
+database/seeds/*.xlsx
+database/seeds/*.xls
+database/seeds/*.csv
+database/seeds/*.dump
+database/seeds/*.backup
+
 # Node
 node_modules/
 dist/
