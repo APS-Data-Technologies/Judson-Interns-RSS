@@ -6,8 +6,10 @@ import {
   getLeadSources,
   getLocations,
   getTour,
+  getTourEvents,
+  rescheduleTour,
+  transitionTourStatus,
   updateTour,
-  updateTourStatus,
 } from "../../features/tours/tourApi";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
 import "./TourPlaceholder.css";
@@ -46,7 +48,7 @@ function getFormFromTour(tour) {
     childGrade: tour.child_grade || "",
     tourDate: toDateInput(tour.scheduled_tour_date),
     tourTime: toTimeInput(tour.scheduled_tour_date),
-    notes: tour.events?.[0]?.notes || "",
+    notes: "",
   };
 }
 
@@ -57,6 +59,7 @@ function TourPlaceholder({ mode }) {
   const [tour, setTour] = useState(null);
   const [locations, setLocations] = useState([]);
   const [leadSources, setLeadSources] = useState([]);
+  const [events, setEvents] = useState([]);
   const [form, setForm] = useState(null);
   const [initialForm, setInitialForm] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -84,11 +87,13 @@ function TourPlaceholder({ mode }) {
           getLocations(),
           getLeadSources(),
         ]);
+        const eventData = await getTourEvents(id);
 
         if (!isCurrent) return;
 
         const nextForm = getFormFromTour(tourData);
         setTour(tourData);
+        setEvents(eventData);
         setLocations(locationData);
         setLeadSources(sourceData);
         setForm(nextForm);
@@ -119,9 +124,13 @@ function TourPlaceholder({ mode }) {
   }
 
   async function refreshTour() {
-    const tourData = await getTour(id);
+    const [tourData, eventData] = await Promise.all([
+      getTour(id),
+      getTourEvents(id),
+    ]);
     const nextForm = getFormFromTour(tourData);
     setTour(tourData);
+    setEvents(eventData);
     setForm(nextForm);
     setInitialForm(nextForm);
   }
@@ -132,11 +141,12 @@ function TourPlaceholder({ mode }) {
     setIsSaving(true);
 
     try {
-      const tourData = await updateTourStatus(id, {
+      const tourData = await transitionTourStatus(id, {
         status,
         notes: `Status changed to ${status}.`,
       });
       setTour(tourData);
+      setEvents(await getTourEvents(id));
       setMessage("Tour status updated.");
     } catch {
       setError("Unable to update tour status.");
@@ -152,16 +162,23 @@ function TourPlaceholder({ mode }) {
     setIsSaving(true);
 
     try {
+      const scheduledTourDate = `${form.tourDate}T${form.tourTime}:00`;
+      const didReschedule =
+        form.tourDate !== initialForm.tourDate ||
+        form.tourTime !== initialForm.tourTime;
+
       await updateTour(id, {
-        family_name: form.familyName,
-        contact_email: form.contactEmail,
-        contact_phone: form.contactPhone,
-        location: Number(form.location),
         lead_source: Number(form.leadSource),
         child_grade: form.childGrade,
-        scheduled_tour_date: `${form.tourDate}T${form.tourTime}:00`,
-        notes: form.notes,
       });
+
+      if (didReschedule) {
+        await rescheduleTour(id, {
+          scheduled_tour_date: scheduledTourDate,
+          notes: form.notes || "Tour rescheduled.",
+        });
+      }
+
       await refreshTour();
       setMessage("Tour saved.");
       navigate(`/tours/${id}`);
@@ -211,19 +228,19 @@ function TourPlaceholder({ mode }) {
         <form className="tour-edit-form" onSubmit={handleSubmit}>
           <label>
             <span>Family name</span>
-            <input value={form.familyName} onChange={(event) => updateForm("familyName", event.target.value)} required />
+            <input value={form.familyName} disabled required />
           </label>
           <label>
             <span>Email</span>
-            <input type="email" value={form.contactEmail} onChange={(event) => updateForm("contactEmail", event.target.value)} />
+            <input type="email" value={form.contactEmail} disabled />
           </label>
           <label>
             <span>Phone</span>
-            <input type="tel" value={form.contactPhone} onChange={(event) => updateForm("contactPhone", event.target.value)} />
+            <input type="tel" value={form.contactPhone} disabled />
           </label>
           <label>
             <span>Location</span>
-            <select value={form.location} onChange={(event) => updateForm("location", event.target.value)} required>
+            <select value={form.location} disabled required>
               {locations.map((location) => (
                 <option key={location.id} value={location.id}>{location.location_name}</option>
               ))}
@@ -303,8 +320,8 @@ function TourPlaceholder({ mode }) {
           <section className="tour-detail-panel tour-detail-panel--wide">
             <h2>Event History</h2>
             <div className="tour-events">
-              {tour.events?.length ? (
-                tour.events.map((event) => (
+              {events.length ? (
+                events.map((event) => (
                   <article key={event.id}>
                     <strong>{event.status_label}</strong>
                     <span>{formatDateTime(event.event_timestamp)}</span>
