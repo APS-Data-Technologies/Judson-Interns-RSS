@@ -1,7 +1,9 @@
-from django.urls import path
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
-from .views import LocationListView
+from .views import LocationViewSet
 
-urlpatterns = [
-    path("locations/", LocationListView.as_view(), name="location-list"),
-]
+router = DefaultRouter()
+router.register("locations", LocationViewSet, basename="location")
+
+urlpatterns = [path("", include(router.urls))]
