@@ -6,7 +6,11 @@ from .models import Tour, TourEvent
 class TourEventInline(admin.TabularInline):
     model = TourEvent
     extra = 0
-    readonly_fields = ("event_timestamp",)
+    can_delete = False
+    readonly_fields = ("status", "event_timestamp", "updated_by", "notes")
+
+    def has_add_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Tour)
@@ -17,6 +21,17 @@ class TourAdmin(admin.ModelAdmin):
     date_hierarchy = "scheduled_tour_date"
     inlines = [TourEventInline]
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ("scheduled_tour_date", "current_status")
+        return ()
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 @admin.register(TourEvent)
 class TourEventAdmin(admin.ModelAdmin):
@@ -24,4 +39,10 @@ class TourEventAdmin(admin.ModelAdmin):
     list_filter = ("status", "event_timestamp")
     search_fields = ("tour__family__family_name", "updated_by__email", "notes")
     date_hierarchy = "event_timestamp"
+    readonly_fields = ("tour", "status", "event_timestamp", "updated_by", "notes")
 
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

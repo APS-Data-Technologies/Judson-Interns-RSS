@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -57,7 +58,13 @@ class TourSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
-        read_only_fields = ("assigned_staff", "created_at", "updated_at")
+        read_only_fields = (
+            "assigned_staff",
+            "scheduled_tour_date",
+            "current_status",
+            "created_at",
+            "updated_at",
+        )
 
     def get_assigned_staff_name(self, obj):
         return obj.assigned_staff.get_full_name() or obj.assigned_staff.email
@@ -74,6 +81,13 @@ class TourCreateSerializer(serializers.Serializer):
     scheduled_tour_date = serializers.DateTimeField()
     notes = serializers.CharField(required=False, allow_blank=True)
 
+    def validate_location(self, location):
+        user = self.context["request"].user
+        if user.role == User.Role.STAFF and location.pk != user.location_id:
+            raise serializers.ValidationError("You do not have access to this location.")
+        return location
+
+    @transaction.atomic
     def create(self, validated_data):
         request = self.context["request"]
         student_name = validated_data.pop("student_name", "")
@@ -111,6 +125,68 @@ class TourCreateSerializer(serializers.Serializer):
 
     def to_representation(self, instance):
         return TourSerializer(instance).data
+
+
+class TourUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tour
+        fields = ("lead_source", "child_grade")
+
+    def validate(self, attrs):
+        protected_fields = {"current_status", "scheduled_tour_date"}
+        attempted_fields = protected_fields.intersection(self.initial_data)
+        if attempted_fields:
+            raise serializers.ValidationError(
+                {
+                    field: "Use the dedicated workflow endpoint to update this field."
+                    for field in sorted(attempted_fields)
+                }
+            )
+        return attrs
+
+    def to_representation(self, instance):
+        return TourSerializer(instance, context=self.context).data
+
+
+class TourStatusTransitionSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=TourStatus.choices)
+    notes = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_status(self, status_value):
+        if status_value == TourStatus.RESCHEDULED:
+            raise serializers.ValidationError("Use the reschedule endpoint for this status.")
+        return status_value
+
+
+class TourRescheduleSerializer(serializers.Serializer):
+    scheduled_tour_date = serializers.DateTimeField()
+    notes = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_scheduled_tour_date(self, scheduled_tour_date):
+        if scheduled_tour_date <= timezone.now():
+            raise serializers.ValidationError("The new tour date must be in the future.")
+        return scheduled_tour_date
+
+
+class TourEventSerializer(serializers.ModelSerializer):
+    status_label = serializers.CharField(source="get_status_display", read_only=True)
+    updated_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TourEvent
+        fields = (
+            "id",
+            "status",
+            "status_label",
+            "event_timestamp",
+            "updated_by",
+            "updated_by_name",
+            "notes",
+        )
+        read_only_fields = fields
+
+    def get_updated_by_name(self, obj):
+        return obj.updated_by.get_full_name() or obj.updated_by.email
 
 
 class HomeTourSerializer(TourSerializer):
