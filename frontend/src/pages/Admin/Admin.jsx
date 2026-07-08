@@ -8,6 +8,11 @@ import {
   listUsers,
   updateUser,
 } from "../../features/auth/userApi";
+import {
+  createLocation,
+  listLocations as listManagedLocations,
+  updateLocation as saveLocation,
+} from "../../features/admin/locationApi";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
 import "./Admin.css";
 
@@ -18,6 +23,17 @@ const emptyForm = {
   role: "staff",
   location: "",
   password: "",
+};
+
+const emptyLocationForm = {
+  external_id: "",
+  location_name: "",
+  address: "",
+  city: "",
+  state: "",
+  zip_code: "",
+  phone: "",
+  is_active: true,
 };
 
 const roleLabels = {
@@ -45,6 +61,19 @@ function getUserForm(user) {
   };
 }
 
+function getLocationForm(location) {
+  return {
+    external_id: location.external_id || "",
+    location_name: location.location_name || "",
+    address: location.address || "",
+    city: location.city || "",
+    state: location.state || "",
+    zip_code: location.zip_code || "",
+    phone: location.phone || "",
+    is_active: location.is_active,
+  };
+}
+
 function Admin() {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
@@ -53,10 +82,15 @@ function Admin() {
   const [searchParams] = useSearchParams();
   const [users, setUsers] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [managedLocations, setManagedLocations] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [initialForm, setInitialForm] = useState(emptyForm);
+  const [locationForm, setLocationForm] = useState(emptyLocationForm);
+  const [initialLocationForm, setInitialLocationForm] = useState(emptyLocationForm);
   const [editingId, setEditingId] = useState(null);
+  const [editingLocationId, setEditingLocationId] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isLocationFormOpen, setIsLocationFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -75,12 +109,25 @@ function Admin() {
       : location.pathname.includes("/admin/users/") && location.pathname.endsWith("/edit")
         ? params.id
         : searchParams.get("user");
+  const locationParam =
+    location.pathname === "/admin/locations/new"
+      ? "new"
+      : location.pathname.includes("/admin/locations/") && location.pathname.endsWith("/edit")
+        ? params.id
+        : searchParams.get("location");
   const isUserFormDirty = useMemo(
     () => isFormOpen && JSON.stringify(form) !== JSON.stringify(initialForm),
     [form, initialForm, isFormOpen],
   );
+  const isLocationFormDirty = useMemo(
+    () =>
+      isLocationFormOpen
+      && JSON.stringify(locationForm) !== JSON.stringify(initialLocationForm),
+    [initialLocationForm, isLocationFormOpen, locationForm],
+  );
 
   useUnsavedChangesPrompt(isUserFormDirty && !isSaving);
+  useUnsavedChangesPrompt(isLocationFormDirty && !isSaving);
 
   const loadData = useCallback(async () => {
     if (!canManageUsers) {
@@ -98,6 +145,19 @@ function Admin() {
       setIsLoading(false);
     }
   }, [canManageUsers]);
+
+  const loadManagedLocations = useCallback(async () => {
+    if (!canManageAdmin) {
+      return;
+    }
+    setError("");
+    try {
+      const locationData = await listManagedLocations({ include_inactive: true });
+      setManagedLocations(locationData);
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    }
+  }, [canManageAdmin]);
 
   useEffect(() => {
     if (!canManageUsers) return undefined;
@@ -121,6 +181,28 @@ function Admin() {
       cancelled = true;
     };
   }, [canManageUsers]);
+
+  useEffect(() => {
+    if (adminSection !== "locations" || !canManageAdmin) return undefined;
+
+    let cancelled = false;
+    listManagedLocations({ include_inactive: true })
+      .then((locationData) => {
+        if (!cancelled) {
+          setManagedLocations(locationData);
+        }
+      })
+      .catch((requestError) => {
+        if (!cancelled) setError(getErrorMessage(requestError));
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [adminSection, canManageAdmin]);
 
   function openCreateForm() {
     setEditingId(null);
@@ -153,11 +235,52 @@ function Admin() {
     navigate("/admin/users");
   }
 
+  function openCreateLocationForm() {
+    setEditingLocationId(null);
+    setLocationForm(emptyLocationForm);
+    setInitialLocationForm(emptyLocationForm);
+    setError("");
+    setIsLocationFormOpen(true);
+    navigate("/admin/locations/new");
+  }
+
+  function openEditLocationForm(locationItem) {
+    const nextForm = getLocationForm(locationItem);
+    setEditingLocationId(locationItem.id);
+    setLocationForm(nextForm);
+    setInitialLocationForm(nextForm);
+    setError("");
+    setIsLocationFormOpen(true);
+    navigate(`/admin/locations/${locationItem.id}/edit`);
+  }
+
+  function closeLocationForm() {
+    if (
+      isLocationFormDirty
+      && !window.confirm("You have unsaved changes. Close this form?")
+    ) {
+      return;
+    }
+
+    setIsLocationFormOpen(false);
+    setLocationForm(emptyLocationForm);
+    setInitialLocationForm(emptyLocationForm);
+    setEditingLocationId(null);
+    navigate("/admin/locations");
+  }
+
   function updateForm(field, value) {
     setForm((current) => ({
       ...current,
       [field]: value,
       ...(field === "role" && value !== "staff" ? { location: "" } : {}),
+    }));
+  }
+
+  function updateLocationForm(field, value) {
+    setLocationForm((current) => ({
+      ...current,
+      [field]: value,
     }));
   }
 
@@ -205,6 +328,47 @@ function Admin() {
     }
   }
 
+  async function handleLocationSubmit(event) {
+    event.preventDefault();
+    setError("");
+    setIsSaving(true);
+
+    try {
+      const payload = {
+        ...locationForm,
+        state: locationForm.state.trim().toUpperCase(),
+      };
+      if (!payload.external_id) delete payload.external_id;
+
+      if (editingLocationId) {
+        await saveLocation(editingLocationId, payload);
+      } else {
+        await createLocation(payload);
+      }
+
+      setIsLocationFormOpen(false);
+      setLocationForm(emptyLocationForm);
+      setInitialLocationForm(emptyLocationForm);
+      setEditingLocationId(null);
+      navigate("/admin/locations", { replace: true });
+      await loadManagedLocations();
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleLocationStatusChange(locationItem) {
+    setError("");
+    try {
+      await saveLocation(locationItem.id, { is_active: !locationItem.is_active });
+      await loadManagedLocations();
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    }
+  }
+
   useEffect(() => {
     if (!canManageUsers) return;
 
@@ -244,6 +408,54 @@ function Admin() {
     });
   }, [canManageUsers, editingId, isFormOpen, userParam, users]);
 
+  useEffect(() => {
+    if (adminSection !== "locations" || !canManageAdmin) return;
+
+    queueMicrotask(() => {
+      if (locationParam === "new") {
+        if (!isLocationFormOpen || editingLocationId !== null) {
+          setEditingLocationId(null);
+          setLocationForm(emptyLocationForm);
+          setInitialLocationForm(emptyLocationForm);
+          setError("");
+          setIsLocationFormOpen(true);
+        }
+        return;
+      }
+
+      if (locationParam) {
+        const selectedLocation = managedLocations.find(
+          (locationItem) => String(locationItem.id) === locationParam,
+        );
+        if (!selectedLocation) return;
+
+        if (!isLocationFormOpen || editingLocationId !== selectedLocation.id) {
+          const nextForm = getLocationForm(selectedLocation);
+          setEditingLocationId(selectedLocation.id);
+          setLocationForm(nextForm);
+          setInitialLocationForm(nextForm);
+          setError("");
+          setIsLocationFormOpen(true);
+        }
+        return;
+      }
+
+      if (isLocationFormOpen) {
+        setIsLocationFormOpen(false);
+        setLocationForm(emptyLocationForm);
+        setInitialLocationForm(emptyLocationForm);
+        setEditingLocationId(null);
+      }
+    });
+  }, [
+    adminSection,
+    canManageAdmin,
+    editingLocationId,
+    isLocationFormOpen,
+    locationParam,
+    managedLocations,
+  ]);
+
   if (location.pathname === "/admin") {
     return <Navigate to="/admin/users" replace />;
   }
@@ -272,14 +484,66 @@ function Admin() {
       <section className="admin-page">
         {renderAdminNavigation()}
         <header className="admin-heading">
-          <div><h2>Manage locations</h2><p>Location navigation</p></div>
-          <Link className="admin-primary-link" to="/admin/locations/new">Add location</Link>
+          <div><h2>Manage locations</h2><p>{managedLocations.length} locations</p></div>
+          <button type="button" onClick={openCreateLocationForm}>Add location</button>
         </header>
-        <div className="admin-route-list">
-          <Link to="/admin/locations/new">Add location</Link>
-          <Link to="/admin/locations/1/edit">Edit location</Link>
+
+        {error && <p className="form-error" role="alert">{error}</p>}
+
+        {isLocationFormOpen && (
+          <form className="user-form" onSubmit={handleLocationSubmit}>
+            <div className="form-heading">
+              <h3>{editingLocationId ? "Edit location" : "Add location"}</h3>
+              <button type="button" onClick={closeLocationForm}>Cancel</button>
+            </div>
+            <label htmlFor="location-external-id">External ID</label>
+            <input id="location-external-id" value={locationForm.external_id} onChange={(event) => updateLocationForm("external_id", event.target.value)} />
+            <label htmlFor="location-name">Location name</label>
+            <input id="location-name" value={locationForm.location_name} onChange={(event) => updateLocationForm("location_name", event.target.value)} required />
+            <label htmlFor="location-address">Address</label>
+            <input id="location-address" value={locationForm.address} onChange={(event) => updateLocationForm("address", event.target.value)} required />
+            <label htmlFor="location-city">City</label>
+            <input id="location-city" value={locationForm.city} onChange={(event) => updateLocationForm("city", event.target.value)} required />
+            <label htmlFor="location-state">State</label>
+            <input id="location-state" value={locationForm.state} onChange={(event) => updateLocationForm("state", event.target.value)} maxLength="2" required />
+            <label htmlFor="location-zip">ZIP code</label>
+            <input id="location-zip" value={locationForm.zip_code} onChange={(event) => updateLocationForm("zip_code", event.target.value)} required />
+            <label htmlFor="location-phone">Phone</label>
+            <input id="location-phone" type="tel" value={locationForm.phone} onChange={(event) => updateLocationForm("phone", event.target.value)} />
+            <label className="admin-checkbox" htmlFor="location-active">
+              <input id="location-active" type="checkbox" checked={locationForm.is_active} onChange={(event) => updateLocationForm("is_active", event.target.checked)} />
+              <span>Location is active</span>
+            </label>
+            <button className="primary-action" type="submit" disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save location"}
+            </button>
+          </form>
+        )}
+
+        <div className="user-list">
+          {isLoading && <p className="empty-state">Loading locations...</p>}
+          {!isLoading && managedLocations.map((locationItem) => (
+            <article className="user-row" key={locationItem.id}>
+              <div className="user-summary">
+                <strong>{locationItem.location_name}</strong>
+                <span>{locationItem.address}</span>
+                <span>
+                  {locationItem.city}, {locationItem.state} {locationItem.zip_code}
+                </span>
+                {locationItem.phone && <span>{locationItem.phone}</span>}
+              </div>
+              <div className="user-status-actions">
+                <span className={locationItem.is_active ? "status-active" : "status-inactive"}>
+                  {locationItem.is_active ? "Active" : "Inactive"}
+                </span>
+                <button type="button" onClick={() => openEditLocationForm(locationItem)}>Edit</button>
+                <button type="button" onClick={() => handleLocationStatusChange(locationItem)}>
+                  {locationItem.is_active ? "Deactivate" : "Reactivate"}
+                </button>
+              </div>
+            </article>
+          ))}
         </div>
-        <p className="empty-state">Location management content will be built here.</p>
       </section>
     );
   }

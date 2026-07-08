@@ -106,6 +106,18 @@
   font-weight: 600;
 }
 
+.user-form .admin-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+.user-form .admin-checkbox input {
+  width: auto;
+  min-height: auto;
+}
+
 .user-form input,
 .user-form select,
 .user-form .primary-action {
