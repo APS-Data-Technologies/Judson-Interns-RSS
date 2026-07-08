@@ -11,4 +11,7 @@ class LocationListView(generics.ListAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        return Location.objects.filter(is_active=True).order_by("location_name")
+        queryset = Location.objects.filter(is_active=True).order_by("location_name")
+        if self.request.user.role == "staff" and self.request.user.location_id:
+            queryset = queryset.filter(id=self.request.user.location_id)
+        return queryset

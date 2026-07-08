@@ -33,7 +33,9 @@ function Sidebar() {
                 return `sidebar-nav-item ${isActive || isSettingsArea ? "active" : ""}`;
               }}
             >
-              <Icon className="sidebar-nav-icon" aria-hidden="true" />
+              <span className="sidebar-nav-icon-wrap">
+                <Icon className="sidebar-nav-icon" aria-hidden="true" />
+              </span>
               <span className="sidebar-nav-label">{item.label}</span>
             </NavLink>
           );
@@ -41,7 +43,9 @@ function Sidebar() {
       </nav>
 
       <button className="sidebar-logout" type="button" onClick={logout}>
-        <LogOut className="sidebar-nav-icon" aria-hidden="true" />
+        <span className="sidebar-nav-icon-wrap">
+          <LogOut className="sidebar-nav-icon" aria-hidden="true" />
+        </span>
         <span className="sidebar-nav-label">Logout</span>
       </button>
     </aside>

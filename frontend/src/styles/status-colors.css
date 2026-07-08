@@ -1,0 +1,37 @@
+:root {
+  --status-booked: #0f62fe;
+  --status-toured: #f5b400;
+  --status-enrolled: #16a34a;
+  --status-churned: #ef4444;
+  --status-no-show: #f97316;
+  --status-cancelled: #64748b;
+  --status-rescheduled: #7c3aed;
+}
+
+.status-color--scheduled {
+  background: var(--status-booked);
+}
+
+.status-color--rescheduled {
+  background: var(--status-rescheduled);
+}
+
+.status-color--toured {
+  background: var(--status-toured);
+}
+
+.status-color--enrolled {
+  background: var(--status-enrolled);
+}
+
+.status-color--churned {
+  background: var(--status-churned);
+}
+
+.status-color--no_show {
+  background: var(--status-no-show);
+}
+
+.status-color--cancelled {
+  background: var(--status-cancelled);
+}

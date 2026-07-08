@@ -24,3 +24,18 @@ export async function createTour(payload) {
   const response = await api.post("/tours/", payload);
   return response.data;
 }
+
+export async function getTour(id) {
+  const response = await api.get(`/tours/${id}/`);
+  return response.data;
+}
+
+export async function updateTour(id, payload) {
+  const response = await api.patch(`/tours/${id}/`, payload);
+  return response.data;
+}
+
+export async function updateTourStatus(id, payload) {
+  const response = await api.patch(`/tours/${id}/status/`, payload);
+  return response.data;
+}

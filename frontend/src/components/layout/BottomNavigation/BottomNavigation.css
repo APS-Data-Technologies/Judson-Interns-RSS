@@ -38,3 +38,24 @@
   font-size: clamp(0.58rem, 1.45vmin, 0.78rem);
   line-height: 1;
 }
+
+@media (max-aspect-ratio: 11/10) {
+  .bottom-navigation {
+    min-height: clamp(5.6rem, 12.5vmin, 6.9rem);
+    padding: clamp(0.45rem, 1.2vmin, 0.75rem);
+  }
+
+  .bottom-navigation__item {
+    gap: 0.26rem;
+  }
+
+  .bottom-navigation__icon {
+    height: clamp(1.35rem, 3.8vmin, 1.8rem);
+    width: clamp(1.35rem, 3.8vmin, 1.8rem);
+  }
+
+  .bottom-navigation__label {
+    font-size: clamp(0.72rem, 2.2vmin, 0.92rem);
+    font-weight: 850;
+  }
+}

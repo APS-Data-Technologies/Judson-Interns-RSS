@@ -6,23 +6,25 @@
 
 .new-tour-header {
   align-items: center;
-  background: linear-gradient(135deg, var(--rss-blue), #1d7cf2);
-  border-radius: var(--radius-lg);
-  color: #ffffff;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
   display: flex;
   gap: var(--space-4);
   justify-content: space-between;
-  padding: clamp(1.1rem, 3vw, 2rem);
+  padding: var(--space-4) var(--space-5);
 }
 
 .new-tour-header p {
-  color: rgba(255, 255, 255, 0.84);
+  color: var(--color-text-secondary);
   font-weight: 800;
   margin-bottom: var(--space-2);
 }
 
 .new-tour-header h1 {
-  font-size: clamp(2rem, 4vw, 3.2rem);
+  color: #08265c;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
   line-height: 1;
 }
 

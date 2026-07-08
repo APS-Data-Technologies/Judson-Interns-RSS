@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Eye, Search } from "lucide-react";
 
+import { Button } from "../../components/ui";
 import useAuth from "../../features/auth/useAuth";
 import { getHomeSummary } from "../../features/tours/tourApi";
-import { Button } from "../../components/ui";
 import "./Home.css";
 
 const initialSummary = {
@@ -12,8 +13,6 @@ const initialSummary = {
   no_show_tours: [],
   filters: {
     locations: [],
-    lead_sources: [],
-    statuses: [],
   },
 };
 
@@ -21,45 +20,38 @@ function getTodayValue() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function getTodayLabel(dateValue) {
-  const date = dateValue ? new Date(`${dateValue}T00:00:00`) : new Date();
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  }).format(date);
-}
-
 function formatTourTime(value) {
   return new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit",
+    timeZone: "UTC",
   }).format(new Date(value));
 }
 
-function applyStatusFilter(tours, status) {
-  if (!status) {
-    return tours;
-  }
-  return tours.filter((tour) => tour.current_status === status);
-}
+function TourList({ title, tours, tone }) {
+  const navigate = useNavigate();
+  const status = tone === "booked" ? "scheduled" : "no_show";
+  const statusLabel = tone === "booked" ? "booked" : "no show";
 
-function TourList({ title, description, tours, tone }) {
   return (
     <article className={`home-card home-card--${tone}`}>
       <div className="home-card__header">
-        <div>
-          <h2>{title}</h2>
-          <p>{description}</p>
-        </div>
-        <span className="home-card__count">{tours.length}</span>
+        <h2>{title}</h2>
+        <button
+          className="home-card__count"
+          type="button"
+          aria-label={`View today's ${statusLabel} tours`}
+          onClick={() => navigate(`/tours?date=${getTodayValue()}&status=${status}`)}
+        >
+          {tours.length}
+        </button>
       </div>
 
       <div className="home-tour-list">
         {tours.length > 0 ? (
           tours.map((tour) => (
             <div className="home-tour-row" key={tour.id}>
-              <div>
+              <div className="home-tour-row__family">
                 <strong>{tour.family_name}</strong>
                 <span>Grade {tour.child_grade || "not set"}</span>
               </div>
@@ -67,6 +59,14 @@ function TourList({ title, description, tours, tone }) {
                 <span>{formatTourTime(tour.scheduled_tour_date)}</span>
                 <span>{tour.location_name}</span>
               </div>
+              <button
+                className="home-tour-row__view"
+                type="button"
+                aria-label={`View ${tour.family_name} family tour details`}
+                onClick={() => navigate(`/tours/${tour.id}`)}
+              >
+                <Eye aria-hidden="true" />
+              </button>
             </div>
           ))
         ) : (
@@ -81,9 +81,8 @@ function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [filters, setFilters] = useState({
-    location: "",
-    leadSource: "",
-    status: "",
+    date: getTodayValue(),
+    location: user?.role === "staff" && user.location ? String(user.location) : "",
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [summary, setSummary] = useState(initialSummary);
@@ -99,9 +98,8 @@ function Home() {
 
       try {
         const data = await getHomeSummary({
-          date: getTodayValue(),
+          date: filters.date,
           location: filters.location || undefined,
-          lead_source: filters.leadSource || undefined,
           search: searchTerm || undefined,
         });
 
@@ -110,7 +108,7 @@ function Home() {
         }
       } catch {
         if (isCurrent) {
-          setError("Unable to load today's tours.");
+          setError("Unable to load tours.");
         }
       } finally {
         if (isCurrent) {
@@ -124,34 +122,15 @@ function Home() {
     return () => {
       isCurrent = false;
     };
-  }, [filters.location, filters.leadSource, searchTerm]);
+  }, [filters.date, filters.location, searchTerm]);
 
-  const selectedFilters = Object.entries(filters).filter(([, value]) => value);
-  const filteredBookedTours = useMemo(
-    () => applyStatusFilter(summary.booked_tours, filters.status),
-    [filters.status, summary.booked_tours],
+  const selectedLocation = useMemo(
+    () =>
+      summary.filters.locations.find(
+        (location) => String(location.id) === String(filters.location),
+      ),
+    [filters.location, summary.filters.locations],
   );
-  const filteredNoShows = useMemo(
-    () => applyStatusFilter(summary.no_show_tours, filters.status),
-    [filters.status, summary.no_show_tours],
-  );
-  const filterLabels = useMemo(
-    () => ({
-      location:
-        summary.filters.locations.find(
-          (location) => String(location.id) === String(filters.location),
-        )?.location_name || filters.location,
-      leadSource:
-        summary.filters.lead_sources.find(
-          (source) => String(source.id) === String(filters.leadSource),
-        )?.source_name || filters.leadSource,
-      status:
-        summary.filters.statuses.find((status) => status.value === filters.status)
-          ?.label || filters.status,
-    }),
-    [filters, summary.filters],
-  );
-  const firstName = user?.first_name || user?.email?.split("@")[0] || "there";
 
   function updateFilter(name, value) {
     setFilters((currentFilters) => ({
@@ -160,44 +139,27 @@ function Home() {
     }));
   }
 
-  function clearFilter(name) {
-    setFilters((currentFilters) => ({
-      ...currentFilters,
-      [name]: "",
-    }));
-  }
-
   return (
     <section className="home-page" aria-label="Home dashboard">
-      <div className="home-hero">
-        <div>
-          <p className="home-hero__date">{getTodayLabel(summary.date)}</p>
-          <h1>Hello {firstName}</h1>
-        </div>
-        <Button size="lg" onClick={() => navigate("/tours/new")}>
-          New Tour
-        </Button>
-      </div>
-
       <div className="home-tools" aria-label="Tour filters">
-        <label className="home-search">
-          <span>Search family</span>
-          <input
-            type="search"
-            placeholder="Search family names"
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-          />
-        </label>
-
         <div className="home-filter-grid">
+          <label>
+            <span>Date</span>
+            <input
+              type="date"
+              value={filters.date}
+              onChange={(event) => updateFilter("date", event.target.value)}
+            />
+          </label>
+
           <label>
             <span>Location</span>
             <select
               value={filters.location}
               onChange={(event) => updateFilter("location", event.target.value)}
+              disabled={user?.role === "staff"}
             >
-              <option value="">All locations</option>
+              {user?.role !== "staff" && <option value="">All locations</option>}
               {summary.filters.locations.map((location) => (
                 <option key={location.id} value={location.id}>
                   {location.location_name}
@@ -206,57 +168,36 @@ function Home() {
             </select>
           </label>
 
-          <label>
-            <span>Lead source</span>
-            <select
-              value={filters.leadSource}
-              onChange={(event) =>
-                updateFilter("leadSource", event.target.value)
-              }
-            >
-              <option value="">All sources</option>
-              {summary.filters.lead_sources.map((source) => (
-                <option key={source.id} value={source.id}>
-                  {source.source_name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            <span>Status</span>
-            <select
-              value={filters.status}
-              onChange={(event) => updateFilter("status", event.target.value)}
-            >
-              <option value="">Booked and No Show</option>
-              {summary.filters.statuses.map((status) => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
+          <label className="home-search">
+            <span>Search family</span>
+            <Search className="home-search__icon" aria-hidden="true" />
+            <input
+              type="search"
+              placeholder="Search family names"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+            />
           </label>
         </div>
 
-        {(selectedFilters.length > 0 || searchTerm) && (
+        {(filters.location || searchTerm) && (
           <div className="home-active-filters" aria-label="Active filters">
+            {filters.location && (
+              <button
+                type="button"
+                disabled={user?.role === "staff"}
+                onClick={() => updateFilter("location", "")}
+              >
+                {selectedLocation?.location_name || "Location"}
+                {user?.role !== "staff" && <span aria-hidden="true">x</span>}
+              </button>
+            )}
             {searchTerm && (
               <button type="button" onClick={() => setSearchTerm("")}>
                 Family: {searchTerm}
                 <span aria-hidden="true">x</span>
               </button>
             )}
-            {selectedFilters.map(([name, value]) => (
-              <button
-                type="button"
-                key={name}
-                onClick={() => clearFilter(name)}
-              >
-                {filterLabels[name] || value}
-                <span aria-hidden="true">x</span>
-              </button>
-            ))}
           </div>
         )}
       </div>
@@ -267,16 +208,20 @@ function Home() {
       <div className="home-summary" aria-label="Today tour summary">
         <TourList
           title="Today's booked tours"
-          description={`${summary.booked_tours.length} booked for today`}
-          tours={filteredBookedTours}
+          tours={summary.booked_tours}
           tone="booked"
         />
         <TourList
           title="Today's no show"
-          description="No shows from yesterday's tours"
-          tours={filteredNoShows}
+          tours={summary.no_show_tours}
           tone="noshow"
         />
+      </div>
+
+      <div className="home-fixed-action">
+        <Button size="lg" onClick={() => navigate("/tours/new")}>
+          + New Tour
+        </Button>
       </div>
     </section>
   );

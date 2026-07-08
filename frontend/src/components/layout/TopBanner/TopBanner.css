@@ -28,7 +28,37 @@
 }
 
 .top-banner__name {
-  font-size: clamp(1.6rem, 3.8vmin, 2.75rem);
+  font-size: clamp(1.8rem, 4.1vmin, 3rem);
   font-weight: 950;
   white-space: nowrap;
+}
+
+@media (max-aspect-ratio: 11/10) {
+  .top-banner {
+    min-height: clamp(7rem, 17vmin, 9rem);
+  }
+
+  .top-banner__brand {
+    gap: clamp(0.7rem, 2vmin, 1rem);
+  }
+
+  .top-banner__logo {
+    height: clamp(2.7rem, 7vmin, 3.6rem);
+    width: clamp(2.7rem, 7vmin, 3.6rem);
+  }
+
+  .top-banner__name {
+    font-size: clamp(2rem, 6.5vmin, 3rem);
+  }
+}
+
+@media (min-aspect-ratio: 11/10) {
+  .top-banner {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .top-banner__name {
+    font-size: clamp(2rem, 4.6vmin, 3.25rem);
+  }
 }

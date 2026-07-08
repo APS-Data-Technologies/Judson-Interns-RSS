@@ -1,30 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { CalendarDays, Filter, MapPin, Search } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Eye, Pencil } from "lucide-react";
 
-import heroImage from "../../assets/login/Desktop_Hero.png";
-import { getLocations, listTours } from "../../features/tours/tourApi";
+import TourFilterControls from "../../components/filters/TourFilterControls";
+import useAuth from "../../features/auth/useAuth";
+import {
+  currentMonthValue,
+  currentYearValue,
+  getDateRange,
+  joinFilterValues,
+  statusLabels,
+} from "../../features/tours/filterConfig";
+import { getLeadSources, getLocations, listTours } from "../../features/tours/tourApi";
 import "./Tours.css";
-
-const statusOptions = [
-  { value: "", label: "All" },
-  { value: "scheduled", label: "Booked" },
-  { value: "toured", label: "Toured" },
-  { value: "no_show", label: "No Show" },
-  { value: "enrolled", label: "Enrolled" },
-  { value: "churned", label: "Churned" },
-  { value: "cancelled", label: "Cancelled" },
-];
-
-const statusLabels = {
-  scheduled: "Booked",
-  rescheduled: "Rescheduled",
-  toured: "Toured",
-  enrolled: "Enrolled",
-  churned: "Churned",
-  cancelled: "Cancelled",
-  no_show: "No Show",
-};
 
 function todayValue() {
   return new Date().toISOString().slice(0, 10);
@@ -41,42 +29,73 @@ function formatTourDate(value) {
 function TourCard({ tour }) {
   const navigate = useNavigate();
   const statusLabel = statusLabels[tour.current_status] || tour.status_label;
+  const familyName = tour.family_name.endsWith("Family")
+    ? tour.family_name
+    : `${tour.family_name} Family`;
 
   return (
     <article className="tour-card">
       <div className="tour-card__content">
         <div>
-          <h2>{tour.family_name} Family</h2>
+          <h2>{familyName}</h2>
           <p>
             Grade {tour.child_grade || "not set"} <span aria-hidden="true">·</span>{" "}
             {tour.location_name}
           </p>
           <p>Tour Date: {formatTourDate(tour.scheduled_tour_date)}</p>
         </div>
-        <span className={`tour-status tour-status--${tour.current_status}`}>
-          {statusLabel}
-        </span>
-      </div>
-
-      <div className="tour-card__actions">
-        <button type="button" onClick={() => navigate(`/tours/${tour.id}`)}>
-          View Details
-        </button>
-        <button type="button" onClick={() => navigate(`/tours/${tour.id}/edit`)}>
-          Edit Tour
-        </button>
+        <div className="tour-card__side">
+          <span className={`tour-status status-color--${tour.current_status}`}>
+            {statusLabel}
+          </span>
+          <div className="tour-card__actions" aria-label={`${familyName} actions`}>
+            <button
+              type="button"
+              aria-label={`View ${familyName} details`}
+              onClick={() => navigate(`/tours/${tour.id}`)}
+            >
+              <Eye aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              aria-label={`Edit ${familyName}`}
+              onClick={() => navigate(`/tours/${tour.id}/edit`)}
+            >
+              <Pencil aria-hidden="true" />
+            </button>
+          </div>
+        </div>
       </div>
     </article>
   );
 }
 
 function Tours() {
+  const location = useLocation();
+  const { user } = useAuth();
+  const queryFilters = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const dateParam = params.get("date") || "";
+    const datePreset = dateParam && dateParam !== todayValue() ? "custom" : "today";
+    return {
+      datePreset,
+      dateFrom: dateParam && datePreset === "custom" ? dateParam : "",
+      dateTo: dateParam && datePreset === "custom" ? dateParam : "",
+      statuses: params.get("status")?.split(",").filter(Boolean) || [],
+    };
+  }, [location.search]);
   const [tours, setTours] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [leadSources, setLeadSources] = useState([]);
   const [filters, setFilters] = useState({
-    status: "",
-    location: "",
-    date: todayValue(),
+    datePreset: queryFilters.datePreset,
+    dateFrom: queryFilters.dateFrom,
+    dateTo: queryFilters.dateTo,
+    month: currentMonthValue(),
+    year: currentYearValue(),
+    locations: user?.role === "staff" && user.location ? [String(user.location)] : [],
+    leadSources: [],
+    statuses: queryFilters.statuses,
     search: "",
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -87,9 +106,19 @@ function Tours() {
 
     async function loadOptions() {
       try {
-        const locationData = await getLocations();
+        const [locationData, sourceData] = await Promise.all([
+          getLocations(),
+          getLeadSources(),
+        ]);
         if (isCurrent) {
           setLocations(locationData);
+          setLeadSources(sourceData);
+          if (user?.role === "staff" && user.location) {
+            setFilters((currentFilters) => ({
+              ...currentFilters,
+              locations: [String(user.location)],
+            }));
+          }
         }
       } catch {
         if (isCurrent) {
@@ -103,7 +132,7 @@ function Tours() {
     return () => {
       isCurrent = false;
     };
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -111,12 +140,15 @@ function Tours() {
     async function loadTours() {
       setIsLoading(true);
       setError("");
+      const dateRange = getDateRange(filters);
 
       try {
         const tourData = await listTours({
-          status: filters.status || undefined,
-          location: filters.location || undefined,
-          date: filters.date || undefined,
+          status: joinFilterValues(filters.statuses),
+          location: joinFilterValues(filters.locations),
+          lead_source: joinFilterValues(filters.leadSources),
+          date_from: dateRange.dateFrom || undefined,
+          date_to: dateRange.dateTo || undefined,
           search: filters.search || undefined,
         });
 
@@ -141,12 +173,6 @@ function Tours() {
     };
   }, [filters]);
 
-  const selectedLocation = useMemo(
-    () =>
-      locations.find((location) => String(location.id) === String(filters.location)),
-    [filters.location, locations],
-  );
-
   function updateFilter(name, value) {
     setFilters((currentFilters) => ({
       ...currentFilters,
@@ -156,69 +182,14 @@ function Tours() {
 
   return (
     <section className="tours-page" aria-label="Tours list">
-      <header className="tours-hero">
-        <img src={heroImage} alt="" aria-hidden="true" />
-        <h1>Tours</h1>
-      </header>
-
-      <div className="tours-controls" aria-label="Tour filters">
-        <label>
-          <Filter aria-hidden="true" />
-          <span>Status</span>
-          <select
-            value={filters.status}
-            onChange={(event) => updateFilter("status", event.target.value)}
-          >
-            {statusOptions.map((status) => (
-              <option key={status.value || "all"} value={status.value}>
-                {status.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          <MapPin aria-hidden="true" />
-          <span>Location</span>
-          <select
-            value={filters.location}
-            onChange={(event) => updateFilter("location", event.target.value)}
-          >
-            <option value="">All locations</option>
-            {locations.map((location) => (
-              <option key={location.id} value={location.id}>
-                {location.location_name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          <CalendarDays aria-hidden="true" />
-          <span>Date</span>
-          <input
-            type="date"
-            value={filters.date}
-            onChange={(event) => updateFilter("date", event.target.value)}
-          />
-        </label>
-
-        <label className="tours-search">
-          <Search aria-hidden="true" />
-          <input
-            type="search"
-            placeholder="Search tours..."
-            value={filters.search}
-            onChange={(event) => updateFilter("search", event.target.value)}
-          />
-        </label>
-      </div>
-
-      <div className="tours-context">
-        <span>{statusOptions.find((status) => status.value === filters.status)?.label || "All"} status</span>
-        <span>{selectedLocation?.location_name || "All locations"}</span>
-        <span>{filters.date ? formatTourDate(`${filters.date}T00:00:00`) : "All dates"}</span>
-      </div>
+      <TourFilterControls
+        filters={filters}
+        leadSources={leadSources}
+        locations={locations}
+        onChange={updateFilter}
+        searchPlaceholder="Search family name"
+        staffLocationOnly={user?.role === "staff"}
+      />
 
       {error && <p className="tours-state tours-state--error">{error}</p>}
       {isLoading && <p className="tours-state">Loading tours...</p>}

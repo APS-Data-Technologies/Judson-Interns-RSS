@@ -44,7 +44,7 @@
     grid-template-rows: auto auto 1fr;
     gap: clamp(0.35rem, 1vmin, 0.6rem);
     min-height: 0;
-    padding-bottom: clamp(4.9rem, 10vmin, 6rem);
+    padding-bottom: clamp(6.4rem, 14vmin, 7.8rem);
   }
 
   .app-shell__top-banner {
@@ -87,6 +87,7 @@
     grid-template-rows: auto auto 1fr;
     gap: 0;
     min-height: 0;
+    overflow: hidden;
   }
 
   .app-shell__top-banner {

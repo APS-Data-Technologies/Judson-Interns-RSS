@@ -2,20 +2,25 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   CalendarCheck,
-  CalendarDays,
   ChevronDown,
   ChevronUp,
-  Filter,
+  Eye,
   GraduationCap,
-  MapPin,
-  Search,
+  Pencil,
   UserRoundCheck,
   UserRoundX,
   X,
 } from "lucide-react";
 
-import heroImage from "../../assets/login/Desktop_Hero.png";
-import { getLocations, listTours } from "../../features/tours/tourApi";
+import TourFilterControls from "../../components/filters/TourFilterControls";
+import useAuth from "../../features/auth/useAuth";
+import {
+  currentMonthValue,
+  currentYearValue,
+  getDateRange,
+  joinFilterValues,
+} from "../../features/tours/filterConfig";
+import { getLeadSources, getLocations, listTours } from "../../features/tours/tourApi";
 import "./Pipeline.css";
 
 const pipelineStatuses = [
@@ -37,40 +42,61 @@ function formatTourDate(value) {
 function PipelineCard({ tour }) {
   const navigate = useNavigate();
   const status = pipelineStatuses.find((item) => item.value === tour.current_status);
+  const familyName = tour.family_name.endsWith("Family")
+    ? tour.family_name
+    : `${tour.family_name} Family`;
 
   return (
     <article className="pipeline-card">
       <div className="pipeline-card__content">
         <div>
-          <h3>{tour.family_name} Family</h3>
+          <h3>{familyName}</h3>
           <p>
             Grade {tour.child_grade || "not set"} <span aria-hidden="true">·</span>{" "}
             {tour.location_name}
           </p>
           <p>Tour Date: {formatTourDate(tour.scheduled_tour_date)}</p>
         </div>
-        <span className={`pipeline-card__badge pipeline-card__badge--${tour.current_status}`}>
-          {status?.label || tour.status_label}
-        </span>
-      </div>
-      <div className="pipeline-card__actions">
-        <button type="button" onClick={() => navigate(`/tours/${tour.id}`)}>
-          View Details
-        </button>
-        <button type="button" onClick={() => navigate(`/tours/${tour.id}/edit`)}>
-          Edit Tour
-        </button>
+        <div className="pipeline-card__side">
+          <span className={`pipeline-card__badge status-color--${tour.current_status}`}>
+            {status?.label || tour.status_label}
+          </span>
+          <div className="pipeline-card__actions" aria-label={`${familyName} actions`}>
+            <button
+              type="button"
+              aria-label={`View ${familyName} details`}
+              onClick={() => navigate(`/tours/${tour.id}`)}
+            >
+              <Eye aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              aria-label={`Edit ${familyName}`}
+              onClick={() => navigate(`/tours/${tour.id}/edit`)}
+            >
+              <Pencil aria-hidden="true" />
+            </button>
+          </div>
+        </div>
       </div>
     </article>
   );
 }
 
 function Pipeline() {
+  const { user } = useAuth();
   const [tours, setTours] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [leadSources, setLeadSources] = useState([]);
   const [filters, setFilters] = useState({
-    status: "",
-    location: "",
+    datePreset: "last_30_days",
+    dateFrom: "",
+    dateTo: "",
+    month: currentMonthValue(),
+    year: currentYearValue(),
+    locations: user?.role === "staff" && user.location ? [String(user.location)] : [],
+    leadSources: [],
+    statuses: [],
     search: "",
   });
   const [openSections, setOpenSections] = useState(["toured"]);
@@ -82,9 +108,19 @@ function Pipeline() {
 
     async function loadOptions() {
       try {
-        const locationData = await getLocations();
+        const [locationData, sourceData] = await Promise.all([
+          getLocations(),
+          getLeadSources(),
+        ]);
         if (isCurrent) {
           setLocations(locationData);
+          setLeadSources(sourceData);
+          if (user?.role === "staff" && user.location) {
+            setFilters((currentFilters) => ({
+              ...currentFilters,
+              locations: [String(user.location)],
+            }));
+          }
         }
       } catch {
         if (isCurrent) {
@@ -98,7 +134,7 @@ function Pipeline() {
     return () => {
       isCurrent = false;
     };
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -106,11 +142,15 @@ function Pipeline() {
     async function loadTours() {
       setIsLoading(true);
       setError("");
+      const dateRange = getDateRange(filters);
 
       try {
         const tourData = await listTours({
-          status: filters.status || undefined,
-          location: filters.location || undefined,
+          date_from: dateRange.dateFrom || undefined,
+          date_to: dateRange.dateTo || undefined,
+          location: joinFilterValues(filters.locations),
+          lead_source: joinFilterValues(filters.leadSources),
+          status: joinFilterValues(filters.statuses),
           search: filters.search || undefined,
         });
 
@@ -163,61 +203,15 @@ function Pipeline() {
 
   return (
     <section className="pipeline-page" aria-label="Pipeline">
-      <header className="pipeline-hero">
-        <img src={heroImage} alt="" aria-hidden="true" />
-        <h1>Pipeline</h1>
-      </header>
-
       <div className="pipeline-controls" aria-label="Pipeline filters">
-        <label>
-          <Filter aria-hidden="true" />
-          <span>Status</span>
-          <select
-            value={filters.status}
-            onChange={(event) => updateFilter("status", event.target.value)}
-          >
-            <option value="">All Status</option>
-            {pipelineStatuses.map((status) => (
-              <option key={status.value} value={status.value}>
-                {status.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          <MapPin aria-hidden="true" />
-          <span>Location</span>
-          <select
-            value={filters.location}
-            onChange={(event) => updateFilter("location", event.target.value)}
-          >
-            <option value="">All locations</option>
-            {locations.map((location) => (
-              <option key={location.id} value={location.id}>
-                {location.location_name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          <CalendarDays aria-hidden="true" />
-          <span>Date</span>
-          <select aria-label="Date filter" disabled>
-            <option>All Dates</option>
-          </select>
-        </label>
-
-        <label className="pipeline-search">
-          <Search aria-hidden="true" />
-          <input
-            type="search"
-            placeholder="Search tours..."
-            value={filters.search}
-            onChange={(event) => updateFilter("search", event.target.value)}
-          />
-        </label>
+        <TourFilterControls
+          filters={filters}
+          leadSources={leadSources}
+          locations={locations}
+          onChange={updateFilter}
+          searchPlaceholder="Search family name"
+          staffLocationOnly={user?.role === "staff"}
+        />
       </div>
 
       {error && <p className="pipeline-state pipeline-state--error">{error}</p>}
