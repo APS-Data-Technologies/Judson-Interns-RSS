@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   CalendarCheck,
+  Check,
   Eye,
   GraduationCap,
+  MoveRight,
   Pencil,
   UserRoundCheck,
   UserRoundX,
@@ -54,10 +56,22 @@ function formatTourDate(value) {
 
 function PipelineCard({ tour, onMove, isMoving }) {
   const navigate = useNavigate();
+  const [isMoveMenuOpen, setIsMoveMenuOpen] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState("");
   const status = pipelineStatuses.find((item) => item.value === tour.current_status);
   const familyName = tour.family_name.endsWith("Family")
     ? tour.family_name
     : `${tour.family_name} Family`;
+  const moveOptions = nextStageActions[tour.current_status] || [];
+
+  function confirmMove() {
+    if (!pendingStatus) {
+      return;
+    }
+    onMove(tour.id, pendingStatus);
+    setIsMoveMenuOpen(false);
+    setPendingStatus("");
+  }
 
   return (
     <article className="pipeline-card">
@@ -89,21 +103,55 @@ function PipelineCard({ tour, onMove, isMoving }) {
             >
               <Pencil aria-hidden="true" />
             </button>
+            {moveOptions.length > 0 && (
+              <button
+                className="pipeline-card__move-trigger"
+                type="button"
+                aria-expanded={isMoveMenuOpen}
+                aria-label={`Move ${familyName} to next stage`}
+                disabled={isMoving}
+                onClick={() => setIsMoveMenuOpen((isOpen) => !isOpen)}
+              >
+                <MoveRight aria-hidden="true" />
+              </button>
+            )}
           </div>
         </div>
       </div>
-      {nextStageActions[tour.current_status]?.length > 0 && (
+      {isMoveMenuOpen && moveOptions.length > 0 && (
         <div className="pipeline-card__moves" aria-label={`Move ${familyName}`}>
-          {nextStageActions[tour.current_status].map((action) => (
+          {moveOptions.map((action) => (
             <button
               type="button"
               key={action.value}
               disabled={isMoving}
-              onClick={() => onMove(tour.id, action.value)}
+              aria-pressed={pendingStatus === action.value}
+              onClick={() => setPendingStatus(action.value)}
             >
-              {isMoving ? "Moving" : action.label}
+              {action.label}
             </button>
           ))}
+          <button
+            className="pipeline-card__move-confirm"
+            type="button"
+            aria-label={`Confirm move for ${familyName}`}
+            disabled={isMoving || !pendingStatus}
+            onClick={confirmMove}
+          >
+            <Check aria-hidden="true" />
+            <span>{isMoving ? "Moving" : "Confirm"}</span>
+          </button>
+          <button
+            className="pipeline-card__move-cancel"
+            type="button"
+            disabled={isMoving}
+            onClick={() => {
+              setPendingStatus("");
+              setIsMoveMenuOpen(false);
+            }}
+          >
+            Cancel
+          </button>
         </div>
       )}
     </article>
