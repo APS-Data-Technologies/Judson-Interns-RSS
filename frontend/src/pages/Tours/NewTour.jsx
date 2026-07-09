@@ -131,16 +131,6 @@ function NewTour() {
 
   return (
     <section className="new-tour-page" aria-label="Add tour">
-      <div className="new-tour-header">
-        <div>
-          <p>Tour scheduling</p>
-          <h1>New Tour</h1>
-        </div>
-        <Button variant="secondary" onClick={() => navigate("/home")}>
-          Cancel
-        </Button>
-      </div>
-
       {error && <p className="new-tour-state new-tour-state--error">{error}</p>}
       {isLoading && <p className="new-tour-state">Loading tour options...</p>}
 
@@ -239,7 +229,7 @@ function NewTour() {
         </label>
 
         <div className="new-tour-actions">
-          <Button type="button" variant="secondary" onClick={() => navigate("/home")}>
+          <Button type="button" variant="secondary" onClick={() => navigate("/tours")}>
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting || isLoading}>

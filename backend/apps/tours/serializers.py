@@ -130,9 +130,20 @@ class TourCreateSerializer(serializers.Serializer):
 
 
 class TourUpdateSerializer(serializers.ModelSerializer):
+    family_name = serializers.CharField(max_length=150, required=False)
+    contact_email = serializers.EmailField(required=False, allow_blank=True)
+    contact_phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+
     class Meta:
         model = Tour
-        fields = ("lead_source", "child_grade")
+        fields = (
+            "family_name",
+            "contact_email",
+            "contact_phone",
+            "location",
+            "lead_source",
+            "child_grade",
+        )
 
     def validate(self, attrs):
         protected_fields = {"current_status", "scheduled_tour_date"}
@@ -145,6 +156,39 @@ class TourUpdateSerializer(serializers.ModelSerializer):
                 }
             )
         return attrs
+
+    def validate_location(self, location):
+        user = self.context["request"].user
+        if user.role == User.Role.STAFF and location.pk != user.location_id:
+            raise serializers.ValidationError("You do not have access to this location.")
+        return location
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        family_fields = {
+            field: validated_data.pop(field)
+            for field in ("family_name", "contact_email", "contact_phone")
+            if field in validated_data
+        }
+
+        if family_fields:
+            family = instance.family
+            if "family_name" in family_fields:
+                family.family_name = family_fields["family_name"].strip()
+            if "contact_email" in family_fields:
+                family.contact_email = family_fields["contact_email"]
+            if "contact_phone" in family_fields:
+                family.contact_phone = family_fields["contact_phone"]
+            family.save(
+                update_fields=[
+                    "family_name",
+                    "contact_email",
+                    "contact_phone",
+                    "updated_at",
+                ]
+            )
+
+        return super().update(instance, validated_data)
 
     def to_representation(self, instance):
         return TourSerializer(instance, context=self.context).data

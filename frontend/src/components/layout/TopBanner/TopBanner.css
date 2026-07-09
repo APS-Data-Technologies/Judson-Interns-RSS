@@ -1,5 +1,7 @@
 .top-banner {
   width: 100%;
+  overflow: hidden;
+  padding: 0 clamp(0.85rem, 3vw, 1.25rem);
   min-height: clamp(4rem, 9vmin, 5.5rem);
   background: linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-navy-dark) 100%);
   color: #ffffff;
@@ -15,12 +17,15 @@
   align-items: center;
   justify-content: center;
   gap: clamp(0.5rem, 1.5vmin, 0.9rem);
+  max-width: 100%;
+  min-width: 0;
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0;
 }
 
 .top-banner__logo {
+  flex: 0 0 auto;
   width: clamp(2rem, 5vmin, 3.25rem);
   height: clamp(2rem, 5vmin, 3.25rem);
   object-fit: contain;
@@ -28,8 +33,11 @@
 }
 
 .top-banner__name {
-  font-size: clamp(1.8rem, 4.1vmin, 3rem);
+  font-size: clamp(1.7rem, 4.1vmin, 3rem);
   font-weight: 950;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -48,7 +56,26 @@
   }
 
   .top-banner__name {
-    font-size: clamp(2rem, 6.5vmin, 3rem);
+    font-size: clamp(1.7rem, 8.7vw, 2.75rem);
+  }
+}
+
+@media (max-width: 430px) {
+  .top-banner {
+    padding: 0 0.85rem;
+  }
+
+  .top-banner__brand {
+    gap: 0.55rem;
+  }
+
+  .top-banner__logo {
+    height: clamp(2.2rem, 10vw, 2.8rem);
+    width: clamp(2.2rem, 10vw, 2.8rem);
+  }
+
+  .top-banner__name {
+    font-size: clamp(1.65rem, 8vw, 2.2rem);
   }
 }
 

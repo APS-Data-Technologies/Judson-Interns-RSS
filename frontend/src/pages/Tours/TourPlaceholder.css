@@ -164,15 +164,31 @@
 .tour-edit-form input,
 .tour-edit-form select,
 .tour-edit-form textarea {
+  appearance: none;
+  -webkit-appearance: none;
   background: var(--color-surface-soft);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  box-sizing: border-box;
   color: var(--color-text-primary);
   font-size: 1rem;
   font-weight: 700;
+  max-width: 100%;
   min-height: 44px;
+  min-width: 0;
   padding: 0 var(--space-3);
   width: 100%;
+}
+
+.tour-edit-form input[type="date"],
+.tour-edit-form input[type="time"] {
+  line-height: 44px;
+  text-align: left;
+}
+
+.tour-edit-form input[type="date"]::-webkit-date-and-time-value,
+.tour-edit-form input[type="time"]::-webkit-date-and-time-value {
+  text-align: left;
 }
 
 .tour-edit-form textarea {
@@ -214,6 +230,7 @@
   .tour-detail-grid,
   .tour-edit-form {
     grid-template-columns: 1fr;
+    width: 100%;
   }
 
   .tour-detail-panel dl div {

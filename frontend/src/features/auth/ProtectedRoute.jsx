@@ -31,7 +31,10 @@ function ProtectedRoute() {
   }
 
   const firstName = user?.first_name || user?.email?.split("@")[0] || "there";
-  const dynamicTitle = location.pathname.match(/^\/tours\/[^/]+\/edit$/)
+  const routeTitle = routeTitles[location.pathname];
+  const dynamicTitle = routeTitle
+    ? null
+    : location.pathname.match(/^\/tours\/[^/]+\/edit$/)
     ? "Edit Tour"
     : location.pathname.match(/^\/tours\/[^/]+$/)
       ? "Tour Details"
@@ -39,7 +42,7 @@ function ProtectedRoute() {
   const pageTitle =
     location.pathname === "/home"
       ? `Hello ${firstName}`
-      : dynamicTitle || routeTitles[location.pathname] || "Ready Set STEM";
+      : routeTitle || dynamicTitle || "Ready Set STEM";
 
   return (
     <AppShell title={pageTitle}>

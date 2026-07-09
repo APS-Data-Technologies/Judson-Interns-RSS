@@ -8,19 +8,10 @@ import {
   getTour,
   getTourEvents,
   rescheduleTour,
-  transitionTourStatus,
   updateTour,
 } from "../../features/tours/tourApi";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
 import "./TourPlaceholder.css";
-
-const statusActions = [
-  { value: "toured", label: "Mark Toured" },
-  { value: "enrolled", label: "Mark Enrolled" },
-  { value: "no_show", label: "No Show" },
-  { value: "churned", label: "Churned" },
-  { value: "cancelled", label: "Cancel" },
-];
 
 function formatDateTime(value) {
   if (!value) return "";
@@ -50,6 +41,11 @@ function getFormFromTour(tour) {
     tourTime: toTimeInput(tour.scheduled_tour_date),
     notes: "",
   };
+}
+
+function getFamilyDisplayName(familyName) {
+  if (!familyName) return "Family";
+  return familyName.endsWith("Family") ? familyName : `${familyName} Family`;
 }
 
 function TourPlaceholder({ mode }) {
@@ -135,26 +131,6 @@ function TourPlaceholder({ mode }) {
     setInitialForm(nextForm);
   }
 
-  async function handleStatus(status) {
-    setError("");
-    setMessage("");
-    setIsSaving(true);
-
-    try {
-      const tourData = await transitionTourStatus(id, {
-        status,
-        notes: `Status changed to ${status}.`,
-      });
-      setTour(tourData);
-      setEvents(await getTourEvents(id));
-      setMessage("Tour status updated.");
-    } catch {
-      setError("Unable to update tour status.");
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
@@ -168,6 +144,10 @@ function TourPlaceholder({ mode }) {
         form.tourTime !== initialForm.tourTime;
 
       await updateTour(id, {
+        family_name: form.familyName,
+        contact_email: form.contactEmail,
+        contact_phone: form.contactPhone,
+        location: Number(form.location),
         lead_source: Number(form.leadSource),
         child_grade: form.childGrade,
       });
@@ -201,12 +181,13 @@ function TourPlaceholder({ mode }) {
     return <p className="tour-detail-state">Tour not found.</p>;
   }
 
+  const familyDisplayName = getFamilyDisplayName(tour.family_name);
+
   return (
     <section className="tour-detail-page">
       <header className="tour-detail-hero">
         <div>
-          <p>Tour #{tour.id}</p>
-          <h1>{tour.family_name} Family</h1>
+          <h1>{familyDisplayName}</h1>
           <span>{tour.status_label}</span>
         </div>
         <div className="tour-detail-hero__actions">
@@ -228,19 +209,19 @@ function TourPlaceholder({ mode }) {
         <form className="tour-edit-form" onSubmit={handleSubmit}>
           <label>
             <span>Family name</span>
-            <input value={form.familyName} disabled required />
+            <input value={form.familyName} onChange={(event) => updateForm("familyName", event.target.value)} required />
           </label>
           <label>
             <span>Email</span>
-            <input type="email" value={form.contactEmail} disabled />
+            <input type="email" value={form.contactEmail} onChange={(event) => updateForm("contactEmail", event.target.value)} />
           </label>
           <label>
             <span>Phone</span>
-            <input type="tel" value={form.contactPhone} disabled />
+            <input type="tel" value={form.contactPhone} onChange={(event) => updateForm("contactPhone", event.target.value)} />
           </label>
           <label>
             <span>Location</span>
-            <select value={form.location} disabled required>
+            <select value={form.location} onChange={(event) => updateForm("location", event.target.value)} required>
               {locations.map((location) => (
                 <option key={location.id} value={location.id}>{location.location_name}</option>
               ))}
@@ -271,7 +252,7 @@ function TourPlaceholder({ mode }) {
             <textarea rows="4" value={form.notes} onChange={(event) => updateForm("notes", event.target.value)} />
           </label>
           <div className="tour-edit-form__actions">
-            <Button type="button" variant="secondary" onClick={() => navigate(`/tours/${id}`)}>
+            <Button type="button" variant="secondary" onClick={() => navigate("/tours")}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSaving}>
@@ -299,22 +280,6 @@ function TourPlaceholder({ mode }) {
               <div><dt>Email</dt><dd>{tour.contact_email || "Not set"}</dd></div>
               <div><dt>Phone</dt><dd>{tour.contact_phone || "Not set"}</dd></div>
             </dl>
-          </section>
-
-          <section className="tour-detail-panel tour-detail-panel--wide">
-            <h2>Status Actions</h2>
-            <div className="tour-status-actions">
-              {statusActions.map((action) => (
-                <button
-                  key={action.value}
-                  type="button"
-                  disabled={isSaving || tour.current_status === action.value}
-                  onClick={() => handleStatus(action.value)}
-                >
-                  {action.label}
-                </button>
-              ))}
-            </div>
           </section>
 
           <section className="tour-detail-panel tour-detail-panel--wide">

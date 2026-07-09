@@ -230,7 +230,7 @@
 .pipeline-card__actions {
   display: grid;
   gap: var(--space-2);
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .pipeline-card__actions button,
@@ -256,9 +256,10 @@
 }
 
 .pipeline-card__moves {
-  display: flex;
-  flex-wrap: wrap;
+  align-items: stretch;
+  display: grid;
   gap: var(--space-2);
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto auto;
 }
 
 .pipeline-card__moves button {
@@ -266,9 +267,42 @@
   border: 1px solid var(--color-action-border);
   border-radius: var(--radius-sm);
   color: var(--color-action);
-  flex: 1 1 112px;
   font-weight: 900;
   min-height: 42px;
+}
+
+.pipeline-card__moves button[aria-pressed="true"] {
+  background: var(--color-action-soft);
+  border-color: var(--color-action);
+}
+
+.pipeline-card__move-confirm {
+  align-items: center;
+  background: var(--color-action) !important;
+  color: #ffffff !important;
+  display: inline-flex;
+  gap: var(--space-1);
+  justify-content: center;
+  min-width: 48px;
+  padding: 0 var(--space-3);
+}
+
+.pipeline-card__move-cancel {
+  background: #ffffff !important;
+  border-color: var(--color-border) !important;
+  color: #475569 !important;
+  min-width: 92px;
+  padding: 0 var(--space-3);
+}
+
+.pipeline-card__move-confirm:disabled {
+  background: #dbe4f0 !important;
+  color: #64748b !important;
+}
+
+.pipeline-card__move-confirm svg {
+  height: 18px;
+  width: 18px;
 }
 
 .pipeline-card__moves button:disabled {
@@ -302,36 +336,46 @@
 
   .pipeline-board {
     align-items: start;
-    grid-template-columns: clamp(78px, 22vw, 112px) minmax(0, 1fr);
+    grid-template-columns: clamp(78px, 22vw, 96px) minmax(0, 1fr);
   }
 
   .pipeline-tabs {
+    align-self: stretch;
     grid-template-columns: 1fr;
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+    height: min(50vh, 398px);
     position: sticky;
-    top: var(--space-2);
+    top: calc(var(--space-2) + 78px);
   }
 
   .pipeline-tab {
     gap: var(--space-1);
     grid-template-columns: 1fr;
     justify-items: center;
-    min-height: 92px;
-    padding: var(--space-2);
+    min-height: 0;
+    padding: 6px 5px;
     text-align: center;
   }
 
   .pipeline-tab__label {
-    font-size: clamp(0.68rem, 2.4vw, 0.86rem);
+    font-size: clamp(0.62rem, 2vw, 0.78rem);
+    line-height: 1.05;
     white-space: normal;
   }
 
   .pipeline-tab__count {
-    height: 28px;
-    min-width: 28px;
+    background: transparent !important;
+    border-radius: 0;
+    color: currentColor;
+    font-size: 0.9rem;
+    height: auto;
+    line-height: 1;
+    min-width: 0;
+    padding: 0;
   }
 
   .pipeline-stage-panel__body {
-    max-height: calc(100dvh - 360px);
+    max-height: calc(100dvh - 390px);
   }
 
   .pipeline-stage-panel__header {
@@ -347,13 +391,13 @@
 
   .pipeline-board {
     gap: var(--space-2);
-    grid-template-columns: 72px minmax(0, 1fr);
+    grid-template-columns: 86px minmax(0, 1fr);
   }
 
   .pipeline-tab {
     border-radius: var(--radius-sm);
-    min-height: 76px;
-    padding: var(--space-1);
+    min-height: 0;
+    padding: 5px 3px;
   }
 
   .pipeline-tab__icon {
@@ -362,12 +406,12 @@
   }
 
   .pipeline-tab__icon svg {
-    height: 19px;
-    width: 19px;
+    height: 18px;
+    width: 18px;
   }
 
   .pipeline-tab__label {
-    font-size: 0.62rem;
+    font-size: 0.68rem;
     line-height: 1.05;
   }
 
@@ -391,5 +435,17 @@
 
   .pipeline-card__side {
     grid-template-columns: 1fr auto;
+  }
+
+  .pipeline-card__badge {
+    min-width: 0;
+  }
+
+  .pipeline-card__moves {
+    grid-template-columns: 1fr;
+  }
+
+  .pipeline-card__move-cancel {
+    min-width: 0;
   }
 }

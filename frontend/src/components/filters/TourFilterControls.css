@@ -262,7 +262,7 @@
     padding: var(--space-2);
     position: sticky;
     top: -1px;
-    z-index: 25;
+    z-index: 35;
   }
 
   .tour-filters::before {
@@ -270,7 +270,7 @@
     border-radius: 0 0 var(--radius-lg) var(--radius-lg);
     box-shadow: 0 12px 22px rgba(15, 23, 42, 0.04);
     content: "";
-    inset: -10px -14px -10px;
+    inset: -14px -18px -14px;
     position: absolute;
     z-index: -1;
   }
@@ -282,7 +282,7 @@
   }
 
   .tour-filters--locked-date .tour-filters__mobile-bar {
-    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(78px, 92px) minmax(0, 1fr);
   }
 
   .tour-filters--no-search .tour-filters__mobile-bar {
@@ -336,7 +336,7 @@
     gap: var(--space-1);
     justify-content: center;
     min-height: 60px;
-    min-width: 86px;
+    min-width: 0;
     padding: 0 var(--space-2);
     font-size: 0.92rem;
     font-weight: 950;
@@ -379,8 +379,8 @@
     display: grid;
     gap: var(--space-2);
     max-width: 100%;
-    max-height: min(70dvh, 620px);
-    overflow: visible;
+    max-height: min(76dvh, 620px);
+    overflow: hidden;
     padding: var(--space-2);
     width: 100%;
   }
@@ -411,7 +411,7 @@
     display: grid;
     gap: var(--space-2);
     grid-template-columns: 1fr;
-    max-height: min(36dvh, 320px);
+    max-height: min(42dvh, 360px);
     overflow: auto;
     width: 100%;
   }
@@ -626,23 +626,35 @@
 
   .tour-filters__mobile-trigger {
     border-radius: 999px;
-    min-height: 58px;
-    width: 58px;
+    min-height: 54px;
+    width: 54px;
   }
 
   .tour-filters__mobile-search {
     border-radius: var(--radius-md);
-    min-height: 58px;
+    min-height: 54px;
   }
 
   .tour-filters--locked-date .tour-filters__mobile-bar {
-    grid-template-columns: auto minmax(74px, auto) minmax(0, 1fr);
+    grid-template-columns: auto minmax(70px, 82px) minmax(0, 1fr);
   }
 
   .tour-filters__mobile-fixed-chip {
     font-size: 0.82rem;
-    min-height: 58px;
-    min-width: 74px;
+    min-height: 54px;
+    min-width: 0;
     padding: 0 var(--space-1);
+  }
+
+  .tour-filters__mobile-fixed-chip svg {
+    display: none;
+  }
+
+  .tour-filters__mobile-search {
+    padding: 0 var(--space-2);
+  }
+
+  .tour-filters__mobile-search input {
+    font-size: 0.9rem;
   }
 }
