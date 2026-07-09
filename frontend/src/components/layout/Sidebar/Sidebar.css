@@ -1,7 +1,7 @@
 .app-sidebar {
   height: 100%;
   min-height: 0;
-  background: linear-gradient(180deg, #0f62fe 0%, #0757d4 100%);
+  background: linear-gradient(180deg, var(--brand-navy) 0%, var(--brand-navy-dark) 100%);
   color: #ffffff;
   border-radius: 0;
   padding: clamp(0.7rem, 1.4vmin, 1rem) 0;
@@ -65,7 +65,7 @@
 
 .sidebar-nav-item.active .sidebar-nav-icon-wrap {
   background: #ffffff;
-  color: #0f62fe;
+  color: var(--brand-navy);
 }
 
 .sidebar-nav-icon {

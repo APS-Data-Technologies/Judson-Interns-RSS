@@ -18,12 +18,12 @@
     clamp(0.42rem, 1vmin, 0.85rem)
     clamp(0.55rem, 1.7vmin, 1.35rem);
 
-  background: linear-gradient(135deg, #0f62fe 0%, #0a58d8 100%);
+  background: linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-navy-dark) 100%);
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: clamp(0.7rem, 1.6vmin, 1.2rem);
 
   box-shadow:
-    0 0.8rem 1.8rem rgba(15, 98, 254, 0.18),
+    0 0.8rem 1.8rem rgba(32, 72, 110, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.24);
 }
 

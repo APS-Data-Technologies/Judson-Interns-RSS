@@ -25,33 +25,33 @@
 }
 
 .rss-badge--booked {
-  background: #ede9fe;
-  color: #7c3aed;
+  background: var(--status-booked);
+  color: #ffffff;
 }
 
 .rss-badge--toured {
-  background: #dbeafe;
-  color: #2563eb;
+  background: var(--status-toured);
+  color: #08265c;
 }
 
 .rss-badge--enrolled {
-  background: #dcfce7;
-  color: #16a34a;
+  background: var(--status-enrolled);
+  color: #ffffff;
 }
 
 .rss-badge--churned {
-  background: #fee2e2;
-  color: #dc2626;
+  background: var(--status-churned);
+  color: #ffffff;
 }
 
 .rss-badge--no-show {
-  background: #ffedd5;
-  color: #ea580c;
+  background: var(--status-no-show);
+  color: #ffffff;
 }
 
 .rss-badge--info {
-  background: #dbeafe;
-  color: #2563eb;
+  background: var(--info-bg);
+  color: var(--info-text);
 }
 
 .rss-badge--success {

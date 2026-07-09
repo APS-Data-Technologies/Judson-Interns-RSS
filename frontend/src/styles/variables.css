@@ -1,16 +1,30 @@
 :root {
   /* Brand colors */
-  --rss-blue: #0b4dbb;
-  --rss-blue-dark: #083a8c;
+  --brand-navy: #28577f;
+  --brand-navy-dark: #20486e;
+  --rss-blue: #0f8b8d;
+  --rss-blue-dark: #0b6f72;
   --rss-gold: #f5b400;
   --rss-green: #16a34a;
   --rss-red: #ef4444;
   --rss-purple: #7c3aed;
+  --action-blue: #0f8b8d;
+  --action-blue-dark: #0b6f72;
+  --action-blue-soft: #e7f7f7;
+  --action-blue-border: #a8dddd;
+  --info-bg: #eef7f9;
+  --info-border: #b9dfe7;
+  --info-text: #256d7b;
+  --neutral-action: #64748b;
 
   /* App colors */
-  --color-primary: var(--rss-blue);
-  --color-primary-dark: var(--rss-blue-dark);
-  --color-primary-light: #dbeafe;
+  --color-primary: var(--action-blue);
+  --color-primary-dark: var(--action-blue-dark);
+  --color-primary-light: var(--action-blue-soft);
+  --color-action: var(--action-blue);
+  --color-action-dark: var(--action-blue-dark);
+  --color-action-soft: var(--action-blue-soft);
+  --color-action-border: var(--action-blue-border);
 
   --color-background: #f7faff;
   --color-surface: #ffffff;

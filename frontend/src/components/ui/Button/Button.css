@@ -9,7 +9,7 @@
 }
 
 .btn--primary {
-  background: #2563eb;
+  background: var(--color-action);
   color: white;
 }
 
@@ -20,7 +20,7 @@
 
 .btn--ghost {
   background: transparent;
-  color: #2563eb;
+  color: var(--color-action);
 }
 
 .btn--sm {
