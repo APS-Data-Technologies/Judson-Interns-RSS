@@ -116,6 +116,7 @@ function Pipeline() {
   const [locations, setLocations] = useState([]);
   const [leadSources, setLeadSources] = useState([]);
   const [filters, setFilters] = useState(() => createDefaultTourFilters(user));
+  const [activeStatus, setActiveStatus] = useState("scheduled");
   const [movingTourId, setMovingTourId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -202,6 +203,8 @@ function Pipeline() {
       }, {}),
     [tours],
   );
+  const activeStage = pipelineStatuses.find((status) => status.value === activeStatus) || pipelineStatuses[0];
+  const activeTours = groupedTours[activeStage.value] || [];
 
   function updateFilter(name, value) {
     setFilters((currentFilters) => ({
@@ -246,44 +249,57 @@ function Pipeline() {
       {error && <p className="pipeline-state pipeline-state--error">{error}</p>}
       {isLoading && <p className="pipeline-state">Loading pipeline...</p>}
 
-      <div className="pipeline-flow">
+      <div className="pipeline-board">
+        <div className="pipeline-tabs" role="tablist" aria-label="Pipeline stages">
         {pipelineStatuses.map((status) => {
           const Icon = status.icon;
           const groupTours = groupedTours[status.value] || [];
 
           return (
-            <section
-              className={`pipeline-stage pipeline-stage--${status.value}`}
+            <button
+              className={`pipeline-tab pipeline-tab--${status.value}`}
               key={status.value}
+              type="button"
+              role="tab"
+              aria-selected={activeStage.value === status.value}
+              onClick={() => setActiveStatus(status.value)}
             >
-              <header className="pipeline-stage__header">
-                <span className="pipeline-stage__icon">
-                  <Icon aria-hidden="true" />
-                </span>
-                <div>
-                  <strong>{status.label}</strong>
-                  <span>{groupTours.length} tours</span>
-                </div>
-                <span className="pipeline-stage__count">{groupTours.length}</span>
-              </header>
-
-              <div className="pipeline-stage__body">
-                {groupTours.length > 0 ? (
-                  groupTours.map((tour) => (
-                    <PipelineCard
-                      key={tour.id}
-                      tour={tour}
-                      isMoving={movingTourId === tour.id}
-                      onMove={moveTour}
-                    />
-                  ))
-                ) : (
-                  <p className="pipeline-empty">No tours in this status.</p>
-                )}
-              </div>
-            </section>
+              <span className="pipeline-tab__icon"><Icon aria-hidden="true" /></span>
+              <span className="pipeline-tab__label">{status.label}</span>
+              <span className="pipeline-tab__count">{groupTours.length}</span>
+            </button>
           );
         })}
+        </div>
+
+        <section
+          className={`pipeline-stage-panel pipeline-stage-panel--${activeStage.value}`}
+          role="tabpanel"
+          aria-label={`${activeStage.label} tours`}
+        >
+          <header className="pipeline-stage-panel__header">
+            <div>
+              <h2>{activeStage.label}</h2>
+              <p>{activeTours.length} tours</p>
+            </div>
+            <span className="pipeline-stage-panel__count">{activeTours.length}</span>
+          </header>
+
+          <div className="pipeline-stage-panel__body">
+            {activeTours.length > 0 ? (
+              activeTours.map((tour) => (
+                <PipelineCard
+                  key={tour.id}
+                  tour={tour}
+                  isMoving={movingTourId === tour.id}
+                  onMove={moveTour}
+                />
+              ))
+            ) : (
+              <p className="pipeline-empty">No tours in this status.</p>
+            )}
+          </div>
+        </section>
       </div>
     </section>
   );

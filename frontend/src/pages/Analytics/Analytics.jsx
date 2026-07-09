@@ -107,29 +107,12 @@ function Analytics() {
       }),
       {},
     );
-    const enrolled = counts.enrolled || 0;
-    const toured = counts.toured || 0;
-    const cost = Number(costBasis) || 0;
-
-    return [
-      { label: "Total tours", value: tours.length, tone: "total" },
-      ...Object.entries(metricLabels).map(([status, label]) => ({
+    return Object.entries(metricLabels).map(([status, label]) => ({
         label,
         value: counts[status] || 0,
         tone: status,
-      })),
-      {
-        label: "Tour to enroll",
-        value: toured ? `${Math.round((enrolled / toured) * 100)}%` : "0%",
-        tone: "rate",
-      },
-      {
-        label: "Estimated cost",
-        value: cost ? `$${(tours.length * cost).toLocaleString()}` : "$0",
-        tone: "cost",
-      },
-    ];
-  }, [costBasis, tours]);
+      }));
+  }, [tours]);
 
   function updateFilter(name, value) {
     setFilters((currentFilters) => ({

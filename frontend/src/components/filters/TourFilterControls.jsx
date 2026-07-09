@@ -3,19 +3,24 @@ import {
   CalendarDays,
   CheckCheck,
   ChevronDown,
+  CircleDot,
+  DollarSign,
   Eraser,
-  Filter,
+  RadioTower,
   MapPin,
   Search,
 } from "lucide-react";
 
 import {
-  currentMonthValue,
-  currentYearValue,
   datePresetOptions,
   statusOptions,
 } from "../../features/tours/filterConfig";
 import "./TourFilterControls.css";
+
+const datePresetRows = [
+  ["yesterday", "today", "tomorrow"],
+  ["last_7_days", "last_30_days"],
+];
 
 function getSummary(values, options, fallback) {
   if (!values.length) return fallback;
@@ -114,6 +119,7 @@ function DateFilter({ filters, isOpen, onChange, onToggle }) {
   const selectedOption =
     datePresetOptions.find((option) => option.value === filters.datePreset) ||
     datePresetOptions[0];
+  const optionsByValue = new Map(datePresetOptions.map((option) => [option.value, option]));
 
   return (
     <FilterShell
@@ -124,56 +130,51 @@ function DateFilter({ filters, isOpen, onChange, onToggle }) {
       summary={selectedOption.label}
     >
       <div className="tour-filter__menu tour-filter__menu--date">
-        {datePresetOptions.map((option) => (
-          <button
-            className="tour-filter__preset"
-            type="button"
-            key={option.value}
-            aria-pressed={filters.datePreset === option.value}
-            onClick={() => onChange("datePreset", option.value)}
-          >
-            {option.label}
-          </button>
+        {datePresetRows.map((row) => (
+          <div className="tour-filter__preset-row" key={row.join("-")}>
+            {row.map((value) => {
+              const option = optionsByValue.get(value);
+              return (
+                <button
+                  className="tour-filter__preset"
+                  type="button"
+                  key={option.value}
+                  aria-pressed={filters.datePreset === option.value}
+                  onClick={() => onChange("datePreset", option.value)}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
         ))}
 
-        {filters.datePreset === "custom" && (
-          <div className="tour-filter__range">
+        <div className="tour-filter__range">
+          <label>
+            <small>From</small>
             <input
               aria-label="Start date"
               type="date"
               value={filters.dateFrom}
-              onChange={(event) => onChange("dateFrom", event.target.value)}
+              onChange={(event) => {
+                onChange("datePreset", "custom");
+                onChange("dateFrom", event.target.value);
+              }}
             />
+          </label>
+          <label>
+            <small>To</small>
             <input
               aria-label="End date"
               type="date"
               value={filters.dateTo}
-              onChange={(event) => onChange("dateTo", event.target.value)}
+              onChange={(event) => {
+                onChange("datePreset", "custom");
+                onChange("dateTo", event.target.value);
+              }}
             />
-          </div>
-        )}
-
-        {filters.datePreset === "month" && (
-          <input
-            aria-label="Month"
-            className="tour-filter__single-input"
-            type="month"
-            value={filters.month}
-            onChange={(event) => onChange("month", event.target.value || currentMonthValue())}
-          />
-        )}
-
-        {filters.datePreset === "year" && (
-          <input
-            aria-label="Year"
-            className="tour-filter__single-input"
-            max="2100"
-            min="2000"
-            type="number"
-            value={filters.year}
-            onChange={(event) => onChange("year", event.target.value || currentYearValue())}
-          />
-        )}
+          </label>
+        </div>
       </div>
     </FilterShell>
   );
@@ -271,7 +272,7 @@ function TourFilterControls({
       {showLeadSource && (
         <MultiFilter
           fallback="All sources"
-          icon={Filter}
+          icon={RadioTower}
           isOpen={openFilter === "leadSources"}
           label="Lead source"
           onChange={(values) => onChange("leadSources", values)}
@@ -284,7 +285,7 @@ function TourFilterControls({
       {showStatus && (
         <MultiFilter
           fallback="All statuses"
-          icon={Filter}
+          icon={CircleDot}
           isOpen={openFilter === "statuses"}
           label="Status"
           onChange={(values) => onChange("statuses", values)}
@@ -296,7 +297,7 @@ function TourFilterControls({
 
       {showCostBasis && (
         <label className="tour-filter tour-filter--cost">
-          <Filter aria-hidden="true" />
+          <DollarSign aria-hidden="true" />
           <span>
             <small>Cost basis</small>
             <input

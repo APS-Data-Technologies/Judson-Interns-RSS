@@ -10,7 +10,7 @@
 .analytics-grid {
   display: grid;
   gap: var(--space-4);
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .analytics-card {
@@ -20,8 +20,20 @@
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
   display: grid;
   gap: var(--space-3);
+  grid-template-rows: auto 1fr;
   min-height: 150px;
   padding: var(--space-5);
+  position: relative;
+  overflow: hidden;
+}
+
+.analytics-card::before {
+  content: "";
+  height: 6px;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
 }
 
 .analytics-card span {
@@ -36,6 +48,26 @@
   font-size: clamp(2.2rem, 4vw, 3.8rem);
   font-weight: 950;
   line-height: 1;
+}
+
+.analytics-card--scheduled::before {
+  background: var(--status-booked);
+}
+
+.analytics-card--toured::before {
+  background: var(--status-toured);
+}
+
+.analytics-card--enrolled::before {
+  background: var(--status-enrolled);
+}
+
+.analytics-card--churned::before {
+  background: var(--status-churned);
+}
+
+.analytics-card--no_show::before {
+  background: var(--status-no-show);
 }
 
 .analytics-state {
@@ -55,18 +87,27 @@
 
 @media (max-aspect-ratio: 11/10) {
   .analytics-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .analytics-card {
-    min-height: 128px;
-    padding: var(--space-4);
+    min-height: 112px;
+    padding: var(--space-3);
+  }
+
+  .analytics-card span {
+    font-size: 0.7rem;
+  }
+
+  .analytics-card strong {
+    font-size: clamp(1.9rem, 8vw, 3rem);
   }
 }
 
 @media (max-width: 520px) {
   .analytics-grid {
     gap: var(--space-2);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .analytics-card {

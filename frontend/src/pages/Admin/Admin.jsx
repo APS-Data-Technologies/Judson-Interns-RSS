@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, NavLink, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { NavLink, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import useAuth from "../../features/auth/useAuth";
 import {
   createUser,
@@ -13,6 +13,11 @@ import {
   listLocations as listManagedLocations,
   updateLocation as saveLocation,
 } from "../../features/admin/locationApi";
+import {
+  createLeadSource,
+  listLeadSources as listManagedLeadSources,
+  updateLeadSource as saveLeadSource,
+} from "../../features/admin/leadSourceApi";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
 import "./Admin.css";
 
@@ -33,6 +38,13 @@ const emptyLocationForm = {
   state: "",
   zip_code: "",
   phone: "",
+  is_active: true,
+};
+
+const emptyLeadSourceForm = {
+  external_id: "",
+  source_name: "",
+  description: "",
   is_active: true,
 };
 
@@ -74,6 +86,15 @@ function getLocationForm(location) {
   };
 }
 
+function getLeadSourceForm(leadSource) {
+  return {
+    external_id: leadSource.external_id || "",
+    source_name: leadSource.source_name || "",
+    description: leadSource.description || "",
+    is_active: leadSource.is_active,
+  };
+}
+
 function Admin() {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
@@ -83,14 +104,19 @@ function Admin() {
   const [users, setUsers] = useState([]);
   const [locations, setLocations] = useState([]);
   const [managedLocations, setManagedLocations] = useState([]);
+  const [managedLeadSources, setManagedLeadSources] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [initialForm, setInitialForm] = useState(emptyForm);
   const [locationForm, setLocationForm] = useState(emptyLocationForm);
   const [initialLocationForm, setInitialLocationForm] = useState(emptyLocationForm);
+  const [leadSourceForm, setLeadSourceForm] = useState(emptyLeadSourceForm);
+  const [initialLeadSourceForm, setInitialLeadSourceForm] = useState(emptyLeadSourceForm);
   const [editingId, setEditingId] = useState(null);
   const [editingLocationId, setEditingLocationId] = useState(null);
+  const [editingLeadSourceId, setEditingLeadSourceId] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLocationFormOpen, setIsLocationFormOpen] = useState(false);
+  const [isLeadSourceFormOpen, setIsLeadSourceFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -115,6 +141,12 @@ function Admin() {
       : location.pathname.includes("/admin/locations/") && location.pathname.endsWith("/edit")
         ? params.id
         : searchParams.get("location");
+  const leadSourceParam =
+    location.pathname === "/admin/lead-sources/new"
+      ? "new"
+      : location.pathname.includes("/admin/lead-sources/") && location.pathname.endsWith("/edit")
+        ? params.id
+        : searchParams.get("leadSource");
   const isUserFormDirty = useMemo(
     () => isFormOpen && JSON.stringify(form) !== JSON.stringify(initialForm),
     [form, initialForm, isFormOpen],
@@ -125,9 +157,16 @@ function Admin() {
       && JSON.stringify(locationForm) !== JSON.stringify(initialLocationForm),
     [initialLocationForm, isLocationFormOpen, locationForm],
   );
+  const isLeadSourceFormDirty = useMemo(
+    () =>
+      isLeadSourceFormOpen
+      && JSON.stringify(leadSourceForm) !== JSON.stringify(initialLeadSourceForm),
+    [initialLeadSourceForm, isLeadSourceFormOpen, leadSourceForm],
+  );
 
   useUnsavedChangesPrompt(isUserFormDirty && !isSaving);
   useUnsavedChangesPrompt(isLocationFormDirty && !isSaving);
+  useUnsavedChangesPrompt(isLeadSourceFormDirty && !isSaving);
 
   const loadData = useCallback(async () => {
     if (!canManageUsers) {
@@ -154,6 +193,19 @@ function Admin() {
     try {
       const locationData = await listManagedLocations({ include_inactive: true });
       setManagedLocations(locationData);
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    }
+  }, [canManageAdmin]);
+
+  const loadManagedLeadSources = useCallback(async () => {
+    if (!canManageAdmin) {
+      return;
+    }
+    setError("");
+    try {
+      const sourceData = await listManagedLeadSources({ include_inactive: true });
+      setManagedLeadSources(sourceData);
     } catch (requestError) {
       setError(getErrorMessage(requestError));
     }
@@ -190,6 +242,28 @@ function Admin() {
       .then((locationData) => {
         if (!cancelled) {
           setManagedLocations(locationData);
+        }
+      })
+      .catch((requestError) => {
+        if (!cancelled) setError(getErrorMessage(requestError));
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [adminSection, canManageAdmin]);
+
+  useEffect(() => {
+    if (adminSection !== "leadSources" || !canManageAdmin) return undefined;
+
+    let cancelled = false;
+    listManagedLeadSources({ include_inactive: true })
+      .then((sourceData) => {
+        if (!cancelled) {
+          setManagedLeadSources(sourceData);
         }
       })
       .catch((requestError) => {
@@ -269,6 +343,40 @@ function Admin() {
     navigate("/admin/locations");
   }
 
+  function openCreateLeadSourceForm() {
+    setEditingLeadSourceId(null);
+    setLeadSourceForm(emptyLeadSourceForm);
+    setInitialLeadSourceForm(emptyLeadSourceForm);
+    setError("");
+    setIsLeadSourceFormOpen(true);
+    navigate("/admin/lead-sources/new");
+  }
+
+  function openEditLeadSourceForm(source) {
+    const nextForm = getLeadSourceForm(source);
+    setEditingLeadSourceId(source.id);
+    setLeadSourceForm(nextForm);
+    setInitialLeadSourceForm(nextForm);
+    setError("");
+    setIsLeadSourceFormOpen(true);
+    navigate(`/admin/lead-sources/${source.id}/edit`);
+  }
+
+  function closeLeadSourceForm() {
+    if (
+      isLeadSourceFormDirty
+      && !window.confirm("You have unsaved changes. Close this form?")
+    ) {
+      return;
+    }
+
+    setIsLeadSourceFormOpen(false);
+    setLeadSourceForm(emptyLeadSourceForm);
+    setInitialLeadSourceForm(emptyLeadSourceForm);
+    setEditingLeadSourceId(null);
+    navigate("/admin/lead-sources");
+  }
+
   function updateForm(field, value) {
     setForm((current) => ({
       ...current,
@@ -279,6 +387,13 @@ function Admin() {
 
   function updateLocationForm(field, value) {
     setLocationForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  function updateLeadSourceForm(field, value) {
+    setLeadSourceForm((current) => ({
       ...current,
       [field]: value,
     }));
@@ -364,6 +479,48 @@ function Admin() {
     try {
       await saveLocation(locationItem.id, { is_active: !locationItem.is_active });
       await loadManagedLocations();
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    }
+  }
+
+  async function handleLeadSourceSubmit(event) {
+    event.preventDefault();
+    setError("");
+    setIsSaving(true);
+
+    try {
+      const payload = {
+        ...leadSourceForm,
+        source_name: leadSourceForm.source_name.trim(),
+        description: leadSourceForm.description.trim(),
+      };
+      if (!payload.external_id) delete payload.external_id;
+
+      if (editingLeadSourceId) {
+        await saveLeadSource(editingLeadSourceId, payload);
+      } else {
+        await createLeadSource(payload);
+      }
+
+      setIsLeadSourceFormOpen(false);
+      setLeadSourceForm(emptyLeadSourceForm);
+      setInitialLeadSourceForm(emptyLeadSourceForm);
+      setEditingLeadSourceId(null);
+      navigate("/admin/lead-sources", { replace: true });
+      await loadManagedLeadSources();
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleLeadSourceStatusChange(source) {
+    setError("");
+    try {
+      await saveLeadSource(source.id, { is_active: !source.is_active });
+      await loadManagedLeadSources();
     } catch (requestError) {
       setError(getErrorMessage(requestError));
     }
@@ -456,8 +613,56 @@ function Admin() {
     managedLocations,
   ]);
 
+  useEffect(() => {
+    if (adminSection !== "leadSources" || !canManageAdmin) return;
+
+    queueMicrotask(() => {
+      if (leadSourceParam === "new") {
+        if (!isLeadSourceFormOpen || editingLeadSourceId !== null) {
+          setEditingLeadSourceId(null);
+          setLeadSourceForm(emptyLeadSourceForm);
+          setInitialLeadSourceForm(emptyLeadSourceForm);
+          setError("");
+          setIsLeadSourceFormOpen(true);
+        }
+        return;
+      }
+
+      if (leadSourceParam) {
+        const selectedSource = managedLeadSources.find(
+          (source) => String(source.id) === leadSourceParam,
+        );
+        if (!selectedSource) return;
+
+        if (!isLeadSourceFormOpen || editingLeadSourceId !== selectedSource.id) {
+          const nextForm = getLeadSourceForm(selectedSource);
+          setEditingLeadSourceId(selectedSource.id);
+          setLeadSourceForm(nextForm);
+          setInitialLeadSourceForm(nextForm);
+          setError("");
+          setIsLeadSourceFormOpen(true);
+        }
+        return;
+      }
+
+      if (isLeadSourceFormOpen) {
+        setIsLeadSourceFormOpen(false);
+        setLeadSourceForm(emptyLeadSourceForm);
+        setInitialLeadSourceForm(emptyLeadSourceForm);
+        setEditingLeadSourceId(null);
+      }
+    });
+  }, [
+    adminSection,
+    canManageAdmin,
+    editingLeadSourceId,
+    isLeadSourceFormOpen,
+    leadSourceParam,
+    managedLeadSources,
+  ]);
+
   if (location.pathname === "/admin") {
-    return <Navigate to="/admin/users" replace />;
+    return <Navigate to={canManageUsers ? "/admin/users" : "/admin/locations"} replace />;
   }
 
   if (!canManageAdmin) {
@@ -553,14 +758,55 @@ function Admin() {
       <section className="admin-page">
         {renderAdminNavigation()}
         <header className="admin-heading">
-          <div><h2>Manage lead sources</h2><p>Lead source navigation</p></div>
-          <Link className="admin-primary-link" to="/admin/lead-sources/new">Add lead source</Link>
+          <div><h2>Manage lead sources</h2><p>{managedLeadSources.length} sources</p></div>
+          <button type="button" onClick={openCreateLeadSourceForm}>Add lead source</button>
         </header>
-        <div className="admin-route-list">
-          <Link to="/admin/lead-sources/new">Add lead source</Link>
-          <Link to="/admin/lead-sources/1/edit">Edit lead source</Link>
+
+        {error && <p className="form-error" role="alert">{error}</p>}
+
+        {isLeadSourceFormOpen && (
+          <form className="user-form" onSubmit={handleLeadSourceSubmit}>
+            <div className="form-heading">
+              <h3>{editingLeadSourceId ? "Edit lead source" : "Add lead source"}</h3>
+              <button type="button" onClick={closeLeadSourceForm}>Cancel</button>
+            </div>
+            <label htmlFor="lead-source-external-id">External ID</label>
+            <input id="lead-source-external-id" value={leadSourceForm.external_id} onChange={(event) => updateLeadSourceForm("external_id", event.target.value)} />
+            <label htmlFor="lead-source-name">Lead source name</label>
+            <input id="lead-source-name" value={leadSourceForm.source_name} onChange={(event) => updateLeadSourceForm("source_name", event.target.value)} required />
+            <label htmlFor="lead-source-description">Description</label>
+            <textarea id="lead-source-description" value={leadSourceForm.description} onChange={(event) => updateLeadSourceForm("description", event.target.value)} rows="4" />
+            <label className="admin-checkbox" htmlFor="lead-source-active">
+              <input id="lead-source-active" type="checkbox" checked={leadSourceForm.is_active} onChange={(event) => updateLeadSourceForm("is_active", event.target.checked)} />
+              <span>Lead source is active</span>
+            </label>
+            <button className="primary-action" type="submit" disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save lead source"}
+            </button>
+          </form>
+        )}
+
+        <div className="user-list">
+          {isLoading && <p className="empty-state">Loading lead sources...</p>}
+          {!isLoading && managedLeadSources.map((source) => (
+            <article className="user-row" key={source.id}>
+              <div className="user-summary">
+                <strong>{source.source_name}</strong>
+                {source.description && <span>{source.description}</span>}
+                {source.external_id && <span>External ID: {source.external_id}</span>}
+              </div>
+              <div className="user-status-actions">
+                <span className={source.is_active ? "status-active" : "status-inactive"}>
+                  {source.is_active ? "Active" : "Inactive"}
+                </span>
+                <button type="button" onClick={() => openEditLeadSourceForm(source)}>Edit</button>
+                <button type="button" onClick={() => handleLeadSourceStatusChange(source)}>
+                  {source.is_active ? "Deactivate" : "Reactivate"}
+                </button>
+              </div>
+            </article>
+          ))}
         </div>
-        <p className="empty-state">Lead source management content will be built here.</p>
       </section>
     );
   }
