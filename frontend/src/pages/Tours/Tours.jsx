@@ -5,18 +5,14 @@ import { Eye, Pencil } from "lucide-react";
 import TourFilterControls from "../../components/filters/TourFilterControls";
 import useAuth from "../../features/auth/useAuth";
 import {
-  currentMonthValue,
-  currentYearValue,
+  createDefaultTourFilters,
   getDateRange,
   joinFilterValues,
   statusLabels,
+  todayValue,
 } from "../../features/tours/filterConfig";
 import { getLeadSources, getLocations, listTours } from "../../features/tours/tourApi";
 import "./Tours.css";
-
-function todayValue() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function formatTourDate(value) {
   return new Intl.DateTimeFormat("en-US", {
@@ -81,23 +77,19 @@ function Tours() {
       datePreset,
       dateFrom: dateParam && datePreset === "custom" ? dateParam : "",
       dateTo: dateParam && datePreset === "custom" ? dateParam : "",
+      hasDateParam: Boolean(dateParam),
       statuses: params.get("status")?.split(",").filter(Boolean) || [],
     };
   }, [location.search]);
   const [tours, setTours] = useState([]);
   const [locations, setLocations] = useState([]);
   const [leadSources, setLeadSources] = useState([]);
-  const [filters, setFilters] = useState({
-    datePreset: queryFilters.datePreset,
+  const [filters, setFilters] = useState(() => createDefaultTourFilters(user, {
+    datePreset: queryFilters.hasDateParam ? queryFilters.datePreset : "last_30_days",
     dateFrom: queryFilters.dateFrom,
     dateTo: queryFilters.dateTo,
-    month: currentMonthValue(),
-    year: currentYearValue(),
-    locations: user?.role === "staff" && user.location ? [String(user.location)] : [],
-    leadSources: [],
     statuses: queryFilters.statuses,
-    search: "",
-  });
+  }));
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 

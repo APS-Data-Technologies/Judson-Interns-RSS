@@ -11,6 +11,8 @@ from apps.tours.models import Tour, TourEvent, TourStatus
 
 class HomeSummaryQuerySerializer(serializers.Serializer):
     date = serializers.DateField(required=False)
+    date_from = serializers.DateField(required=False)
+    date_to = serializers.DateField(required=False)
     location = serializers.PrimaryKeyRelatedField(
         queryset=Location.objects.filter(is_active=True),
         required=False,

@@ -1,9 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, Search } from "lucide-react";
+import { Eye } from "lucide-react";
 
+import TourFilterControls from "../../components/filters/TourFilterControls";
 import { Button } from "../../components/ui";
 import useAuth from "../../features/auth/useAuth";
+import {
+  createDefaultTourFilters,
+  getDateRange,
+  todayValue,
+} from "../../features/tours/filterConfig";
 import { getHomeSummary } from "../../features/tours/tourApi";
 import "./Home.css";
 
@@ -15,14 +21,6 @@ const initialSummary = {
     locations: [],
   },
 };
-
-function getTodayValue() {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
 function formatTourTime(value) {
   return new Intl.DateTimeFormat("en-US", {
@@ -45,7 +43,7 @@ function TourList({ title, tours, tone }) {
           className="home-card__count"
           type="button"
           aria-label={`View today's ${statusLabel} tours`}
-          onClick={() => navigate(`/tours?date=${getTodayValue()}&status=${status}`)}
+          onClick={() => navigate(`/tours?date=${todayValue()}&status=${status}`)}
         >
           {tours.length}
         </button>
@@ -84,11 +82,7 @@ function TourList({ title, tours, tone }) {
 function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [filters, setFilters] = useState({
-    date: getTodayValue(),
-    location: user?.role === "staff" && user.location ? String(user.location) : "",
-  });
-  const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState(() => createDefaultTourFilters(user));
   const [summary, setSummary] = useState(initialSummary);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -99,12 +93,14 @@ function Home() {
     async function loadSummary() {
       setIsLoading(true);
       setError("");
+      const dateRange = getDateRange(filters);
 
       try {
         const data = await getHomeSummary({
-          date: filters.date,
-          location: filters.location || undefined,
-          search: searchTerm || undefined,
+          date_from: dateRange.dateFrom || undefined,
+          date_to: dateRange.dateTo || undefined,
+          location: filters.locations[0] || undefined,
+          search: filters.search || undefined,
         });
 
         if (isCurrent) {
@@ -126,15 +122,7 @@ function Home() {
     return () => {
       isCurrent = false;
     };
-  }, [filters.date, filters.location, searchTerm]);
-
-  const selectedLocation = useMemo(
-    () =>
-      summary.filters.locations.find(
-        (location) => String(location.id) === String(filters.location),
-      ),
-    [filters.location, summary.filters.locations],
-  );
+  }, [filters]);
 
   function updateFilter(name, value) {
     setFilters((currentFilters) => ({
@@ -146,64 +134,16 @@ function Home() {
   return (
     <section className="home-page" aria-label="Home dashboard">
       <div className="home-tools" aria-label="Tour filters">
-        <div className="home-filter-grid">
-          <label>
-            <span>Date</span>
-            <input
-              type="date"
-              value={filters.date}
-              onChange={(event) => updateFilter("date", event.target.value)}
-            />
-          </label>
-
-          <label>
-            <span>Location</span>
-            <select
-              value={filters.location}
-              onChange={(event) => updateFilter("location", event.target.value)}
-              disabled={user?.role === "staff"}
-            >
-              {user?.role !== "staff" && <option value="">All locations</option>}
-              {summary.filters.locations.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.location_name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="home-search">
-            <span>Search family</span>
-            <Search className="home-search__icon" aria-hidden="true" />
-            <input
-              type="search"
-              placeholder="Search family names"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-            />
-          </label>
-        </div>
-
-        {(filters.location || searchTerm) && (
-          <div className="home-active-filters" aria-label="Active filters">
-            {filters.location && (
-              <button
-                type="button"
-                disabled={user?.role === "staff"}
-                onClick={() => updateFilter("location", "")}
-              >
-                {selectedLocation?.location_name || "Location"}
-                {user?.role !== "staff" && <span aria-hidden="true">x</span>}
-              </button>
-            )}
-            {searchTerm && (
-              <button type="button" onClick={() => setSearchTerm("")}>
-                Family: {searchTerm}
-                <span aria-hidden="true">x</span>
-              </button>
-            )}
-          </div>
-        )}
+        <TourFilterControls
+          filters={filters}
+          leadSources={[]}
+          locations={summary.filters.locations}
+          onChange={updateFilter}
+          searchPlaceholder="Search family names"
+          showLeadSource={false}
+          showStatus={false}
+          staffLocationOnly={user?.role === "staff"}
+        />
       </div>
 
       {error && <p className="home-state home-state--error">{error}</p>}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import useAuth from "../../features/auth/useAuth";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
@@ -15,7 +15,6 @@ function Login() {
   const { isAuthenticated, login } = useAuth();
 
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,7 +23,7 @@ function Login() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const destination = location.state?.from?.pathname || "/home";
+  const destination = "/home";
   const hasUnsavedLogin = Boolean(email || password);
 
   useUnsavedChangesPrompt(hasUnsavedLogin && !isSubmitting && !isAuthenticated);

@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   CalendarCheck,
-  ChevronDown,
-  ChevronUp,
   Eye,
   GraduationCap,
   Pencil,
@@ -15,12 +13,16 @@ import {
 import TourFilterControls from "../../components/filters/TourFilterControls";
 import useAuth from "../../features/auth/useAuth";
 import {
-  currentMonthValue,
-  currentYearValue,
+  createDefaultTourFilters,
   getDateRange,
   joinFilterValues,
 } from "../../features/tours/filterConfig";
-import { getLeadSources, getLocations, listTours } from "../../features/tours/tourApi";
+import {
+  getLeadSources,
+  getLocations,
+  listTours,
+  transitionTourStatus,
+} from "../../features/tours/tourApi";
 import "./Pipeline.css";
 
 const pipelineStatuses = [
@@ -31,6 +33,17 @@ const pipelineStatuses = [
   { value: "no_show", label: "No Show", icon: X },
 ];
 
+const nextStageActions = {
+  scheduled: [
+    { value: "toured", label: "Toured" },
+    { value: "no_show", label: "No Show" },
+  ],
+  toured: [
+    { value: "enrolled", label: "Enrolled" },
+    { value: "churned", label: "Churned" },
+  ],
+};
+
 function formatTourDate(value) {
   return new Intl.DateTimeFormat("en-US", {
     month: "long",
@@ -39,7 +52,7 @@ function formatTourDate(value) {
   }).format(new Date(value));
 }
 
-function PipelineCard({ tour }) {
+function PipelineCard({ tour, onMove, isMoving }) {
   const navigate = useNavigate();
   const status = pipelineStatuses.find((item) => item.value === tour.current_status);
   const familyName = tour.family_name.endsWith("Family")
@@ -79,6 +92,20 @@ function PipelineCard({ tour }) {
           </div>
         </div>
       </div>
+      {nextStageActions[tour.current_status]?.length > 0 && (
+        <div className="pipeline-card__moves" aria-label={`Move ${familyName}`}>
+          {nextStageActions[tour.current_status].map((action) => (
+            <button
+              type="button"
+              key={action.value}
+              disabled={isMoving}
+              onClick={() => onMove(tour.id, action.value)}
+            >
+              {isMoving ? "Moving" : action.label}
+            </button>
+          ))}
+        </div>
+      )}
     </article>
   );
 }
@@ -88,18 +115,8 @@ function Pipeline() {
   const [tours, setTours] = useState([]);
   const [locations, setLocations] = useState([]);
   const [leadSources, setLeadSources] = useState([]);
-  const [filters, setFilters] = useState({
-    datePreset: "last_30_days",
-    dateFrom: "",
-    dateTo: "",
-    month: currentMonthValue(),
-    year: currentYearValue(),
-    locations: user?.role === "staff" && user.location ? [String(user.location)] : [],
-    leadSources: [],
-    statuses: [],
-    search: "",
-  });
-  const [openSections, setOpenSections] = useState(["toured"]);
+  const [filters, setFilters] = useState(() => createDefaultTourFilters(user));
+  const [movingTourId, setMovingTourId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -193,12 +210,23 @@ function Pipeline() {
     }));
   }
 
-  function toggleSection(status) {
-    setOpenSections((currentSections) =>
-      currentSections.includes(status)
-        ? currentSections.filter((item) => item !== status)
-        : [...currentSections, status],
-    );
+  async function moveTour(tourId, status) {
+    setMovingTourId(tourId);
+    setError("");
+
+    try {
+      const updatedTour = await transitionTourStatus(tourId, {
+        status,
+        notes: `Moved to ${status} from pipeline.`,
+      });
+      setTours((currentTours) =>
+        currentTours.map((tour) => (tour.id === tourId ? updatedTour : tour)),
+      );
+    } catch {
+      setError("Unable to move tour to the selected stage.");
+    } finally {
+      setMovingTourId(null);
+    }
   }
 
   return (
@@ -210,6 +238,7 @@ function Pipeline() {
           locations={locations}
           onChange={updateFilter}
           searchPlaceholder="Search family name"
+          showStatus={false}
           staffLocationOnly={user?.role === "staff"}
         />
       </div>
@@ -217,42 +246,41 @@ function Pipeline() {
       {error && <p className="pipeline-state pipeline-state--error">{error}</p>}
       {isLoading && <p className="pipeline-state">Loading pipeline...</p>}
 
-      <div className="pipeline-groups">
+      <div className="pipeline-flow">
         {pipelineStatuses.map((status) => {
           const Icon = status.icon;
           const groupTours = groupedTours[status.value] || [];
-          const isOpen = openSections.includes(status.value);
 
           return (
             <section
-              className={`pipeline-group pipeline-group--${status.value}`}
+              className={`pipeline-stage pipeline-stage--${status.value}`}
               key={status.value}
             >
-              <button
-                className="pipeline-group__header"
-                type="button"
-                onClick={() => toggleSection(status.value)}
-                aria-expanded={isOpen}
-              >
-                <span className="pipeline-group__icon">
+              <header className="pipeline-stage__header">
+                <span className="pipeline-stage__icon">
                   <Icon aria-hidden="true" />
                 </span>
-                <strong>{status.label}</strong>
-                <span className="pipeline-group__count">{groupTours.length}</span>
-                {isOpen ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
-              </button>
-
-              {isOpen && (
-                <div className="pipeline-group__body">
-                  {groupTours.length > 0 ? (
-                    groupTours.slice(0, 6).map((tour) => (
-                      <PipelineCard key={tour.id} tour={tour} />
-                    ))
-                  ) : (
-                    <p className="pipeline-empty">No tours in this status.</p>
-                  )}
+                <div>
+                  <strong>{status.label}</strong>
+                  <span>{groupTours.length} tours</span>
                 </div>
-              )}
+                <span className="pipeline-stage__count">{groupTours.length}</span>
+              </header>
+
+              <div className="pipeline-stage__body">
+                {groupTours.length > 0 ? (
+                  groupTours.map((tour) => (
+                    <PipelineCard
+                      key={tour.id}
+                      tour={tour}
+                      isMoving={movingTourId === tour.id}
+                      onMove={moveTour}
+                    />
+                  ))
+                ) : (
+                  <p className="pipeline-empty">No tours in this status.</p>
+                )}
+              </div>
             </section>
           );
         })}
