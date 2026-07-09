@@ -4,6 +4,7 @@ export const statusOptions = [
   { value: "no_show", label: "No Show" },
   { value: "enrolled", label: "Enrolled" },
   { value: "churned", label: "Churned" },
+  { value: "rescheduled", label: "Rescheduled" },
   { value: "cancelled", label: "Cancelled" },
 ];
 
@@ -27,6 +28,8 @@ export const datePresetOptions = [
   { value: "year", label: "Year" },
   { value: "custom", label: "Custom range" },
 ];
+
+export const defaultDatePreset = "last_30_days";
 
 function toDateInputValue(date) {
   const year = date.getFullYear();
@@ -101,4 +104,19 @@ export function getDateRange(filters) {
 
 export function joinFilterValues(values) {
   return values.length ? values.join(",") : undefined;
+}
+
+export function createDefaultTourFilters(user, overrides = {}) {
+  return {
+    datePreset: defaultDatePreset,
+    dateFrom: "",
+    dateTo: "",
+    month: currentMonthValue(),
+    year: currentYearValue(),
+    locations: user?.role === "staff" && user.location ? [String(user.location)] : [],
+    leadSources: [],
+    statuses: [],
+    search: "",
+    ...overrides,
+  };
 }

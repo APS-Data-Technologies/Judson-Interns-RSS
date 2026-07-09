@@ -1,11 +1,38 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  Building2,
+  ChevronDown,
+  KeyRound,
+  LogOut,
+  MapPin,
+  RadioTower,
+  ShieldCheck,
+  UsersRound,
+} from "lucide-react";
+
 import useAuth from "../../features/auth/useAuth";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
 import "./Account.css";
 
+function SettingsPanel({ children, icon: Icon, isOpen, onToggle, title }) {
+  return (
+    <section className={`settings-panel ${isOpen ? "settings-panel--open" : ""}`}>
+      <button className="settings-panel__trigger" type="button" onClick={onToggle}>
+        <span className="settings-panel__icon">
+          <Icon aria-hidden="true" />
+        </span>
+        <strong>{title}</strong>
+        <ChevronDown aria-hidden="true" />
+      </button>
+      {isOpen && <div className="settings-panel__body">{children}</div>}
+    </section>
+  );
+}
+
 function Account() {
   const { user, changePassword, logout } = useAuth();
+  const [openPanel, setOpenPanel] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -15,8 +42,13 @@ function Account() {
   const hasUnsavedPassword = Boolean(currentPassword || newPassword || confirmPassword);
   const canOpenAdmin = ["admin", "super_admin"].includes(user.role);
   const canManageUsers = user.role === "super_admin";
+  const displayName = `${user.first_name} ${user.last_name}`.trim() || user.email;
 
   useUnsavedChangesPrompt(hasUnsavedPassword && !isSubmitting);
+
+  function togglePanel(panelName) {
+    setOpenPanel((currentPanel) => (currentPanel === panelName ? "" : panelName));
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -48,42 +80,108 @@ function Account() {
   }
 
   return (
-    <section className="account-page">
-      <dl className="account-details">
-        <div><dt>Name</dt><dd>{`${user.first_name} ${user.last_name}`.trim()}</dd></div>
-        <div><dt>Role</dt><dd>{user.role.replace("_", " ")}</dd></div>
-        {user.location_name && <div><dt>Location</dt><dd>{user.location_name}</dd></div>}
-      </dl>
+    <section className="account-page" aria-label="Settings">
+      <header className="account-profile">
+        <div className="account-profile__avatar" aria-hidden="true">
+          {displayName.slice(0, 1).toUpperCase()}
+        </div>
+        <div>
+          <h1>{displayName}</h1>
+          <p>{user.role.replace("_", " ")}</p>
+        </div>
+      </header>
 
-      {canOpenAdmin ? (
-        <section className="settings-navigation" aria-label="Admin navigation">
-          <h3>Administration</h3>
-          {canManageUsers && <Link to="/admin/users">Manage users</Link>}
-          <Link to="/admin/locations">Manage locations</Link>
-          <Link to="/admin/lead-sources">Manage lead sources</Link>
-        </section>
-      ) : (
-        <section className="settings-navigation" aria-label="Staff settings">
-          <h3>Assigned location</h3>
-          <p>{user.location_name || "No location assigned"}</p>
+      {user.role === "staff" && (
+        <section className="account-location">
+          <MapPin aria-hidden="true" />
+          <div>
+            <span>Assigned location</span>
+            <strong>{user.location_name || "No location assigned"}</strong>
+          </div>
         </section>
       )}
 
-      <form className="password-form" onSubmit={handleSubmit}>
-        <h3>Change password</h3>
-        <label htmlFor="current-password">Current password</label>
-        <input id="current-password" type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required />
-        <label htmlFor="new-password">New password</label>
-        <input id="new-password" type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} minLength="8" required />
-        <label htmlFor="confirm-password">Confirm new password</label>
-        <input id="confirm-password" type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength="8" required />
-        {error && <p className="form-error" role="alert">{error}</p>}
-        {message && <p className="form-success" role="status">{message}</p>}
-        <button type="submit" disabled={isSubmitting}>{isSubmitting ? "Updating..." : "Update password"}</button>
-      </form>
+      <SettingsPanel
+        icon={KeyRound}
+        isOpen={openPanel === "password"}
+        onToggle={() => togglePanel("password")}
+        title="Update password"
+      >
+        <form className="password-form" onSubmit={handleSubmit}>
+          <label htmlFor="current-password">Current password</label>
+          <input
+            id="current-password"
+            type="password"
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(event) => setCurrentPassword(event.target.value)}
+            required
+          />
+          <label htmlFor="new-password">New password</label>
+          <input
+            id="new-password"
+            type="password"
+            autoComplete="new-password"
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+            minLength="8"
+            required
+          />
+          <label htmlFor="confirm-password">Confirm new password</label>
+          <input
+            id="confirm-password"
+            type="password"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            minLength="8"
+            required
+          />
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          {message && (
+            <p className="form-success" role="status">
+              {message}
+            </p>
+          )}
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Updating..." : "Update password"}
+          </button>
+        </form>
+      </SettingsPanel>
+
+      {canOpenAdmin && (
+        <SettingsPanel
+          icon={ShieldCheck}
+          isOpen={openPanel === "admin"}
+          onToggle={() => togglePanel("admin")}
+          title="Admin privileges"
+        >
+          <nav className="settings-admin-links" aria-label="Admin management">
+            {canManageUsers && (
+              <Link to="/admin/users">
+                <UsersRound aria-hidden="true" />
+                <span>Manage users</span>
+              </Link>
+            )}
+            <Link to="/admin/locations">
+              <Building2 aria-hidden="true" />
+              <span>Manage locations</span>
+            </Link>
+            <Link to="/admin/lead-sources">
+              <RadioTower aria-hidden="true" />
+              <span>Manage lead sources</span>
+            </Link>
+          </nav>
+        </SettingsPanel>
+      )}
 
       <section className="account-actions" aria-label="Account actions">
         <button className="logout-action" type="button" onClick={logout}>
+          <LogOut aria-hidden="true" />
           Logout
         </button>
       </section>

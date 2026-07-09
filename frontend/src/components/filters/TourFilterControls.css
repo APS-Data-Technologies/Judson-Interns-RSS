@@ -4,6 +4,22 @@
   grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.4fr) repeat(3, minmax(170px, 0.8fr));
 }
 
+.tour-filters--no-search {
+  grid-template-columns: repeat(5, minmax(170px, 1fr));
+}
+
+.tour-filters--no-status:not(.tour-filters--no-search) {
+  grid-template-columns: minmax(220px, 0.9fr) minmax(280px, 1.4fr) repeat(2, minmax(170px, 0.85fr));
+}
+
+.tour-filters--no-lead-source.tour-filters--no-status {
+  grid-template-columns: minmax(220px, 0.9fr) minmax(280px, 1.4fr) minmax(170px, 0.85fr);
+}
+
+.tour-filters--no-search.tour-filters--no-status {
+  grid-template-columns: repeat(4, minmax(170px, 1fr));
+}
+
 .tour-filter {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -15,13 +31,19 @@
 }
 
 .tour-filter__summary,
-.tour-filter--search {
+.tour-filter--search,
+.tour-filter--cost {
   align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
   display: grid;
   gap: var(--space-2);
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   min-height: 68px;
   padding: 0 var(--space-4);
+  text-align: left;
+  width: 100%;
 }
 
 .tour-filter__summary {
@@ -33,10 +55,21 @@
   display: none;
 }
 
-.tour-filter svg {
+.tour-filter svg:not(.tour-filter__chevron) {
   color: #34476c;
   height: 28px;
   width: 28px;
+}
+
+.tour-filter__chevron {
+  color: #6b7895;
+  height: 20px;
+  transition: transform 160ms ease;
+  width: 20px;
+}
+
+.tour-filter--open .tour-filter__chevron {
+  transform: rotate(180deg);
 }
 
 .tour-filter small {
@@ -89,6 +122,56 @@
   z-index: 30;
 }
 
+.tour-filter__menu--date {
+  min-width: min(320px, 92vw);
+}
+
+.tour-filter__toolbar {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tour-filter__toolbar button {
+  align-items: center;
+  background: #eaf2ff;
+  border: 1px solid #bfd7ff;
+  border-radius: var(--radius-sm);
+  color: var(--rss-blue);
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 36px;
+}
+
+.tour-filter__toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.tour-filter__toolbar svg {
+  height: 18px;
+  width: 18px;
+}
+
+.tour-filter__preset {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: #08265c;
+  cursor: pointer;
+  font-weight: 850;
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  text-align: left;
+}
+
+.tour-filter__preset[aria-pressed="true"] {
+  background: #eaf2ff;
+  border-color: #bfd7ff;
+  color: var(--rss-blue);
+}
+
 .tour-filter__option {
   align-items: center;
   border-radius: var(--radius-sm);
@@ -112,16 +195,6 @@
 .tour-filter__option span {
   color: #08265c;
   font-weight: 850;
-}
-
-.tour-filter__clear {
-  background: #eaf2ff;
-  border: 1px solid #bfd7ff;
-  border-radius: var(--radius-sm);
-  color: var(--rss-blue);
-  cursor: pointer;
-  font-weight: 900;
-  min-height: 34px;
 }
 
 .tour-filter__range {
@@ -151,17 +224,36 @@
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
+  .tour-filters--no-search {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .tour-filter--date,
   .tour-filter--search {
     grid-column: span 3;
+  }
+
+  .tour-filters--no-search .tour-filter--date,
+  .tour-filter--cost {
+    grid-column: span 2;
   }
 
   .tour-filter:not(.tour-filter--date):not(.tour-filter--search) {
     grid-column: span 2;
   }
 
+  .tour-filters--no-status:not(.tour-filters--no-search)
+    .tour-filter:not(.tour-filter--date):not(.tour-filter--search) {
+    grid-column: span 3;
+  }
+
+  .tour-filters--no-lead-source.tour-filters--no-status .tour-filter:not(.tour-filter--date):not(.tour-filter--search) {
+    grid-column: span 6;
+  }
+
   .tour-filter__summary,
-  .tour-filter--search {
+  .tour-filter--search,
+  .tour-filter--cost {
     min-height: 62px;
     padding: 0 var(--space-3);
   }
@@ -188,7 +280,8 @@
   }
 
   .tour-filter__summary,
-  .tour-filter--search {
+  .tour-filter--search,
+  .tour-filter--cost {
     min-height: 58px;
     padding: 0 var(--space-2);
   }

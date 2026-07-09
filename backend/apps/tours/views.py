@@ -191,16 +191,30 @@ class HomeSummaryView(generics.GenericAPIView):
         query_serializer.is_valid(raise_exception=True)
         filters = query_serializer.validated_data
         base_date = filters.get("date", timezone.localdate())
+        date_from = filters.get("date_from")
+        date_to = filters.get("date_to")
         yesterday = base_date - timezone.timedelta(days=1)
+        booked_tours = self._filtered_tours(request.user, filters)
+        no_show_tours = self._filtered_tours(request.user, filters)
 
-        booked_tours = self._filtered_tours(request.user, filters).filter(
-            scheduled_tour_date__date=base_date,
-            current_status=TourStatus.SCHEDULED,
-        )
-        no_show_tours = self._filtered_tours(request.user, filters).filter(
-            scheduled_tour_date__date=yesterday,
-            current_status=TourStatus.NO_SHOW,
-        )
+        if date_from or date_to:
+            if date_from:
+                booked_tours = booked_tours.filter(scheduled_tour_date__date__gte=date_from)
+                no_show_tours = no_show_tours.filter(scheduled_tour_date__date__gte=date_from)
+            if date_to:
+                booked_tours = booked_tours.filter(scheduled_tour_date__date__lte=date_to)
+                no_show_tours = no_show_tours.filter(scheduled_tour_date__date__lte=date_to)
+            booked_tours = booked_tours.filter(current_status=TourStatus.SCHEDULED)
+            no_show_tours = no_show_tours.filter(current_status=TourStatus.NO_SHOW)
+        else:
+            booked_tours = booked_tours.filter(
+                scheduled_tour_date__date=base_date,
+                current_status=TourStatus.SCHEDULED,
+            )
+            no_show_tours = no_show_tours.filter(
+                scheduled_tour_date__date=yesterday,
+                current_status=TourStatus.NO_SHOW,
+            )
 
         locations = Location.objects.filter(is_active=True)
         if request.user.role == User.Role.STAFF:
