@@ -7,7 +7,6 @@ import { Button } from "../../components/ui";
 import useAuth from "../../features/auth/useAuth";
 import {
   createDefaultTourFilters,
-  getDateRange,
   todayValue,
 } from "../../features/tours/filterConfig";
 import { getHomeSummary } from "../../features/tours/tourApi";
@@ -82,7 +81,9 @@ function TourList({ title, tours, tone }) {
 function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [filters, setFilters] = useState(() => createDefaultTourFilters(user));
+  const [filters, setFilters] = useState(() =>
+    createDefaultTourFilters(user, { datePreset: "today" }),
+  );
   const [summary, setSummary] = useState(initialSummary);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -93,12 +94,10 @@ function Home() {
     async function loadSummary() {
       setIsLoading(true);
       setError("");
-      const dateRange = getDateRange(filters);
 
       try {
         const data = await getHomeSummary({
-          date_from: dateRange.dateFrom || undefined,
-          date_to: dateRange.dateTo || undefined,
+          date: todayValue(),
           location: filters.locations[0] || undefined,
           search: filters.search || undefined,
         });
@@ -139,6 +138,7 @@ function Home() {
           leadSources={[]}
           locations={summary.filters.locations}
           onChange={updateFilter}
+          lockDate
           searchPlaceholder="Search family names"
           showLeadSource={false}
           showStatus={false}
@@ -156,7 +156,7 @@ function Home() {
           tone="booked"
         />
         <TourList
-          title="Today's no show"
+          title="Yesterday's no show"
           tours={summary.no_show_tours}
           tone="noshow"
         />

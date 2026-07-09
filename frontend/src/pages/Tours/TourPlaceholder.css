@@ -32,7 +32,7 @@
   display: inline-flex;
   margin-top: var(--space-3);
   border-radius: 999px;
-  background: #eaf2ff;
+  background: var(--color-action-soft);
   color: var(--rss-blue);
   font-weight: 900;
   padding: 8px 12px;
@@ -104,10 +104,10 @@
 
 .tour-status-actions button {
   min-height: 44px;
-  border: 1px solid #0f62fe;
+  border: 1px solid var(--color-action);
   border-radius: var(--radius-sm);
   background: #ffffff;
-  color: #0f62fe;
+  color: var(--color-action);
   cursor: pointer;
   font-weight: 900;
 }
@@ -191,10 +191,10 @@
 }
 
 .tour-detail-state {
-  background: #eaf2ff;
-  border: 1px solid #bfd7ff;
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
   border-radius: var(--radius-sm);
-  color: var(--rss-blue);
+  color: var(--info-text);
   font-weight: 800;
   padding: var(--space-3) var(--space-4);
 }

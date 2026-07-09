@@ -74,10 +74,10 @@
 
 .home-active-filters button {
   align-items: center;
-  background: #eaf2ff;
-  border: 1px solid #bfd7ff;
+  background: var(--color-action-soft);
+  border: 1px solid var(--color-action-border);
   border-radius: 999px;
-  color: var(--rss-blue);
+  color: var(--color-action);
   cursor: pointer;
   display: inline-flex;
   font-size: 0.88rem;
@@ -92,7 +92,7 @@
 }
 
 .home-active-filters span {
-  background: var(--rss-blue);
+  background: var(--color-action);
   border-radius: 999px;
   color: #ffffff;
   display: grid;
@@ -111,10 +111,10 @@
 }
 
 .home-state {
-  background: #eaf2ff;
-  border: 1px solid #bfd7ff;
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
   border-radius: var(--radius-sm);
-  color: var(--rss-blue);
+  color: var(--info-text);
   font-weight: 800;
   padding: var(--space-3) var(--space-4);
 }
@@ -139,11 +139,11 @@
 }
 
 .home-card--booked {
-  border-top: 6px solid var(--rss-green);
+  border-top: 6px solid var(--status-booked);
 }
 
 .home-card--noshow {
-  border-top: 6px solid var(--rss-red);
+  border-top: 6px solid var(--status-no-show);
 }
 
 .home-card__header {
@@ -176,11 +176,11 @@
 }
 
 .home-card--booked .home-card__count {
-  background: var(--rss-green);
+  background: var(--status-booked);
 }
 
 .home-card--noshow .home-card__count {
-  background: var(--rss-red);
+  background: var(--status-no-show);
 }
 
 .home-tour-list {
@@ -237,10 +237,10 @@
 
 .home-tour-row__view {
   align-items: center;
-  background: #eaf2ff;
-  border: 1px solid #bfd7ff;
+  background: var(--color-action-soft);
+  border: 1px solid var(--color-action-border);
   border-radius: var(--radius-sm);
-  color: var(--rss-blue);
+  color: var(--color-action);
   cursor: pointer;
   display: inline-flex;
   height: 36px;
@@ -254,9 +254,10 @@
 }
 
 .home-empty {
-  background: var(--color-surface-soft);
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
   border-radius: var(--radius-sm);
-  color: var(--color-text-secondary);
+  color: var(--info-text);
   font-weight: 800;
   padding: var(--space-4);
 }
@@ -306,7 +307,11 @@
   }
 
   .home-tools {
-    padding: var(--space-3);
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
   }
 
   .home-filter-grid {
@@ -317,7 +322,7 @@
 
   .home-search__icon {
     align-items: center;
-    color: var(--rss-blue);
+    color: var(--color-action);
     display: flex;
     height: 24px;
     left: 16px;
@@ -355,9 +360,9 @@
     align-items: center;
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
-    min-height: 128px;
-    padding: var(--space-4) var(--space-2);
+    gap: var(--space-2);
+    min-height: 112px;
+    padding: var(--space-3) var(--space-2);
     text-align: center;
   }
 
@@ -374,9 +379,9 @@
   }
 
   .home-card__count {
-    font-size: 1.7rem;
-    height: 58px;
-    width: 64px;
+    font-size: 1.35rem;
+    height: 50px;
+    width: 56px;
   }
 
   .home-tour-list {
@@ -387,24 +392,27 @@
 
   .home-tour-row {
     align-items: center;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    min-height: 94px;
-    padding: var(--space-4) var(--space-3);
+    gap: var(--space-2);
+    grid-template-columns: minmax(0, 1fr) 36px;
+    min-height: 88px;
+    padding: var(--space-2);
   }
 
   .home-tour-row__meta {
-    grid-column: auto;
-    text-align: right;
+    text-align: left;
   }
 
   .home-tour-row__view {
-    height: 40px;
-    width: 40px;
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    height: 34px;
+    justify-self: end;
+    width: 34px;
   }
 
   .home-tour-row__view svg {
-    height: 20px;
-    width: 20px;
+    height: 17px;
+    width: 17px;
   }
 }
 
@@ -435,7 +443,7 @@
 
   .home-card {
     max-height: clamp(360px, 58vh, 520px);
-    min-height: clamp(340px, 46vh, 460px);
+    min-height: clamp(320px, 44vh, 440px);
   }
 
   .home-tour-list {
@@ -450,8 +458,8 @@
     align-items: center;
     gap: var(--space-2);
     grid-template-columns: minmax(0, 1fr) 38px;
-    min-height: 104px;
-    padding: var(--space-4) var(--space-2);
+    min-height: 88px;
+    padding: var(--space-2);
   }
 
   .home-tour-row__family {
@@ -476,16 +484,18 @@
   }
 
   .home-tour-row strong {
-    font-size: 0.98rem;
+    font-size: 0.84rem;
+    line-height: 1.08;
   }
 
   .home-tour-row span,
   .home-tour-row__meta {
-    font-size: 0.9rem;
+    font-size: 0.74rem;
+    line-height: 1.08;
   }
 
   .home-tour-row__view {
-    height: 38px;
-    width: 38px;
+    height: 34px;
+    width: 34px;
   }
 }

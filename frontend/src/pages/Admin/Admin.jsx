@@ -741,8 +741,8 @@ function Admin() {
                 <span className={locationItem.is_active ? "status-active" : "status-inactive"}>
                   {locationItem.is_active ? "Active" : "Inactive"}
                 </span>
-                <button type="button" onClick={() => openEditLocationForm(locationItem)}>Edit</button>
-                <button type="button" onClick={() => handleLocationStatusChange(locationItem)}>
+                <button className="admin-row-action admin-row-action--edit" type="button" onClick={() => openEditLocationForm(locationItem)}>Edit</button>
+                <button className={`admin-row-action ${locationItem.is_active ? "admin-row-action--deactivate" : "admin-row-action--reactivate"}`} type="button" onClick={() => handleLocationStatusChange(locationItem)}>
                   {locationItem.is_active ? "Deactivate" : "Reactivate"}
                 </button>
               </div>
@@ -799,8 +799,8 @@ function Admin() {
                 <span className={source.is_active ? "status-active" : "status-inactive"}>
                   {source.is_active ? "Active" : "Inactive"}
                 </span>
-                <button type="button" onClick={() => openEditLeadSourceForm(source)}>Edit</button>
-                <button type="button" onClick={() => handleLeadSourceStatusChange(source)}>
+                <button className="admin-row-action admin-row-action--edit" type="button" onClick={() => openEditLeadSourceForm(source)}>Edit</button>
+                <button className={`admin-row-action ${source.is_active ? "admin-row-action--deactivate" : "admin-row-action--reactivate"}`} type="button" onClick={() => handleLeadSourceStatusChange(source)}>
                   {source.is_active ? "Deactivate" : "Reactivate"}
                 </button>
               </div>
@@ -879,8 +879,12 @@ function Admin() {
             </div>
             <div className="user-status-actions">
               <span className={user.is_active ? "status-active" : "status-inactive"}>{user.is_active ? "Active" : "Inactive"}</span>
-              <button type="button" onClick={() => openEditForm(user)}>Edit</button>
-              {user.id !== currentUser.id && <button type="button" onClick={() => handleStatusChange(user)}>{user.is_active ? "Deactivate" : "Reactivate"}</button>}
+              <button className="admin-row-action admin-row-action--edit" type="button" onClick={() => openEditForm(user)}>Edit</button>
+              {user.id !== currentUser.id && (
+                <button className={`admin-row-action ${user.is_active ? "admin-row-action--deactivate" : "admin-row-action--reactivate"}`} type="button" onClick={() => handleStatusChange(user)}>
+                  {user.is_active ? "Deactivate" : "Reactivate"}
+                </button>
+              )}
             </div>
           </article>
         ))}

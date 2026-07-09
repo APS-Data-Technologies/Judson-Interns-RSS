@@ -9,9 +9,13 @@ import {
   RadioTower,
   MapPin,
   Search,
+  SlidersHorizontal,
 } from "lucide-react";
 
 import {
+  currentMonthValue,
+  currentYearValue,
+  defaultDatePreset,
   datePresetOptions,
   statusOptions,
 } from "../../features/tours/filterConfig";
@@ -31,9 +35,16 @@ function getSummary(values, options, fallback) {
   return `${values.length} selected`;
 }
 
-function FilterShell({ children, icon: Icon, isOpen, label, onToggle, summary }) {
+function FilterShell({ children, icon: Icon, isMobileActive = false, isOpen, label, name, onToggle, summary }) {
   return (
-    <div className={`tour-filter ${isOpen ? "tour-filter--open" : ""}`}>
+    <div
+      className={[
+        "tour-filter",
+        `tour-filter--${name}`,
+        isOpen ? "tour-filter--open" : "",
+        isMobileActive ? "tour-filter--mobile-active" : "",
+      ].filter(Boolean).join(" ")}
+    >
       <button
         className="tour-filter__summary"
         type="button"
@@ -52,12 +63,28 @@ function FilterShell({ children, icon: Icon, isOpen, label, onToggle, summary })
   );
 }
 
+function LockedFilterShell({ icon: Icon, label, name, summary }) {
+  return (
+    <div className={`tour-filter tour-filter--${name} tour-filter--locked`}>
+      <div className="tour-filter__summary" aria-label={`${label}: ${summary}`}>
+        <Icon aria-hidden="true" />
+        <span>
+          <small>{label}</small>
+          <strong>{summary}</strong>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function MultiFilter({
   disabled,
   fallback,
   icon,
+  isMobileActive,
   isOpen,
   label,
+  name,
   onChange,
   onToggle,
   options,
@@ -75,8 +102,10 @@ function MultiFilter({
   return (
     <FilterShell
       icon={icon}
+      isMobileActive={isMobileActive}
       isOpen={isOpen}
       label={label}
+      name={name}
       onToggle={onToggle}
       summary={getSummary(values, options, fallback)}
     >
@@ -115,7 +144,7 @@ function MultiFilter({
   );
 }
 
-function DateFilter({ filters, isOpen, onChange, onToggle }) {
+function DateFilter({ filters, isMobileActive, isOpen, onChange, onToggle }) {
   const selectedOption =
     datePresetOptions.find((option) => option.value === filters.datePreset) ||
     datePresetOptions[0];
@@ -124,8 +153,10 @@ function DateFilter({ filters, isOpen, onChange, onToggle }) {
   return (
     <FilterShell
       icon={CalendarDays}
+      isMobileActive={isMobileActive}
       isOpen={isOpen}
       label="Date"
+      name="date"
       onToggle={onToggle}
       summary={selectedOption.label}
     >
@@ -154,6 +185,8 @@ function DateFilter({ filters, isOpen, onChange, onToggle }) {
             <small>From</small>
             <input
               aria-label="Start date"
+              max="2030-12-31"
+              min="2020-01-01"
               type="date"
               value={filters.dateFrom}
               onChange={(event) => {
@@ -166,6 +199,8 @@ function DateFilter({ filters, isOpen, onChange, onToggle }) {
             <small>To</small>
             <input
               aria-label="End date"
+              max="2030-12-31"
+              min="2020-01-01"
               type="date"
               value={filters.dateTo}
               onChange={(event) => {
@@ -189,19 +224,25 @@ function TourFilterControls({
   onCostBasisChange,
   searchPlaceholder = "Search family name",
   showCostBasis = false,
+  showDate = true,
   showLeadSource = true,
   showSearch = true,
   showStatus = true,
   staffLocationOnly = false,
+  lockDate = false,
 }) {
   const [openFilter, setOpenFilter] = useState("");
+  const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(false);
+  const [mobileActiveFilter, setMobileActiveFilter] = useState("");
   const filtersRef = useRef(null);
   const filterClassNames = [
     "tour-filters",
+    isMobilePanelOpen ? "tour-filters--mobile-open" : "",
     !showSearch ? "tour-filters--no-search" : "",
     !showLeadSource ? "tour-filters--no-lead-source" : "",
     !showStatus ? "tour-filters--no-status" : "",
     showCostBasis ? "tour-filters--with-cost" : "",
+    lockDate ? "tour-filters--locked-date" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -213,11 +254,48 @@ function TourFilterControls({
     value: source.id,
     label: source.source_name,
   }));
+  const selectedDateOption =
+    datePresetOptions.find((option) => option.value === filters.datePreset) ||
+    datePresetOptions[0];
+  const mobileFilterOptions = [
+    ...(showDate ? [{
+      value: "date",
+      label: "Date",
+      summary: selectedDateOption.label,
+      icon: CalendarDays,
+      locked: lockDate,
+    }] : []),
+    {
+      value: "locations",
+      label: "Location",
+      summary: getSummary(filters.locations, locationOptions, staffLocationOnly ? "Assigned" : "All"),
+      icon: MapPin,
+    },
+    ...(showLeadSource ? [{
+      value: "leadSources",
+      label: "Lead source",
+      summary: getSummary(filters.leadSources, leadSourceOptions, "All"),
+      icon: RadioTower,
+    }] : []),
+    ...(showStatus ? [{
+      value: "statuses",
+      label: "Status",
+      summary: getSummary(filters.statuses, statusOptions, "All"),
+      icon: CircleDot,
+    }] : []),
+    ...(showCostBasis ? [{
+      value: "cost",
+      label: "Cost basis",
+      summary: costBasis || "Optional",
+      icon: DollarSign,
+    }] : []),
+  ];
 
   useEffect(() => {
     function handlePointerDown(event) {
       if (!filtersRef.current?.contains(event.target)) {
         setOpenFilter("");
+        setIsMobilePanelOpen(false);
       }
     }
 
@@ -229,18 +307,288 @@ function TourFilterControls({
     setOpenFilter((currentFilter) => (currentFilter === name ? "" : name));
   }
 
+  function closeMobilePanel() {
+    setIsMobilePanelOpen(false);
+    setOpenFilter("");
+    setMobileActiveFilter("");
+  }
+
+  function selectMobileFilter(option) {
+    if (option.locked) {
+      setMobileActiveFilter("");
+      setOpenFilter("");
+      return;
+    }
+    setMobileActiveFilter((currentFilter) => (currentFilter === option.value ? "" : option.value));
+    setOpenFilter("");
+  }
+
+  function clearAllFilters() {
+    onChange("datePreset", lockDate ? "today" : defaultDatePreset);
+    onChange("dateFrom", "");
+    onChange("dateTo", "");
+    onChange("month", currentMonthValue());
+    onChange("year", currentYearValue());
+    if (!staffLocationOnly) {
+      onChange("locations", []);
+    }
+    onChange("leadSources", []);
+    onChange("statuses", []);
+    onChange("search", "");
+    if (showCostBasis && onCostBasisChange) {
+      onCostBasisChange("");
+    }
+    setMobileActiveFilter("");
+    setOpenFilter("");
+  }
+
+  function renderMobileDateOptions() {
+    if (lockDate) {
+      return null;
+    }
+    const optionsByValue = new Map(datePresetOptions.map((option) => [option.value, option]));
+    return (
+      <div className="tour-filters__mobile-expanded">
+        {datePresetRows.map((row) => (
+          <div className="tour-filter__preset-row" key={row.join("-")}>
+            {row.map((value) => {
+              const option = optionsByValue.get(value);
+              return (
+                <button
+                  className="tour-filter__preset"
+                  type="button"
+                  key={option.value}
+                  aria-pressed={filters.datePreset === option.value}
+                  onClick={() => onChange("datePreset", option.value)}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+        <div className="tour-filter__range">
+          <label>
+            <small>From</small>
+            <input
+              aria-label="Start date"
+              max="2030-12-31"
+              min="2020-01-01"
+              type="date"
+              value={filters.dateFrom}
+              onChange={(event) => {
+                onChange("datePreset", "custom");
+                onChange("dateFrom", event.target.value);
+              }}
+            />
+          </label>
+          <label>
+            <small>To</small>
+            <input
+              aria-label="End date"
+              max="2030-12-31"
+              min="2020-01-01"
+              type="date"
+              value={filters.dateTo}
+              onChange={(event) => {
+                onChange("datePreset", "custom");
+                onChange("dateTo", event.target.value);
+              }}
+            />
+          </label>
+        </div>
+      </div>
+    );
+  }
+
+  function renderMobileMultiOptions({ disabled = false, label, options, values, onValuesChange }) {
+    return (
+      <div className="tour-filters__mobile-expanded">
+        <div className="tour-filter__toolbar">
+          <button
+            type="button"
+            aria-label={`Select all ${label}`}
+            disabled={disabled}
+            onClick={() => onValuesChange(options.map((option) => String(option.value)))}
+          >
+            <CheckCheck aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            aria-label={`Clear ${label}`}
+            disabled={disabled || values.length === 0}
+            onClick={() => onValuesChange([])}
+          >
+            <Eraser aria-hidden="true" />
+          </button>
+        </div>
+        {options.map((option) => {
+          const value = String(option.value);
+          return (
+            <label className="tour-filter__option" key={option.value}>
+              <input
+                type="checkbox"
+                checked={values.includes(value)}
+                disabled={disabled}
+                onChange={() => {
+                  if (values.includes(value)) {
+                    onValuesChange(values.filter((item) => item !== value));
+                    return;
+                  }
+                  onValuesChange([...values, value]);
+                }}
+              />
+              <span>{option.label}</span>
+            </label>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function renderMobileActiveOptions(name) {
+    if (name === "date") {
+      return renderMobileDateOptions();
+    }
+    if (name === "locations") {
+      return renderMobileMultiOptions({
+        disabled: staffLocationOnly,
+        label: "Location",
+        options: locationOptions,
+        values: filters.locations,
+        onValuesChange: (values) => onChange("locations", values),
+      });
+    }
+    if (name === "leadSources") {
+      return renderMobileMultiOptions({
+        label: "Lead source",
+        options: leadSourceOptions,
+        values: filters.leadSources,
+        onValuesChange: (values) => onChange("leadSources", values),
+      });
+    }
+    if (name === "statuses") {
+      return renderMobileMultiOptions({
+        label: "Status",
+        options: statusOptions,
+        values: filters.statuses,
+        onValuesChange: (values) => onChange("statuses", values),
+      });
+    }
+    if (name === "cost") {
+      return (
+        <div className="tour-filters__mobile-expanded">
+          <label className="tour-filter--cost tour-filter--cost-mobile">
+            <DollarSign aria-hidden="true" />
+            <span>
+              <small>Cost basis</small>
+              <input
+                type="number"
+                min="0"
+                inputMode="decimal"
+                placeholder="Optional"
+                value={costBasis}
+                onChange={(event) => onCostBasisChange(event.target.value)}
+              />
+            </span>
+          </label>
+        </div>
+      );
+    }
+    return null;
+  }
+
   return (
     <div
       className={filterClassNames}
       ref={filtersRef}
       aria-label="Tour filters"
     >
-      <DateFilter
-        filters={filters}
-        isOpen={openFilter === "date"}
-        onChange={onChange}
-        onToggle={() => toggleFilter("date")}
-      />
+      <div className="tour-filters__mobile-bar">
+        <button
+          className="tour-filters__mobile-trigger"
+          type="button"
+          aria-expanded={isMobilePanelOpen}
+          aria-label={isMobilePanelOpen ? "Close filters" : "Open filters"}
+          onClick={() => {
+            setIsMobilePanelOpen((currentValue) => {
+              const nextValue = !currentValue;
+              if (nextValue && !showDate && mobileActiveFilter === "date") {
+                setMobileActiveFilter("");
+              }
+              if (!nextValue) {
+                setOpenFilter("");
+                setMobileActiveFilter("");
+              }
+              return nextValue;
+            });
+          }}
+        >
+          <SlidersHorizontal aria-hidden="true" />
+        </button>
+
+        {showDate && lockDate && (
+          <span className="tour-filters__mobile-fixed-chip" aria-label={`Date: ${selectedDateOption.label}`}>
+            <CalendarDays aria-hidden="true" />
+            {selectedDateOption.label}
+          </span>
+        )}
+
+        {showSearch && (
+          <label className="tour-filters__mobile-search">
+            <Search aria-hidden="true" />
+            <input
+              type="search"
+              placeholder={searchPlaceholder}
+              value={filters.search}
+              onChange={(event) => onChange("search", event.target.value)}
+            />
+          </label>
+        )}
+      </div>
+
+      <div className="tour-filters__mobile-panel" aria-label="Available filters">
+        <div className="tour-filters__mobile-list">
+          {mobileFilterOptions.map((option) => {
+            const Icon = option.icon;
+            return (
+              <div className="tour-filters__mobile-group" key={option.value}>
+                <button
+                  className="tour-filters__mobile-option"
+                  type="button"
+                  aria-pressed={mobileActiveFilter === option.value}
+                  disabled={option.locked}
+                  onClick={() => selectMobileFilter(option)}
+                >
+                  <Icon aria-hidden="true" />
+                  <span>{option.label}</span>
+                  <em>{option.summary}</em>
+                </button>
+                {mobileActiveFilter === option.value && renderMobileActiveOptions(option.value)}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {showDate && lockDate && (
+        <LockedFilterShell
+          icon={CalendarDays}
+          label="Date"
+          name="date"
+          summary={selectedDateOption.label}
+        />
+      )}
+
+      {showDate && !lockDate && (
+        <DateFilter
+          filters={filters}
+          isMobileActive={false}
+          isOpen={openFilter === "date"}
+          onChange={onChange}
+          onToggle={() => toggleFilter("date")}
+        />
+      )}
 
       {showSearch && (
         <label className="tour-filter tour-filter--search">
@@ -261,8 +609,10 @@ function TourFilterControls({
         disabled={staffLocationOnly}
         fallback={staffLocationOnly ? "Assigned location" : "All locations"}
         icon={MapPin}
+        isMobileActive={mobileActiveFilter === "locations"}
         isOpen={openFilter === "locations"}
         label="Location"
+        name="locations"
         onChange={(values) => onChange("locations", values)}
         onToggle={() => toggleFilter("locations")}
         options={locationOptions}
@@ -273,8 +623,10 @@ function TourFilterControls({
         <MultiFilter
           fallback="All sources"
           icon={RadioTower}
+          isMobileActive={mobileActiveFilter === "leadSources"}
           isOpen={openFilter === "leadSources"}
           label="Lead source"
+          name="leadSources"
           onChange={(values) => onChange("leadSources", values)}
           onToggle={() => toggleFilter("leadSources")}
           options={leadSourceOptions}
@@ -286,8 +638,10 @@ function TourFilterControls({
         <MultiFilter
           fallback="All statuses"
           icon={CircleDot}
+          isMobileActive={mobileActiveFilter === "statuses"}
           isOpen={openFilter === "statuses"}
           label="Status"
+          name="statuses"
           onChange={(values) => onChange("statuses", values)}
           onToggle={() => toggleFilter("statuses")}
           options={statusOptions}
@@ -296,7 +650,7 @@ function TourFilterControls({
       )}
 
       {showCostBasis && (
-        <label className="tour-filter tour-filter--cost">
+        <label className={`tour-filter tour-filter--cost ${mobileActiveFilter === "cost" ? "tour-filter--mobile-active" : ""}`}>
           <DollarSign aria-hidden="true" />
           <span>
             <small>Cost basis</small>
@@ -311,6 +665,23 @@ function TourFilterControls({
           </span>
         </label>
       )}
+
+      <div className="tour-filters__mobile-actions">
+        <button
+          className="tour-filters__mobile-clear"
+          type="button"
+          onClick={clearAllFilters}
+        >
+          Clear all
+        </button>
+        <button
+          className="tour-filters__mobile-done"
+          type="button"
+          onClick={closeMobilePanel}
+        >
+          Apply filters
+        </button>
+      </div>
     </div>
   );
 }

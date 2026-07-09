@@ -55,10 +55,19 @@
 }
 
 .admin-heading p,
-.user-summary span,
-.empty-state {
+.user-summary span {
   color: var(--color-text-secondary);
   font-size: 0.875rem;
+}
+
+.empty-state {
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  border-radius: var(--radius-sm);
+  color: var(--info-text);
+  font-size: 0.875rem;
+  font-weight: 800;
+  padding: var(--space-3) var(--space-4);
 }
 
 .admin-heading button,
@@ -199,7 +208,19 @@
 }
 
 .status-active { color: var(--color-success); }
-.status-inactive { color: var(--color-danger); }
+.status-inactive { color: var(--status-cancelled); }
+
+.user-status-actions .admin-row-action {
+  color: var(--color-action);
+}
+
+.user-status-actions .admin-row-action--deactivate {
+  color: var(--color-danger);
+}
+
+.user-status-actions .admin-row-action--reactivate {
+  color: var(--color-success);
+}
 
 @media (max-aspect-ratio: 11/10) {
   .admin-page {

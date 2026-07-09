@@ -115,7 +115,7 @@
 
 .settings-panel__icon {
   align-items: center;
-  background: #eaf2ff;
+  background: var(--color-action-soft);
   border-radius: var(--radius-sm);
   color: var(--rss-blue);
   display: inline-flex;

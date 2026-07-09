@@ -23,8 +23,8 @@
 }
 
 .bottom-navigation__item.active {
-  background: #eaf2ff;
-  color: #0f62fe;
+  background: var(--color-action-soft);
+  color: var(--color-action);
   font-weight: 900;
 }
 
