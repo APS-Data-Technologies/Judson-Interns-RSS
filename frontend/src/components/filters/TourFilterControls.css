@@ -126,6 +126,19 @@
   min-width: min(320px, 92vw);
 }
 
+.tour-filter__preset-row {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.tour-filter__preset-row:first-child {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tour-filter__preset-row:nth-child(2) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .tour-filter__toolbar {
   display: grid;
   gap: var(--space-2);
@@ -202,7 +215,16 @@
   display: grid;
   gap: var(--space-2);
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  padding: 0 var(--space-3) var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.tour-filter__range label {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.tour-filter__range small {
+  font-size: 0.68rem;
 }
 
 .tour-filter__range input,
@@ -254,7 +276,7 @@
   .tour-filter__summary,
   .tour-filter--search,
   .tour-filter--cost {
-    min-height: 62px;
+    min-height: 64px;
     padding: 0 var(--space-3);
   }
 
@@ -272,6 +294,10 @@
     height: 22px;
     width: 22px;
   }
+
+  .tour-filter__menu {
+    max-height: min(52vh, 360px);
+  }
 }
 
 @media (max-width: 520px) {
@@ -282,7 +308,7 @@
   .tour-filter__summary,
   .tour-filter--search,
   .tour-filter--cost {
-    min-height: 58px;
+    min-height: 60px;
     padding: 0 var(--space-2);
   }
 
@@ -294,5 +320,56 @@
 
   .tour-filter small {
     font-size: 0.6rem;
+  }
+
+  .tour-filter__menu--date {
+    left: 50%;
+    min-width: min(360px, calc(100vw - 28px));
+    transform: translateX(-50%);
+  }
+
+  .tour-filter__preset {
+    min-height: 44px;
+    padding: 0 var(--space-2);
+    text-align: center;
+  }
+
+  .tour-filter__range {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 430px) {
+  .tour-filters {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .tour-filter--date,
+  .tour-filter--search,
+  .tour-filter--cost {
+    grid-column: span 3;
+  }
+
+  .tour-filter:not(.tour-filter--date):not(.tour-filter--search):not(.tour-filter--cost) {
+    grid-column: span 1;
+  }
+
+  .tour-filter:not(.tour-filter--date):not(.tour-filter--search):not(.tour-filter--cost) .tour-filter__summary {
+    gap: 0;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    min-height: 56px;
+    padding: 0;
+  }
+
+  .tour-filter:not(.tour-filter--date):not(.tour-filter--search):not(.tour-filter--cost) .tour-filter__summary span,
+  .tour-filter:not(.tour-filter--date):not(.tour-filter--search):not(.tour-filter--cost) .tour-filter__chevron {
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
   }
 }
