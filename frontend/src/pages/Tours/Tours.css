@@ -25,13 +25,13 @@
 }
 
 .tour-card h2 {
-  color: #08265c;
+  color: var(--brand-navy-dark);
   font-size: clamp(1.45rem, 2.6vw, 2rem);
   font-weight: 950;
 }
 
 .tour-card p {
-  color: #08265c;
+  color: var(--brand-navy-dark);
   font-size: clamp(1rem, 1.8vw, 1.22rem);
   font-weight: 750;
   margin-top: var(--space-2);

@@ -29,7 +29,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
-  color: #08265c;
+  color: var(--brand-navy-dark);
   cursor: pointer;
   display: grid;
   gap: var(--space-2);
@@ -156,7 +156,7 @@
 }
 
 .pipeline-stage-panel__header h2 {
-  color: #08265c;
+  color: var(--brand-navy-dark);
   font-size: clamp(1.55rem, 3vw, 2.15rem);
   font-weight: 950;
   line-height: 1.05;
@@ -200,14 +200,14 @@
 }
 
 .pipeline-card h3 {
-  color: #08265c;
+  color: var(--brand-navy-dark);
   font-size: clamp(1.2rem, 2vw, 1.55rem);
   font-weight: 950;
   line-height: 1.1;
 }
 
 .pipeline-card p {
-  color: #08265c;
+  color: var(--brand-navy-dark);
   font-size: clamp(0.92rem, 1.5vw, 1.06rem);
   font-weight: 750;
   margin-top: var(--space-2);
@@ -290,14 +290,14 @@
 .pipeline-card__move-cancel {
   background: #ffffff !important;
   border-color: var(--color-border) !important;
-  color: #475569 !important;
+  color: var(--color-text-secondary) !important;
   min-width: 92px;
   padding: 0 var(--space-3);
 }
 
 .pipeline-card__move-confirm:disabled {
-  background: #dbe4f0 !important;
-  color: #64748b !important;
+  background: var(--color-border) !important;
+  color: var(--color-text-muted) !important;
 }
 
 .pipeline-card__move-confirm svg {

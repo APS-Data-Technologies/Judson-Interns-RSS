@@ -156,7 +156,7 @@
 }
 
 .home-card__header h2 {
-  color: #17233a;
+  color: var(--color-text-primary);
   font-size: clamp(1.28rem, 2.2vw, 1.8rem);
   line-height: 1.1;
 }
@@ -214,7 +214,7 @@
 }
 
 .home-tour-row strong {
-  color: #17233a;
+  color: var(--color-text-primary);
   font-size: 1rem;
 }
 

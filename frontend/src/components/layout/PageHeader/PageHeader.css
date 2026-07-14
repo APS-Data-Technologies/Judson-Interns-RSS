@@ -10,14 +10,14 @@
   font-size: 30px;
   font-weight: 700;
   line-height: 1.2;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .rss-page-header__subtitle {
   margin: 8px 0 0;
   font-size: 16px;
   line-height: 1.5;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .rss-page-header__actions {

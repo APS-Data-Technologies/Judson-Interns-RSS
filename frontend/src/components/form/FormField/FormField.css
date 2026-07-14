@@ -7,7 +7,7 @@
 .rss-form-field__label {
   font-size: clamp(0.82rem, 1.9vmin, 0.98rem);
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .rss-form-field__required {
@@ -18,7 +18,7 @@
 .rss-form-field__helper {
   margin: 0;
   font-size: clamp(0.68rem, 1.5vmin, 0.78rem);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .rss-form-field__error {

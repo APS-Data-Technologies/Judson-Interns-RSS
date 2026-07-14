@@ -25,7 +25,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
-  color: #334567;
+  color: var(--color-text-secondary);
   min-width: 0;
   position: relative;
 }
@@ -66,13 +66,13 @@
 }
 
 .tour-filter svg:not(.tour-filter__chevron) {
-  color: #34476c;
+  color: var(--color-text-secondary);
   height: 28px;
   width: 28px;
 }
 
 .tour-filter__chevron {
-  color: #6b7895;
+  color: var(--color-text-muted);
   height: 20px;
   transition: transform 160ms ease;
   width: 20px;
@@ -83,7 +83,7 @@
 }
 
 .tour-filter small {
-  color: #6b7895;
+  color: var(--color-text-muted);
   display: block;
   font-size: 0.78rem;
   font-weight: 900;
@@ -94,7 +94,7 @@
 .tour-filter strong,
 .tour-filter select,
 .tour-filter input {
-  color: #08265c;
+  color: var(--brand-navy-dark);
   font-size: 1.08rem;
   font-weight: 900;
 }
@@ -181,7 +181,7 @@
   background: #ffffff;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  color: #08265c;
+  color: var(--brand-navy-dark);
   cursor: pointer;
   font-weight: 850;
   min-height: 38px;
@@ -216,7 +216,7 @@
 }
 
 .tour-filter__option span {
-  color: #08265c;
+  color: var(--brand-navy-dark);
   font-weight: 850;
 }
 
@@ -296,7 +296,7 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
-    color: #08265c;
+    color: var(--brand-navy-dark);
     min-height: 60px;
   }
 
@@ -357,7 +357,7 @@
   .tour-filters__mobile-search input {
     background: transparent;
     border: 0;
-    color: #08265c;
+    color: var(--brand-navy-dark);
     font-size: 1rem;
     font-weight: 850;
     min-width: 0;
@@ -427,7 +427,7 @@
     background: var(--color-surface-soft);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    color: #08265c;
+    color: var(--brand-navy-dark);
     cursor: pointer;
     display: grid;
     gap: var(--space-2);
@@ -451,7 +451,7 @@
 
   .tour-filters__mobile-option:disabled em {
     background: #eef2f7;
-    color: #475569;
+    color: var(--color-text-secondary);
   }
 
   .tour-filters__mobile-option svg {
@@ -469,9 +469,9 @@
 
   .tour-filters__mobile-option em {
     background: #ffffff;
-    border: 1px solid #dbe7f7;
+    border: 1px solid var(--color-border);
     border-radius: 999px;
-    color: #52627c;
+    color: var(--color-text-secondary);
     font-size: 0.78rem;
     font-style: normal;
     font-weight: 850;
@@ -482,7 +482,7 @@
 
   .tour-filters__mobile-expanded {
     background: #ffffff;
-    border: 1px solid #dbe7f7;
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     display: grid;
     gap: var(--space-2);

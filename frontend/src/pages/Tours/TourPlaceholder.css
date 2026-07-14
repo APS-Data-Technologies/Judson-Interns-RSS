@@ -23,7 +23,7 @@
 }
 
 .tour-detail-hero h1 {
-  color: #08265c;
+  color: var(--brand-navy-dark);
   font-size: clamp(1.8rem, 3vw, 2.4rem);
   line-height: 1;
 }
@@ -65,7 +65,7 @@
 }
 
 .tour-detail-panel h2 {
-  color: #08265c;
+  color: var(--brand-navy-dark);
   font-size: clamp(1.3rem, 2.2vw, 1.7rem);
   margin-bottom: var(--space-4);
 }
@@ -133,7 +133,7 @@
 }
 
 .tour-events strong {
-  color: #08265c;
+  color: var(--brand-navy-dark);
 }
 
 .tour-events span,

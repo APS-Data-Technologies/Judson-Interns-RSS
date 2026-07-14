@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import useAuth from "../../features/auth/useAuth";
@@ -8,6 +8,7 @@ import BrandSection from "../../components/auth/BrandSection";
 import ProductSection from "../../components/auth/ProductSection";
 import HeroSection from "../../components/auth/HeroSection";
 import LoginCard from "../../components/auth/LoginCard";
+import loginBackgroundVideo from "../../assets/brand/rss-login-background.mp4";
 
 import "./Login.css";
 
@@ -22,6 +23,7 @@ function Login() {
   const [error, setError] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const backgroundVideoRef = useRef(null);
 
   const destination = "/home";
   const hasUnsavedLogin = Boolean(email || password);
@@ -33,6 +35,27 @@ function Login() {
       navigate(destination, { replace: true });
     }
   }, [destination, isAuthenticated, navigate]);
+
+  useEffect(() => {
+    const video = backgroundVideoRef.current;
+
+    if (!video) {
+      return undefined;
+    }
+
+    const startPlayback = () => {
+      video.play().catch(() => {
+        // Browser autoplay policies can still pause video; the static poster frame remains.
+      });
+    };
+
+    startPlayback();
+    video.addEventListener("canplay", startPlayback);
+
+    return () => {
+      video.removeEventListener("canplay", startPlayback);
+    };
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -60,10 +83,24 @@ function Login() {
 
   return (
     <main className="auth-layout">
+      <video
+        ref={backgroundVideoRef}
+        className="auth-background-video"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        aria-hidden="true"
+      >
+        <source src={loginBackgroundVideo} type="video/mp4" />
+      </video>
+
+      <div className="auth-background-overlay" aria-hidden="true" />
+
+      <BrandSection />
 
       <section className="auth-left-panel">
-
-        <BrandSection />
 
         <ProductSection />
 
@@ -74,6 +111,7 @@ function Login() {
       <section className="auth-right-panel">
 
         <LoginCard
+          id="staff-login-card"
           email={email}
           password={password}
           error={error}
