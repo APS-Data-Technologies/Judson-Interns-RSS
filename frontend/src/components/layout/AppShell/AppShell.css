@@ -18,21 +18,26 @@
   min-height: 0;
 }
 
+.app-shell__title-bar {
+  min-width: 0;
+}
+
 .app-shell__content {
   min-width: 0;
   min-height: 0;
-  background: #ffffff;
-  padding: clamp(0.9rem, 2vmin, 1.4rem);
+  background: var(--color-background);
+  padding: var(--page-pad-y) var(--page-pad-x);
   overflow: auto;
+  scroll-padding-top: 120px;
 }
 
 /* Same responsive philosophy as login page: portrait-like screens */
 @media (max-aspect-ratio: 11/10) {
   .app-shell {
     display: grid;
-    grid-template-rows: 1fr;
-    gap: clamp(0.35rem, 1vmin, 0.6rem);
-    padding: clamp(0.35rem, 1vmin, 0.65rem);
+    grid-template-rows: auto auto 1fr;
+    gap: clamp(0.45rem, 1.2vmin, 0.7rem);
+    padding: clamp(0.45rem, 1.3vmin, 0.75rem);
   }
 
   .app-shell__sidebar {
@@ -41,14 +46,23 @@
 
   .app-shell__main {
     display: grid;
-    grid-template-rows: auto auto 1fr;
-    gap: clamp(0.35rem, 1vmin, 0.6rem);
+    grid-template-rows: 1fr;
+    gap: clamp(0.45rem, 1.2vmin, 0.7rem);
     min-height: 0;
     padding-bottom: clamp(6.4rem, 14vmin, 7.8rem);
   }
 
   .app-shell__top-banner {
     display: block;
+    position: relative;
+    top: auto;
+    z-index: 45;
+  }
+
+  .app-shell__title-bar {
+    position: relative;
+    top: auto;
+    z-index: 40;
   }
 
   .app-shell__bottom-nav {
@@ -62,7 +76,8 @@
   }
 
   .app-shell__content {
-    border-radius: 0.75rem;
+    border-radius: var(--radius-md);
+    padding: clamp(0.85rem, 2.6vw, 1.1rem) clamp(0.75rem, 2.4vw, 1rem);
   }
 }
 
@@ -70,28 +85,40 @@
 @media (min-aspect-ratio: 11/10) {
   .app-shell {
     display: grid;
-    grid-template-columns: clamp(10rem, 15vw, 15rem) minmax(0, 1fr);
-    grid-template-rows: 1fr;
+    grid-template-columns: 256px minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
     gap: 0;
     padding: 0;
   }
 
+  .app-shell__top-banner {
+    display: block;
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
   .app-shell__sidebar {
     display: block;
+    grid-column: 1;
+    grid-row: 3;
     min-width: 0;
     min-height: 0;
   }
 
   .app-shell__main {
+    grid-column: 2;
+    grid-row: 3;
     display: grid;
-    grid-template-rows: auto auto 1fr;
+    grid-template-rows: 1fr;
     gap: 0;
     min-height: 0;
     overflow: hidden;
   }
 
-  .app-shell__top-banner {
+  .app-shell__title-bar {
     display: block;
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 
   .app-shell__bottom-nav {
@@ -105,5 +132,16 @@
   .top-banner {
     border-radius: 0;
     box-shadow: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .app-shell {
+    min-width: 360px;
+    overflow: auto;
+  }
+
+  .app-shell__content {
+    overflow-x: hidden;
   }
 }

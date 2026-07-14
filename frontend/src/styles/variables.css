@@ -1,6 +1,6 @@
 :root {
   /* Ready Set STEM brand colors */
-  --brand-navy: #132f6c;
+  --brand-navy: #1a365d;
   --brand-navy-dark: #0b1c41;
   --brand-blue: #0b73da;
   --brand-blue-dark: #0959aa;
@@ -9,7 +9,7 @@
   --brand-cyan: #23b6e7;
   --rss-blue: var(--brand-blue);
   --rss-blue-dark: var(--brand-blue-dark);
-  --rss-gold: #ffbf00;
+  --rss-gold: #fbbf24;
   --rss-green: #16a34a;
   --rss-red: #ef4343;
   --rss-purple: #7c3aed;
@@ -31,14 +31,14 @@
   --color-action-soft: var(--action-blue-soft);
   --color-action-border: var(--action-blue-border);
 
-  --color-background: #f8fbff;
+  --color-background: #f7f9fc;
   --color-surface: #ffffff;
-  --color-surface-soft: #eef6ff;
-  --color-border: #d9e7f7;
+  --color-surface-soft: #f3f7fb;
+  --color-border: #e1e7ef;
 
   --color-text-primary: var(--brand-navy-dark);
-  --color-text-secondary: #65758b;
-  --color-text-muted: #7b8798;
+  --color-text-secondary: #66758c;
+  --color-text-muted: #7a8798;
 
   --color-success: var(--rss-green);
   --color-warning: var(--rss-gold);
@@ -47,9 +47,9 @@
   /* Radius */
   --radius-sm: 8px;
   --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-2xl: 32px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
 
   /* Spacing scale */
   --space-1: 4px;
@@ -62,23 +62,31 @@
   --space-10: 40px;
   --space-12: 48px;
   --space-16: 64px;
+  --spacing-xs: var(--space-1);
+  --spacing-sm: var(--space-2);
+  --spacing-md: var(--space-4);
+  --spacing-lg: var(--space-6);
+  --spacing-xl: var(--space-8);
 
   /* Fluid spacing */
-  --page-pad-x: clamp(1rem, 4vw, 4.5rem);
-  --page-pad-y: clamp(1rem, 3vw, 3rem);
+  --page-pad-x: clamp(1rem, 3vw, 2rem);
+  --page-pad-y: clamp(1rem, 2.2vw, 2rem);
 
   /* Shadows */
-  --shadow-card: 0 12px 32px rgba(15, 23, 42, 0.1);
-  --shadow-soft: 0 18px 50px rgba(15, 23, 42, 0.08);
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.1), 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-soft: 0 8px 22px rgba(15, 23, 42, 0.06);
+  --shadow-panel: 0 14px 34px rgba(15, 23, 42, 0.08);
 
   /* Typography */
   --font-family-base: "Open Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-family-heading: "Montserrat", var(--font-family-base);
 
-  --font-brand: clamp(2.6rem, 4vw, 4.75rem);
+  --font-page-title: clamp(1.5rem, 2.2vw, 1.875rem);
+  --font-section-title: clamp(1.125rem, 1.6vw, 1.5rem);
+  --font-card-title: clamp(1.05rem, 1.4vw, 1.25rem);
+  --font-brand: clamp(2.25rem, 4vw, 4.75rem);
   --font-product: clamp(1.15rem, 2vw, 2rem);
-  --font-tagline: clamp(1.7rem, 3vw, 3.4rem);
-  --font-card-title: clamp(1.7rem, 2.4vw, 2.7rem);
+  --font-tagline: clamp(1.6rem, 3vw, 3.4rem);
 
   /* Breakpoints reference */
   --bp-mobile: 767px;

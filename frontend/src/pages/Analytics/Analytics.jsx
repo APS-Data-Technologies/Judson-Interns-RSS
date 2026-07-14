@@ -133,6 +133,7 @@ function Analytics() {
         showStatus={false}
         costBasis={costBasis}
         onCostBasisChange={setCostBasis}
+        staffLocationLabel={user?.location_name}
         staffLocationOnly={user?.role === "staff"}
       />
 

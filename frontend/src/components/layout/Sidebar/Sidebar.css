@@ -1,10 +1,11 @@
 .app-sidebar {
   height: 100%;
   min-height: 0;
-  background: linear-gradient(180deg, var(--brand-navy) 0%, var(--brand-navy-dark) 100%);
-  color: #ffffff;
+  background: #ffffff;
+  border-right: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   border-radius: 0;
-  padding: clamp(0.7rem, 1.4vmin, 1rem) 0;
+  padding: var(--page-pad-y) 8px 12px;
   display: flex;
   flex-direction: column;
 }
@@ -12,71 +13,76 @@
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: clamp(0.65rem, 1.8vmin, 1.25rem);
-  margin-top: clamp(0.5rem, 3vmin, 2rem);
+  gap: 6px;
+  margin-top: 0;
 }
 
 .sidebar-nav-item,
 .sidebar-logout {
   width: 100%;
   border: 0;
-  border-radius: 0;
-  padding: clamp(0.9rem, 2.2vmin, 1.35rem) clamp(0.45rem, 1.3vmin, 0.9rem);
+  border-radius: 10px;
+  padding: 0 16px;
   background: transparent;
-  color: #ffffff;
+  color: var(--color-text-secondary);
   text-decoration: none;
   font: inherit;
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  justify-content: center;
-  gap: clamp(0.18rem, 0.6vmin, 0.35rem);
+  justify-content: start;
+  gap: 12px;
+  min-height: 48px;
 }
 
 .sidebar-nav-item.active {
-  background: transparent;
+  background: var(--brand-blue);
   color: #ffffff;
-  font-weight: 900;
+  font-weight: 800;
+  box-shadow: 0 4px 10px rgba(11, 115, 218, 0.18);
 }
 
 .sidebar-logout {
   margin-top: auto;
-  color: var(--status-churned);
+  color: var(--rss-red);
 }
 
 .sidebar-logout:hover,
 .sidebar-nav-item:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--color-surface-soft);
+  color: var(--brand-navy-dark);
 }
 
 .sidebar-nav-item.active:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--brand-blue);
+  color: #ffffff;
 }
 
 .sidebar-nav-icon-wrap {
   align-items: center;
-  border-radius: 999px;
   display: inline-flex;
-  height: clamp(3rem, 6vmin, 4rem);
+  height: 24px;
   justify-content: center;
-  width: clamp(3rem, 6vmin, 4rem);
+  width: 24px;
 }
 
 .sidebar-nav-item.active .sidebar-nav-icon-wrap {
-  background: #ffffff;
-  color: var(--brand-navy);
+  background: transparent;
+  color: #ffffff;
 }
 
 .sidebar-nav-icon {
-  width: clamp(1.6rem, 3.2vmin, 2.35rem);
-  height: clamp(1.6rem, 3.2vmin, 2.35rem);
-  stroke-width: 2.9;
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.4;
 }
 
 .sidebar-nav-label {
-  font-size: clamp(0.9rem, 1.8vmin, 1.35rem);
-  font-weight: 900;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  text-align: left;
 }
 
 .sidebar-logout .sidebar-nav-icon-wrap {

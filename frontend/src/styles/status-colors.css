@@ -6,6 +6,13 @@
   --status-no-show: #f97316;
   --status-cancelled: var(--neutral-action);
   --status-rescheduled: #7c3aed;
+  --status-booked-soft: #e8f4ff;
+  --status-toured-soft: #fff7df;
+  --status-enrolled-soft: #eaf8ef;
+  --status-churned-soft: #fff0f0;
+  --status-no-show-soft: #fff3e8;
+  --status-cancelled-soft: #f1f5f9;
+  --status-rescheduled-soft: #f3edff;
 }
 
 .status-color--scheduled {

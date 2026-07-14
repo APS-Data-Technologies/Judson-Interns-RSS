@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye } from "lucide-react";
 
@@ -29,10 +29,27 @@ function formatTourTime(value) {
   }).format(new Date(value));
 }
 
+function yesterdayValue() {
+  const date = new Date();
+  date.setDate(date.getDate() - 1);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function sortToursByTime(tours) {
+  return [...tours].sort((firstTour, secondTour) => (
+    new Date(firstTour.scheduled_tour_date).getTime() -
+    new Date(secondTour.scheduled_tour_date).getTime()
+  ));
+}
+
 function TourList({ title, tours, tone }) {
   const navigate = useNavigate();
   const status = tone === "booked" ? "scheduled" : "no_show";
   const statusLabel = tone === "booked" ? "booked" : "no show";
+  const filterDate = tone === "booked" ? todayValue() : yesterdayValue();
 
   return (
     <article className={`home-card home-card--${tone}`}>
@@ -41,8 +58,8 @@ function TourList({ title, tours, tone }) {
         <button
           className="home-card__count"
           type="button"
-          aria-label={`View today's ${statusLabel} tours`}
-          onClick={() => navigate(`/tours?date=${todayValue()}&status=${status}`)}
+          aria-label={`View ${statusLabel} tours`}
+          onClick={() => navigate(`/tours?date=${filterDate}&status=${status}`)}
         >
           {tours.length}
         </button>
@@ -87,6 +104,14 @@ function Home() {
   const [summary, setSummary] = useState(initialSummary);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const bookedTours = useMemo(
+    () => sortToursByTime(summary.booked_tours),
+    [summary.booked_tours],
+  );
+  const noShowTours = useMemo(
+    () => sortToursByTime(summary.no_show_tours),
+    [summary.no_show_tours],
+  );
 
   useEffect(() => {
     let isCurrent = true;
@@ -142,6 +167,7 @@ function Home() {
           searchPlaceholder="Search family names"
           showLeadSource={false}
           showStatus={false}
+          staffLocationLabel={user?.location_name}
           staffLocationOnly={user?.role === "staff"}
         />
       </div>
@@ -151,13 +177,13 @@ function Home() {
 
       <div className="home-summary" aria-label="Today tour summary">
         <TourList
-          title="Today's booked tours"
-          tours={summary.booked_tours}
+          title="Today's Booked Tours"
+          tours={bookedTours}
           tone="booked"
         />
         <TourList
-          title="Yesterday's no show"
-          tours={summary.no_show_tours}
+          title="Yesterday's No Shows"
+          tours={noShowTours}
           tone="noshow"
         />
       </div>

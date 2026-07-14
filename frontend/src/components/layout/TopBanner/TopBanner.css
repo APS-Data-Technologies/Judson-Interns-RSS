@@ -2,14 +2,17 @@
   width: 100%;
   overflow: hidden;
   padding: 0 clamp(0.85rem, 3vw, 1.25rem);
-  min-height: clamp(4rem, 9vmin, 5.5rem);
-  background: linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-navy-dark) 100%);
+  min-height: clamp(5.8rem, 10vmin, 7.5rem);
+  background: linear-gradient(90deg, #0b6bcb 0%, #0f9ee6 52%, #23b6e7 100%);
   color: #ffffff;
-  border-radius: clamp(1rem, 2.2vmin, 1.6rem);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0.5rem 1.2rem rgba(32, 72, 110, 0.18);
+  box-shadow:
+    0 0.8rem 1.8rem rgba(32, 72, 110, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
 }
 
 .top-banner__brand {
@@ -22,20 +25,21 @@
 
 .top-banner__logo {
   display: block;
-  width: min(62vw, 22rem);
-  height: clamp(3rem, 7vmin, 4.75rem);
+  width: min(56vw, 29rem);
+  height: clamp(4rem, 8vmin, 6rem);
   object-fit: contain;
   filter: drop-shadow(0 0.3rem 0.65rem rgba(0, 0, 0, 0.18));
 }
 
 @media (max-aspect-ratio: 11/10) {
   .top-banner {
-    min-height: clamp(7rem, 17vmin, 9rem);
+    min-height: clamp(6rem, 15vmin, 7.4rem);
+    border-radius: var(--radius-md);
   }
 
   .top-banner__logo {
-    width: min(82vw, 25rem);
-    height: clamp(4.4rem, 13vmin, 6.5rem);
+    width: min(82vw, 24rem);
+    height: clamp(4rem, 11vmin, 5.6rem);
   }
 }
 
@@ -45,8 +49,8 @@
   }
 
   .top-banner__logo {
-    width: min(80vw, 21rem);
-    height: clamp(4rem, 20vw, 5.6rem);
+    width: min(82vw, 20rem);
+    height: clamp(3.5rem, 18vw, 5rem);
   }
 }
 
@@ -57,7 +61,7 @@
   }
 
   .top-banner__logo {
-    width: min(44vw, 25rem);
-    height: clamp(3.4rem, 7vmin, 5rem);
+    width: min(44vw, 29rem);
+    height: clamp(4rem, 8vmin, 6rem);
   }
 }

@@ -1,19 +1,20 @@
 .bottom-navigation {
   width: 100%;
-  min-height: clamp(4.2rem, 8vmin, 5.2rem);
+  min-height: clamp(4.8rem, 10vmin, 6rem);
   background: #ffffff;
-  border-radius: clamp(1rem, 2vmin, 1.4rem);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   padding: clamp(0.35rem, 1vmin, 0.6rem);
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: clamp(0.15rem, 0.6vmin, 0.35rem);
-  box-shadow: 0 -0.2rem 1rem rgba(15, 23, 42, 0.06);
+  box-shadow: 0 -8px 22px rgba(15, 23, 42, 0.08);
 }
 
 .bottom-navigation__item {
   min-width: 0;
-  border-radius: clamp(0.75rem, 1.8vmin, 1.1rem);
-  color: var(--color-text-muted);
+  border-radius: 10px;
+  color: var(--color-text-secondary);
   text-decoration: none;
   display: flex;
   flex-direction: column;
@@ -23,9 +24,10 @@
 }
 
 .bottom-navigation__item.active {
-  background: var(--color-action-soft);
-  color: var(--color-action);
-  font-weight: 900;
+  background: var(--brand-blue);
+  color: #ffffff;
+  font-weight: 800;
+  box-shadow: 0 4px 10px rgba(11, 115, 218, 0.18);
 }
 
 .bottom-navigation__icon {

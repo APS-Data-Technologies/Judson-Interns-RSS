@@ -18,6 +18,18 @@ const routeTitles = {
   "/admin/lead-sources/new": "Add Lead Source",
 };
 
+const primaryRoutes = new Set([
+  "/home",
+  "/tours",
+  "/pipeline",
+  "/analytics",
+  "/settings",
+  "/admin",
+  "/admin/users",
+  "/admin/locations",
+  "/admin/lead-sources",
+]);
+
 function ProtectedRoute() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
@@ -43,9 +55,10 @@ function ProtectedRoute() {
     location.pathname === "/home"
       ? `Hello ${firstName}`
       : routeTitle || dynamicTitle || "Ready Set STEM";
+  const showBack = !primaryRoutes.has(location.pathname);
 
   return (
-    <AppShell title={pageTitle}>
+    <AppShell title={pageTitle} showBack={showBack}>
       <Outlet />
     </AppShell>
   );

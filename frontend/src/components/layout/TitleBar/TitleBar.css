@@ -1,20 +1,43 @@
 .title-bar {
   width: 100%;
   background: #ffffff;
-  border-radius: clamp(0.9rem, 2vmin, 1.4rem);
-  min-height: clamp(3.2rem, 7vmin, 4.75rem);
-  padding: clamp(0.7rem, 1.7vmin, 1.1rem);
+  border: 1px solid var(--color-border);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  min-height: clamp(3rem, 6vmin, 4rem);
+  padding: clamp(0.65rem, 1.4vmin, 0.9rem);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0.2rem 0.7rem rgba(15, 23, 42, 0.05);
+  position: relative;
+  box-shadow: var(--shadow-card);
+}
+
+.title-bar__back {
+  align-items: center;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  color: var(--brand-blue);
+  cursor: pointer;
+  display: inline-flex;
+  height: clamp(2.2rem, 5.5vmin, 2.65rem);
+  justify-content: center;
+  left: clamp(0.75rem, 2vw, 1.25rem);
+  position: absolute;
+  width: clamp(2.2rem, 5.5vmin, 2.65rem);
+}
+
+.title-bar__back svg {
+  height: 1.15rem;
+  stroke-width: 2.6;
+  width: 1.15rem;
 }
 
 .title-bar h1 {
   margin: 0;
   color: var(--color-text-primary);
-  font-size: clamp(1.5rem, 4vmin, 2.4rem);
-  font-weight: 900;
-  letter-spacing: -0.04em;
+  font-size: var(--font-page-title);
+  font-weight: 800;
+  letter-spacing: 0;
   text-align: center;
 }
