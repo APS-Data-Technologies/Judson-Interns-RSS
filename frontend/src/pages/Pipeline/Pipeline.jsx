@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   CalendarCheck,
   Check,
+  Columns3,
   Eye,
   GraduationCap,
+  ListChecks,
   MoveRight,
   Pencil,
   UserRoundCheck,
@@ -52,6 +54,14 @@ function formatTourDate(value) {
     day: "numeric",
     year: "numeric",
   }).format(new Date(value));
+}
+
+function sortToursByTime(tours, direction) {
+  const multiplier = direction === "asc" ? 1 : -1;
+  return [...tours].sort((firstTour, secondTour) => (
+    new Date(firstTour.scheduled_tour_date).getTime() -
+    new Date(secondTour.scheduled_tour_date).getTime()
+  ) * multiplier);
 }
 
 function PipelineCard({ tour, onMove, isMoving }) {
@@ -158,6 +168,199 @@ function PipelineCard({ tour, onMove, isMoving }) {
   );
 }
 
+function PipelineKanbanCard({ tour, onMove, isMoving, onTouchDrop }) {
+  const navigate = useNavigate();
+  const touchDragRef = useRef(null);
+  const [isMoveMenuOpen, setIsMoveMenuOpen] = useState(false);
+  const [isTouchDragging, setIsTouchDragging] = useState(false);
+  const [touchPreview, setTouchPreview] = useState(null);
+  const [pendingStatus, setPendingStatus] = useState("");
+  const status = pipelineStatuses.find((item) => item.value === tour.current_status);
+  const familyName = tour.family_name.endsWith("Family")
+    ? tour.family_name
+    : `${tour.family_name} Family`;
+  const moveOptions = nextStageActions[tour.current_status] || [];
+
+  function beginTouchDrag(event) {
+    if (event.pointerType === "mouse" || isMoving) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    touchDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false,
+    };
+    setTouchPreview({
+      x: event.clientX,
+      y: event.clientY,
+    });
+    setIsTouchDragging(true);
+  }
+
+  function continueTouchDrag(event) {
+    const drag = touchDragRef.current;
+
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+    if (distance > 8) {
+      drag.moved = true;
+    }
+    setTouchPreview({
+      x: event.clientX,
+      y: event.clientY,
+    });
+  }
+
+  function finishTouchDrag(event) {
+    const drag = touchDragRef.current;
+
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    touchDragRef.current = null;
+    setIsTouchDragging(false);
+    setTouchPreview(null);
+
+    if (drag.moved) {
+      onTouchDrop(tour.id, event.clientX, event.clientY);
+    }
+  }
+
+  function confirmMove() {
+    if (!pendingStatus) {
+      return;
+    }
+    onMove(tour.id, pendingStatus);
+    setIsMoveMenuOpen(false);
+    setPendingStatus("");
+  }
+
+  return (
+    <article
+      className={`pipeline-kanban-card pipeline-kanban-card--${tour.current_status} ${
+        isTouchDragging ? "is-touch-dragging" : ""
+      }`}
+      draggable={!isMoving}
+      onDragStart={(event) => {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", String(tour.id));
+      }}
+    >
+      <button
+        className="pipeline-kanban-card__grab"
+        type="button"
+        aria-label={`Drag ${familyName}`}
+        disabled={isMoving}
+        onPointerDown={beginTouchDrag}
+        onPointerMove={continueTouchDrag}
+        onPointerCancel={finishTouchDrag}
+        onPointerUp={finishTouchDrag}
+      >
+        ⋮⋮
+      </button>
+      <div className="pipeline-kanban-card__body">
+        <div className="pipeline-kanban-card__heading">
+          <h3>{familyName}</h3>
+          <span className={`pipeline-kanban-card__badge status-color--${tour.current_status}`}>
+            {status?.label || tour.status_label}
+          </span>
+        </div>
+        <p>
+          Grade {tour.child_grade || "not set"} <span aria-hidden="true">·</span>{" "}
+          {tour.location_name}
+        </p>
+        <p>Tour Date: {formatTourDate(tour.scheduled_tour_date)}</p>
+        <div className="pipeline-kanban-card__actions" aria-label={`${familyName} actions`}>
+          <button
+            type="button"
+            aria-label={`View ${familyName} details`}
+            onClick={() => navigate(`/tours/${tour.id}`)}
+          >
+            <Eye aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            aria-label={`Edit ${familyName}`}
+            onClick={() => navigate(`/tours/${tour.id}/edit`)}
+          >
+            <Pencil aria-hidden="true" />
+          </button>
+          {moveOptions.length > 0 && (
+            <button
+              type="button"
+              aria-expanded={isMoveMenuOpen}
+              aria-label={`Move ${familyName} to next stage`}
+              disabled={isMoving}
+              onClick={() => setIsMoveMenuOpen((isOpen) => !isOpen)}
+            >
+              <MoveRight aria-hidden="true" />
+            </button>
+          )}
+        </div>
+        {isMoveMenuOpen && moveOptions.length > 0 && (
+          <div className="pipeline-kanban-card__moves" aria-label={`Move ${familyName}`}>
+            {moveOptions.map((action) => (
+              <button
+                type="button"
+                key={action.value}
+                disabled={isMoving}
+                aria-pressed={pendingStatus === action.value}
+                onClick={() => setPendingStatus(action.value)}
+              >
+                {action.label}
+              </button>
+            ))}
+            <div className="pipeline-kanban-card__move-actions">
+              <button
+                className="pipeline-kanban-card__move-confirm"
+                type="button"
+                disabled={isMoving || !pendingStatus}
+                onClick={confirmMove}
+              >
+                <Check aria-hidden="true" />
+                <span>{isMoving ? "Moving" : "Confirm"}</span>
+              </button>
+              <button
+                className="pipeline-kanban-card__move-cancel"
+                type="button"
+                disabled={isMoving}
+                onClick={() => {
+                  setPendingStatus("");
+                  setIsMoveMenuOpen(false);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      {isTouchDragging && touchPreview && (
+        <div
+          className={`pipeline-kanban-card__touch-preview pipeline-kanban-card__touch-preview--${tour.current_status}`}
+          style={{
+            "--touch-x": `${touchPreview.x}px`,
+            "--touch-y": `${touchPreview.y}px`,
+          }}
+          aria-hidden="true"
+        >
+          <strong>{familyName}</strong>
+          <span>{status?.label || tour.status_label}</span>
+        </div>
+      )}
+    </article>
+  );
+}
+
 function Pipeline() {
   const { user } = useAuth();
   const [tours, setTours] = useState([]);
@@ -165,7 +368,10 @@ function Pipeline() {
   const [leadSources, setLeadSources] = useState([]);
   const [filters, setFilters] = useState(() => createDefaultTourFilters(user));
   const [activeStatus, setActiveStatus] = useState("scheduled");
+  const [viewMode, setViewMode] = useState("stages");
   const [movingTourId, setMovingTourId] = useState(null);
+  const [dragOverStatus, setDragOverStatus] = useState("");
+  const [sortDirection, setSortDirection] = useState("asc");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -241,15 +447,20 @@ function Pipeline() {
     };
   }, [filters]);
 
+  const sortedTours = useMemo(
+    () => sortToursByTime(tours, sortDirection),
+    [sortDirection, tours],
+  );
+
   const groupedTours = useMemo(
     () =>
       pipelineStatuses.reduce((groups, status) => {
-        groups[status.value] = tours.filter(
+        groups[status.value] = sortedTours.filter(
           (tour) => tour.current_status === status.value,
         );
         return groups;
       }, {}),
-    [tours],
+    [sortedTours],
   );
   const activeStage = pipelineStatuses.find((status) => status.value === activeStatus) || pipelineStatuses[0];
   const activeTours = groupedTours[activeStage.value] || [];
@@ -262,6 +473,19 @@ function Pipeline() {
   }
 
   async function moveTour(tourId, status) {
+    const tourToMove = tours.find((tour) => tour.id === tourId);
+
+    if (!tourToMove || tourToMove.current_status === status) {
+      return;
+    }
+
+    const allowedStatuses = nextStageActions[tourToMove.current_status]?.map((action) => action.value) || [];
+
+    if (!allowedStatuses.includes(status)) {
+      setError("That move is not available from the current stage.");
+      return;
+    }
+
     setMovingTourId(tourId);
     setError("");
 
@@ -280,16 +504,67 @@ function Pipeline() {
     }
   }
 
+  function handleKanbanDrop(event, status) {
+    event.preventDefault();
+    setDragOverStatus("");
+    const tourId = Number(event.dataTransfer.getData("text/plain"));
+    if (tourId) {
+      moveTour(tourId, status);
+    }
+  }
+
+  function handleTouchKanbanDrop(tourId, clientX, clientY) {
+    const target = document
+      .elementFromPoint(clientX, clientY)
+      ?.closest("[data-pipeline-status]");
+    const status = target?.getAttribute("data-pipeline-status");
+
+    if (status) {
+      moveTour(tourId, status);
+    }
+  }
+
   return (
     <section className="pipeline-page" aria-label="Pipeline">
+      <div className="pipeline-viewbar" aria-label="Pipeline view selector">
+        <div>
+          <p>Pipeline View</p>
+          <span>{viewMode === "stages" ? "Card view" : "Board view"}</span>
+        </div>
+        <div className="pipeline-view-toggle" role="group" aria-label="Choose pipeline view">
+          <button
+            className={viewMode === "stages" ? "is-active" : ""}
+            type="button"
+            aria-pressed={viewMode === "stages"}
+            onClick={() => setViewMode("stages")}
+          >
+            <ListChecks aria-hidden="true" />
+            <span>Card view</span>
+          </button>
+          <button
+            className={viewMode === "kanban" ? "is-active" : ""}
+            type="button"
+            aria-pressed={viewMode === "kanban"}
+            onClick={() => setViewMode("kanban")}
+          >
+            <Columns3 aria-hidden="true" />
+            <span>Board view</span>
+          </button>
+        </div>
+      </div>
+
       <div className="pipeline-controls" aria-label="Pipeline filters">
         <TourFilterControls
           filters={filters}
           leadSources={leadSources}
           locations={locations}
           onChange={updateFilter}
+          onSortToggle={() => setSortDirection((direction) => (direction === "asc" ? "desc" : "asc"))}
           searchPlaceholder="Search family name"
           showStatus={false}
+          showSort
+          sortDirection={sortDirection}
+          staffLocationLabel={user?.location_name}
           staffLocationOnly={user?.role === "staff"}
         />
       </div>
@@ -297,7 +572,8 @@ function Pipeline() {
       {error && <p className="pipeline-state pipeline-state--error">{error}</p>}
       {isLoading && <p className="pipeline-state">Loading pipeline...</p>}
 
-      <div className="pipeline-board">
+      {viewMode === "stages" ? (
+      <div className="pipeline-board pipeline-board--stages">
         <div className="pipeline-tabs" role="tablist" aria-label="Pipeline stages">
         {pipelineStatuses.map((status) => {
           const Icon = status.icon;
@@ -349,6 +625,104 @@ function Pipeline() {
           </div>
         </section>
       </div>
+      ) : (
+        <section className="pipeline-kanban" aria-label="Pipeline kanban board">
+          <header className="pipeline-kanban__header">
+            <div>
+              <h2>Pipeline Board</h2>
+              <p>Move Booked tours to Toured or No Show, then move Toured tours to Enrolled or Churned.</p>
+            </div>
+            <span>{sortedTours.length} tours</span>
+          </header>
+
+          <div className="pipeline-kanban__flow pipeline-kanban__flow--branching" aria-hidden="true">
+            <div className="pipeline-kanban__flow-path">
+              <div className="pipeline-kanban__flow-node pipeline-kanban__flow-node--scheduled">
+                <span><CalendarCheck aria-hidden="true" /></span>
+                <strong>Booked</strong>
+              </div>
+              <div className="pipeline-kanban__flow-split">
+                <MoveRight aria-hidden="true" />
+                <span>to</span>
+              </div>
+              <div className="pipeline-kanban__flow-node pipeline-kanban__flow-node--toured">
+                <span><UserRoundCheck aria-hidden="true" /></span>
+                <strong>Toured</strong>
+              </div>
+              <div className="pipeline-kanban__flow-split">
+                <MoveRight aria-hidden="true" />
+                <span>to</span>
+              </div>
+              <div className="pipeline-kanban__flow-node pipeline-kanban__flow-node--enrolled">
+                <span><GraduationCap aria-hidden="true" /></span>
+                <strong>Enrolled</strong>
+              </div>
+            </div>
+            <div className="pipeline-kanban__flow-path pipeline-kanban__flow-path--branch">
+              <span className="pipeline-kanban__flow-branch-label">or</span>
+              <div className="pipeline-kanban__flow-node pipeline-kanban__flow-node--no_show">
+                <span><X aria-hidden="true" /></span>
+                <strong>No Show</strong>
+              </div>
+              <span className="pipeline-kanban__flow-branch-label">or</span>
+              <div className="pipeline-kanban__flow-node pipeline-kanban__flow-node--churned">
+                <span><UserRoundX aria-hidden="true" /></span>
+                <strong>Churned</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="pipeline-kanban__columns">
+            {pipelineStatuses.map((status) => {
+              const Icon = status.icon;
+              const groupTours = groupedTours[status.value] || [];
+
+              return (
+                <section
+                  className={`pipeline-kanban__column pipeline-kanban__column--${status.value} ${
+                    dragOverStatus === status.value ? "is-drop-target" : ""
+                  }`}
+                  key={status.value}
+                  data-pipeline-status={status.value}
+                  aria-label={`${status.label} kanban column`}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                    setDragOverStatus(status.value);
+                  }}
+                  onDragLeave={() => setDragOverStatus("")}
+                  onDrop={(event) => handleKanbanDrop(event, status.value)}
+                >
+                  <header className="pipeline-kanban__column-header">
+                    <span className="pipeline-kanban__column-icon"><Icon aria-hidden="true" /></span>
+                    <div>
+                      <h3>{status.label}</h3>
+                      <p>{groupTours.length} tours</p>
+                    </div>
+                    <strong>{groupTours.length}</strong>
+                  </header>
+
+                  <div className="pipeline-kanban__column-body">
+                    {groupTours.length > 0 ? (
+                      groupTours.map((tour) => (
+                        <PipelineKanbanCard
+                          key={tour.id}
+                          tour={tour}
+                          isMoving={movingTourId === tour.id}
+                          onMove={moveTour}
+                          onTouchDrop={handleTouchKanbanDrop}
+                        />
+                      ))
+                    ) : (
+                      <p className="pipeline-empty">No tours in this status.</p>
+                    )}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </section>
   );
 }

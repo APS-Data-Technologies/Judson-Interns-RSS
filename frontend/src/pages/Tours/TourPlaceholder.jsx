@@ -43,6 +43,17 @@ function getFormFromTour(tour) {
   };
 }
 
+const editRequiredFields = {
+  familyName: "Family name is required.",
+  contactEmail: "Email is required.",
+  contactPhone: "Phone is required.",
+  location: "Location is required.",
+  leadSource: "Lead source is required.",
+  childGrade: "Grade is required.",
+  tourDate: "Date is required.",
+  tourTime: "Time is required.",
+};
+
 function getFamilyDisplayName(familyName) {
   if (!familyName) return "Family";
   return familyName.endsWith("Family") ? familyName : `${familyName} Family`;
@@ -61,14 +72,20 @@ function TourPlaceholder({ mode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [message, setMessage] = useState("");
+  const [pendingAction, setPendingAction] = useState("");
 
   const isDirty = useMemo(
     () => isEdit && form && initialForm && JSON.stringify(form) !== JSON.stringify(initialForm),
     [form, initialForm, isEdit],
   );
 
-  useUnsavedChangesPrompt(isDirty && !isSaving);
+  const navigationPrompt = useUnsavedChangesPrompt(
+    isDirty && !isSaving,
+    "Edit Tour has unsaved changes. Leave this page and discard changes?",
+    { mode: "inline" },
+  );
 
   useEffect(() => {
     let isCurrent = true;
@@ -117,6 +134,11 @@ function TourPlaceholder({ mode }) {
       ...currentForm,
       [name]: value,
     }));
+    setFieldErrors((currentErrors) => ({
+      ...currentErrors,
+      [name]: "",
+    }));
+    setPendingAction("");
   }
 
   async function refreshTour() {
@@ -131,10 +153,35 @@ function TourPlaceholder({ mode }) {
     setInitialForm(nextForm);
   }
 
-  async function handleSubmit(event) {
+  function validateForm() {
+    const nextErrors = {};
+    Object.entries(editRequiredFields).forEach(([fieldName, errorMessage]) => {
+      if (!String(form[fieldName] || "").trim()) {
+        nextErrors[fieldName] = errorMessage;
+      }
+    });
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      setError("Please complete the required fields before saving.");
+      return false;
+    }
+    return true;
+  }
+
+  function requestSave(event) {
     event.preventDefault();
     setError("");
     setMessage("");
+    if (!validateForm()) {
+      return;
+    }
+    setPendingAction("save");
+  }
+
+  async function saveTour() {
+    setError("");
+    setMessage("");
+    setPendingAction("");
     setIsSaving(true);
 
     try {
@@ -169,6 +216,11 @@ function TourPlaceholder({ mode }) {
     }
   }
 
+  function requestCancel() {
+    setPendingAction("");
+    navigate("/tours");
+  }
+
   if (isLoading) {
     return <p className="tour-detail-state">Loading tour...</p>;
   }
@@ -186,9 +238,11 @@ function TourPlaceholder({ mode }) {
   return (
     <section className="tour-detail-page">
       <header className="tour-detail-hero">
-        <div>
+        <div className="tour-detail-hero__title">
           <h1>{familyDisplayName}</h1>
-          <span>{tour.status_label}</span>
+          <span className={`tour-detail-hero__status status-color--${tour.current_status}`}>
+            {tour.status_label}
+          </span>
         </div>
         <div className="tour-detail-hero__actions">
           <Button type="button" variant="secondary" onClick={() => navigate("/tours")}>
@@ -204,55 +258,93 @@ function TourPlaceholder({ mode }) {
 
       {error && <p className="tour-detail-state tour-detail-state--error">{error}</p>}
       {message && <p className="tour-detail-state">{message}</p>}
+      {navigationPrompt.isBlocked && (
+        <div className="tour-detail-confirm" role="alert">
+          <strong>Leave Edit Tour?</strong>
+          <p>{navigationPrompt.message}</p>
+          <div>
+            <Button type="button" variant="secondary" onClick={navigationPrompt.reset}>
+              Stay
+            </Button>
+            <Button type="button" onClick={navigationPrompt.proceed}>
+              Leave Page
+            </Button>
+          </div>
+        </div>
+      )}
 
       {isEdit ? (
-        <form className="tour-edit-form" onSubmit={handleSubmit}>
+        <form className="tour-edit-form" noValidate onSubmit={requestSave}>
           <label>
-            <span>Family name</span>
-            <input value={form.familyName} onChange={(event) => updateForm("familyName", event.target.value)} required />
+            <span>Family name *</span>
+            <input value={form.familyName} onChange={(event) => updateForm("familyName", event.target.value)} aria-invalid={Boolean(fieldErrors.familyName)} />
+            {fieldErrors.familyName && <small>{fieldErrors.familyName}</small>}
           </label>
           <label>
-            <span>Email</span>
-            <input type="email" value={form.contactEmail} onChange={(event) => updateForm("contactEmail", event.target.value)} />
+            <span>Email *</span>
+            <input type="email" value={form.contactEmail} onChange={(event) => updateForm("contactEmail", event.target.value)} aria-invalid={Boolean(fieldErrors.contactEmail)} />
+            {fieldErrors.contactEmail && <small>{fieldErrors.contactEmail}</small>}
           </label>
           <label>
-            <span>Phone</span>
-            <input type="tel" value={form.contactPhone} onChange={(event) => updateForm("contactPhone", event.target.value)} />
+            <span>Phone *</span>
+            <input type="tel" value={form.contactPhone} onChange={(event) => updateForm("contactPhone", event.target.value)} aria-invalid={Boolean(fieldErrors.contactPhone)} />
+            {fieldErrors.contactPhone && <small>{fieldErrors.contactPhone}</small>}
           </label>
           <label>
-            <span>Location</span>
-            <select value={form.location} onChange={(event) => updateForm("location", event.target.value)} required>
+            <span>Location *</span>
+            <select value={form.location} onChange={(event) => updateForm("location", event.target.value)} aria-invalid={Boolean(fieldErrors.location)}>
+              <option value="">Select location</option>
               {locations.map((location) => (
                 <option key={location.id} value={location.id}>{location.location_name}</option>
               ))}
             </select>
+            {fieldErrors.location && <small>{fieldErrors.location}</small>}
           </label>
           <label>
-            <span>Lead source</span>
-            <select value={form.leadSource} onChange={(event) => updateForm("leadSource", event.target.value)} required>
+            <span>Lead source *</span>
+            <select value={form.leadSource} onChange={(event) => updateForm("leadSource", event.target.value)} aria-invalid={Boolean(fieldErrors.leadSource)}>
+              <option value="">Select lead source</option>
               {leadSources.map((source) => (
                 <option key={source.id} value={source.id}>{source.source_name}</option>
               ))}
             </select>
+            {fieldErrors.leadSource && <small>{fieldErrors.leadSource}</small>}
           </label>
           <label>
-            <span>Grade</span>
-            <input value={form.childGrade} onChange={(event) => updateForm("childGrade", event.target.value)} />
+            <span>Grade *</span>
+            <input value={form.childGrade} onChange={(event) => updateForm("childGrade", event.target.value)} aria-invalid={Boolean(fieldErrors.childGrade)} />
+            {fieldErrors.childGrade && <small>{fieldErrors.childGrade}</small>}
           </label>
           <label>
-            <span>Date</span>
-            <input type="date" value={form.tourDate} onChange={(event) => updateForm("tourDate", event.target.value)} required />
+            <span>Date *</span>
+            <input type="date" value={form.tourDate} onChange={(event) => updateForm("tourDate", event.target.value)} aria-invalid={Boolean(fieldErrors.tourDate)} />
+            {fieldErrors.tourDate && <small>{fieldErrors.tourDate}</small>}
           </label>
           <label>
-            <span>Time</span>
-            <input type="time" value={form.tourTime} onChange={(event) => updateForm("tourTime", event.target.value)} required />
+            <span>Time *</span>
+            <input type="time" value={form.tourTime} onChange={(event) => updateForm("tourTime", event.target.value)} aria-invalid={Boolean(fieldErrors.tourTime)} />
+            {fieldErrors.tourTime && <small>{fieldErrors.tourTime}</small>}
           </label>
           <label className="tour-edit-form__wide">
             <span>Notes</span>
             <textarea rows="4" value={form.notes} onChange={(event) => updateForm("notes", event.target.value)} />
           </label>
+          {pendingAction === "save" && (
+            <div className="tour-detail-confirm tour-edit-form__wide" role="alert">
+              <strong>Save Edit Tour?</strong>
+              <p>Confirm that the updated tour details are correct before saving.</p>
+              <div>
+                <Button type="button" variant="secondary" onClick={() => setPendingAction("")}>
+                  Cancel
+                </Button>
+                <Button type="button" disabled={isSaving} onClick={saveTour}>
+                  Confirm Save
+                </Button>
+              </div>
+            </div>
+          )}
           <div className="tour-edit-form__actions">
-            <Button type="button" variant="secondary" onClick={() => navigate("/tours")}>
+            <Button type="button" variant="secondary" onClick={requestCancel}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSaving}>

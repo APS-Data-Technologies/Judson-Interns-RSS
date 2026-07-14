@@ -3,8 +3,10 @@ import { useBlocker } from "react-router-dom";
 
 const defaultMessage = "You have unsaved changes. Leave this page?";
 
-function useUnsavedChangesPrompt(when, message = defaultMessage) {
+function useUnsavedChangesPrompt(when, message = defaultMessage, options = {}) {
   const shouldBlock = Boolean(when);
+  const allowLeave = options.allowLeave !== false;
+  const mode = options.mode || "browser";
 
   const blocker = useBlocker(({ currentLocation, nextLocation }) => (
     shouldBlock &&
@@ -14,13 +16,20 @@ function useUnsavedChangesPrompt(when, message = defaultMessage) {
 
   useEffect(() => {
     if (blocker.state !== "blocked") return;
+    if (mode === "inline") return;
+
+    if (!allowLeave) {
+      window.alert(message);
+      blocker.reset();
+      return;
+    }
 
     if (window.confirm(message)) {
       blocker.proceed();
     } else {
       blocker.reset();
     }
-  }, [blocker, message]);
+  }, [allowLeave, blocker, message]);
 
   useEffect(() => {
     if (!shouldBlock) return undefined;
@@ -33,6 +42,13 @@ function useUnsavedChangesPrompt(when, message = defaultMessage) {
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [message, shouldBlock]);
+
+  return {
+    isBlocked: blocker.state === "blocked",
+    message,
+    proceed: () => blocker.proceed?.(),
+    reset: () => blocker.reset?.(),
+  };
 }
 
 export default useUnsavedChangesPrompt;

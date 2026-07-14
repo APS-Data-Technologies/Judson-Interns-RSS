@@ -29,19 +29,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
   font-weight: 800;
 }
 
 .admin-tabs a {
   padding: 0 16px;
-  background: var(--color-surface-soft);
+  background: #ffffff;
+  border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
 .admin-tabs a.active {
-  background: var(--color-primary);
+  background: var(--color-action);
+  border-color: var(--color-action);
   color: #ffffff;
 }
 
@@ -81,18 +83,27 @@
   cursor: pointer;
 }
 
+.form-heading button {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
 .admin-heading > button {
   min-height: 40px;
   padding: 0 12px;
   border-radius: var(--radius-sm);
-  background: var(--color-primary);
+  background: var(--color-action);
   color: #ffffff;
 }
 
 .admin-primary-link {
   min-height: 40px;
   padding: 0 12px;
-  background: var(--color-primary);
+  background: var(--color-action);
   color: #ffffff;
 }
 
@@ -105,7 +116,7 @@
 .admin-route-list a {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  color: var(--color-primary);
+  color: var(--color-action);
 }
 
 .user-form {
@@ -153,7 +164,7 @@
 .user-form textarea {
   padding: 0 12px;
   border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: var(--color-surface-soft);
   color: var(--color-text-primary);
 }
 
@@ -166,7 +177,7 @@
 .user-form .primary-action {
   margin-top: var(--spacing-md);
   border: 0;
-  background: var(--color-primary);
+  background: var(--color-action);
   color: #ffffff;
   font-weight: 700;
 }
@@ -212,6 +223,10 @@
 
 .user-status-actions .admin-row-action {
   color: var(--color-action);
+}
+
+.user-status-actions .admin-row-action--edit {
+  color: var(--brand-blue);
 }
 
 .user-status-actions .admin-row-action--deactivate {

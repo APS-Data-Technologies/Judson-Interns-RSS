@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  ArrowDownUp,
   CalendarDays,
   CheckCheck,
   ChevronDown,
@@ -28,10 +29,10 @@ const datePresetRows = [
 
 function getSummary(values, options, fallback) {
   if (!values.length) return fallback;
-  if (values.length === options.length) return "All selected";
   if (values.length === 1) {
     return options.find((option) => String(option.value) === String(values[0]))?.label || fallback;
   }
+  if (values.length === options.length) return "All selected";
   return `${values.length} selected`;
 }
 
@@ -63,17 +64,46 @@ function FilterShell({ children, icon: Icon, isMobileActive = false, isOpen, lab
   );
 }
 
-function LockedFilterShell({ icon: Icon, label, name, summary }) {
+function LockedFilterShell({ icon: Icon, label, name, note, onNotice, summary }) {
   return (
     <div className={`tour-filter tour-filter--${name} tour-filter--locked`}>
-      <div className="tour-filter__summary" aria-label={`${label}: ${summary}`}>
+      <button
+        className="tour-filter__summary"
+        type="button"
+        aria-label={`${label}: ${summary}`}
+        title={note || `${label}: ${summary}`}
+        onClick={() => {
+          if (note && onNotice) {
+            onNotice(note);
+          }
+        }}
+      >
         <Icon aria-hidden="true" />
         <span>
           <small>{label}</small>
           <strong>{summary}</strong>
         </span>
-      </div>
+      </button>
     </div>
+  );
+}
+
+function AssignedLocationDisplay({ locationName, onNotice }) {
+  const message = `Staff accounts are limited to their assigned location${locationName ? `: ${locationName}` : ""}. Admins and super admins can filter across locations.`;
+
+  return (
+    <button
+      className="tour-filter-assigned-location"
+      type="button"
+      title={message}
+      onClick={() => onNotice(message)}
+    >
+      <MapPin aria-hidden="true" />
+      <div>
+        <span>Assigned location</span>
+        <strong>{locationName || "No location assigned"}</strong>
+      </div>
+    </button>
   );
 }
 
@@ -222,18 +252,23 @@ function TourFilterControls({
   locations,
   onChange,
   onCostBasisChange,
+  onSortToggle,
   searchPlaceholder = "Search family name",
   showCostBasis = false,
   showDate = true,
   showLeadSource = true,
   showSearch = true,
+  showSort = false,
   showStatus = true,
+  sortDirection = "asc",
+  staffLocationLabel = "",
   staffLocationOnly = false,
   lockDate = false,
 }) {
   const [openFilter, setOpenFilter] = useState("");
   const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(false);
   const [mobileActiveFilter, setMobileActiveFilter] = useState("");
+  const [notice, setNotice] = useState("");
   const filtersRef = useRef(null);
   const filterClassNames = [
     "tour-filters",
@@ -242,6 +277,7 @@ function TourFilterControls({
     !showLeadSource ? "tour-filters--no-lead-source" : "",
     !showStatus ? "tour-filters--no-status" : "",
     showCostBasis ? "tour-filters--with-cost" : "",
+    showSort ? "tour-filters--with-sort" : "",
     lockDate ? "tour-filters--locked-date" : "",
   ]
     .filter(Boolean)
@@ -257,19 +293,39 @@ function TourFilterControls({
   const selectedDateOption =
     datePresetOptions.find((option) => option.value === filters.datePreset) ||
     datePresetOptions[0];
+  const locationSummary = getSummary(
+    filters.locations,
+    locationOptions,
+    staffLocationOnly
+      ? staffLocationLabel || locationOptions[0]?.label || "Assigned location"
+      : "All locations",
+  );
+  const lockedDateNote =
+    "Home always shows today's booked tours and yesterday's no-shows. Go to Tours to view other dates.";
+  const staffLocationNote = `Staff accounts are limited to their assigned location${staffLocationLabel ? `: ${staffLocationLabel}` : ""}. Admins and super admins can filter across locations.`;
   const mobileFilterOptions = [
+    ...(showSort ? [{
+      value: "sort",
+      label: "Sort",
+      summary: sortDirection === "asc" ? "Earliest first" : "Latest first",
+      icon: ArrowDownUp,
+      action: onSortToggle,
+    }] : []),
     ...(showDate ? [{
       value: "date",
       label: "Date",
-      summary: selectedDateOption.label,
+      summary: lockDate ? "Default: Today" : selectedDateOption.label,
       icon: CalendarDays,
       locked: lockDate,
+      note: lockedDateNote,
     }] : []),
     {
       value: "locations",
-      label: "Location",
-      summary: getSummary(filters.locations, locationOptions, staffLocationOnly ? "Assigned" : "All"),
+      label: staffLocationOnly ? "Assigned location" : "Location",
+      summary: locationSummary,
       icon: MapPin,
+      locked: staffLocationOnly,
+      note: staffLocationOnly ? staffLocationNote : "",
     },
     ...(showLeadSource ? [{
       value: "leadSources",
@@ -305,6 +361,7 @@ function TourFilterControls({
 
   function toggleFilter(name) {
     setOpenFilter((currentFilter) => (currentFilter === name ? "" : name));
+    setNotice("");
   }
 
   function closeMobilePanel() {
@@ -314,7 +371,14 @@ function TourFilterControls({
   }
 
   function selectMobileFilter(option) {
+    if (option.action) {
+      option.action();
+      return;
+    }
     if (option.locked) {
+      if (option.note) {
+        setNotice(option.note);
+      }
       setMobileActiveFilter("");
       setOpenFilter("");
       return;
@@ -527,13 +591,6 @@ function TourFilterControls({
           <SlidersHorizontal aria-hidden="true" />
         </button>
 
-        {showDate && lockDate && (
-          <span className="tour-filters__mobile-fixed-chip" aria-label={`Date: ${selectedDateOption.label}`}>
-            <CalendarDays aria-hidden="true" />
-            {selectedDateOption.label}
-          </span>
-        )}
-
         {showSearch && (
           <label className="tour-filters__mobile-search">
             <Search aria-hidden="true" />
@@ -547,6 +604,12 @@ function TourFilterControls({
         )}
       </div>
 
+      {notice && (
+        <p className="tour-filters__notice" role="status">
+          {notice}
+        </p>
+      )}
+
       <div className="tour-filters__mobile-panel" aria-label="Available filters">
         <div className="tour-filters__mobile-list">
           {mobileFilterOptions.map((option) => {
@@ -557,7 +620,8 @@ function TourFilterControls({
                   className="tour-filters__mobile-option"
                   type="button"
                   aria-pressed={mobileActiveFilter === option.value}
-                  disabled={option.locked}
+                  aria-disabled={option.locked ? "true" : undefined}
+                  title={option.note || undefined}
                   onClick={() => selectMobileFilter(option)}
                 >
                   <Icon aria-hidden="true" />
@@ -571,12 +635,38 @@ function TourFilterControls({
         </div>
       </div>
 
+      {showSort && (
+        <button
+          className="tour-filters__sort"
+          type="button"
+          aria-label={
+            sortDirection === "asc"
+              ? "Sort earliest to latest"
+              : "Sort latest to earliest"
+          }
+          title={
+            sortDirection === "asc"
+              ? "Earliest to latest"
+              : "Latest to earliest"
+          }
+          onClick={onSortToggle}
+        >
+          <ArrowDownUp aria-hidden="true" />
+          <span>
+            <small>Sort</small>
+            <strong>{sortDirection === "asc" ? "Earliest first" : "Latest first"}</strong>
+          </span>
+        </button>
+      )}
+
       {showDate && lockDate && (
         <LockedFilterShell
           icon={CalendarDays}
           label="Date"
           name="date"
-          summary={selectedDateOption.label}
+          note={lockedDateNote}
+          onNotice={setNotice}
+          summary="Default: Today"
         />
       )}
 
@@ -605,19 +695,25 @@ function TourFilterControls({
         </label>
       )}
 
-      <MultiFilter
-        disabled={staffLocationOnly}
-        fallback={staffLocationOnly ? "Assigned location" : "All locations"}
-        icon={MapPin}
-        isMobileActive={mobileActiveFilter === "locations"}
-        isOpen={openFilter === "locations"}
-        label="Location"
-        name="locations"
-        onChange={(values) => onChange("locations", values)}
-        onToggle={() => toggleFilter("locations")}
-        options={locationOptions}
-        values={filters.locations}
-      />
+      {staffLocationOnly ? (
+        <AssignedLocationDisplay
+          locationName={staffLocationLabel || locationSummary}
+          onNotice={setNotice}
+        />
+      ) : (
+        <MultiFilter
+          fallback="All locations"
+          icon={MapPin}
+          isMobileActive={mobileActiveFilter === "locations"}
+          isOpen={openFilter === "locations"}
+          label="Location"
+          name="locations"
+          onChange={(values) => onChange("locations", values)}
+          onToggle={() => toggleFilter("locations")}
+          options={locationOptions}
+          values={filters.locations}
+        />
+      )}
 
       {showLeadSource && (
         <MultiFilter
