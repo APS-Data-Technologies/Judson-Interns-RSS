@@ -27,14 +27,15 @@ import {
   listTours,
   transitionTourStatus,
 } from "../../features/tours/tourApi";
+import { toTitleCaseWords } from "../../utils/displayText";
 import "./Pipeline.css";
 
 const pipelineStatuses = [
   { value: "scheduled", label: "Booked", icon: CalendarCheck },
   { value: "toured", label: "Toured", icon: UserRoundCheck },
+  { value: "no_show", label: "No Show", icon: X },
   { value: "enrolled", label: "Enrolled", icon: GraduationCap },
   { value: "churned", label: "Churned", icon: UserRoundX },
-  { value: "no_show", label: "No Show", icon: X },
 ];
 
 const nextStageActions = {
@@ -48,11 +49,10 @@ const nextStageActions = {
   ],
 };
 
-function formatTourDate(value) {
+function formatTourDateTime(value) {
   return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
+    dateStyle: "medium",
+    timeStyle: "short",
   }).format(new Date(value));
 }
 
@@ -69,6 +69,7 @@ function PipelineCard({ tour, onMove, isMoving }) {
   const [isMoveMenuOpen, setIsMoveMenuOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState("");
   const status = pipelineStatuses.find((item) => item.value === tour.current_status);
+  const StatusIcon = status?.icon;
   const familyName = tour.family_name.endsWith("Family")
     ? tour.family_name
     : `${tour.family_name} Family`;
@@ -88,15 +89,13 @@ function PipelineCard({ tour, onMove, isMoving }) {
       <div className="pipeline-card__content">
         <div>
           <h3>{familyName}</h3>
-          <p>
-            Grade {tour.child_grade || "not set"} <span aria-hidden="true">·</span>{" "}
-            {tour.location_name}
-          </p>
-          <p>Tour Date: {formatTourDate(tour.scheduled_tour_date)}</p>
+          <p>{toTitleCaseWords(tour.location_name)}</p>
+          <p>{formatTourDateTime(tour.scheduled_tour_date)}</p>
         </div>
         <div className="pipeline-card__side">
           <span className={`pipeline-card__badge status-color--${tour.current_status}`}>
-            {status?.label || tour.status_label}
+            {StatusIcon && <StatusIcon aria-hidden="true" />}
+            <span>{status?.label || tour.status_label}</span>
           </span>
           <div className="pipeline-card__actions" aria-label={`${familyName} actions`}>
             <button
@@ -176,6 +175,7 @@ function PipelineKanbanCard({ tour, onMove, isMoving, onTouchDrop }) {
   const [touchPreview, setTouchPreview] = useState(null);
   const [pendingStatus, setPendingStatus] = useState("");
   const status = pipelineStatuses.find((item) => item.value === tour.current_status);
+  const StatusIcon = status?.icon;
   const familyName = tour.family_name.endsWith("Family")
     ? tour.family_name
     : `${tour.family_name} Family`;
@@ -271,14 +271,12 @@ function PipelineKanbanCard({ tour, onMove, isMoving, onTouchDrop }) {
         <div className="pipeline-kanban-card__heading">
           <h3>{familyName}</h3>
           <span className={`pipeline-kanban-card__badge status-color--${tour.current_status}`}>
-            {status?.label || tour.status_label}
+            {StatusIcon && <StatusIcon aria-hidden="true" />}
+            <span>{status?.label || tour.status_label}</span>
           </span>
         </div>
-        <p>
-          Grade {tour.child_grade || "not set"} <span aria-hidden="true">·</span>{" "}
-          {tour.location_name}
-        </p>
-        <p>Tour Date: {formatTourDate(tour.scheduled_tour_date)}</p>
+        <p>{toTitleCaseWords(tour.location_name)}</p>
+        <p>{formatTourDateTime(tour.scheduled_tour_date)}</p>
         <div className="pipeline-kanban-card__actions" aria-label={`${familyName} actions`}>
           <button
             type="button"
@@ -361,6 +359,49 @@ function PipelineKanbanCard({ tour, onMove, isMoving, onTouchDrop }) {
   );
 }
 
+function PipelineFlowDiagram() {
+  return (
+    <div className="pipeline-flow-panel" aria-label="Pipeline status flow">
+      <div className="pipeline-kanban__flow pipeline-kanban__flow--branching" aria-hidden="true">
+        <div className="pipeline-kanban__flow-path">
+          <div className="pipeline-kanban__flow-node pipeline-kanban__flow-node--scheduled">
+            <span><CalendarCheck aria-hidden="true" /></span>
+            <strong>Booked</strong>
+          </div>
+          <div className="pipeline-kanban__flow-split">
+            <MoveRight aria-hidden="true" />
+            <span>to</span>
+          </div>
+          <div className="pipeline-kanban__flow-node pipeline-kanban__flow-node--toured">
+            <span><UserRoundCheck aria-hidden="true" /></span>
+            <strong>Toured</strong>
+          </div>
+          <div className="pipeline-kanban__flow-split">
+            <MoveRight aria-hidden="true" />
+            <span>to</span>
+          </div>
+          <div className="pipeline-kanban__flow-node pipeline-kanban__flow-node--enrolled">
+            <span><GraduationCap aria-hidden="true" /></span>
+            <strong>Enrolled</strong>
+          </div>
+        </div>
+        <div className="pipeline-kanban__flow-path pipeline-kanban__flow-path--branch">
+          <span className="pipeline-kanban__flow-branch-label">or</span>
+          <div className="pipeline-kanban__flow-node pipeline-kanban__flow-node--no_show">
+            <span><X aria-hidden="true" /></span>
+            <strong>No Show</strong>
+          </div>
+          <span className="pipeline-kanban__flow-branch-label">or</span>
+          <div className="pipeline-kanban__flow-node pipeline-kanban__flow-node--churned">
+            <span><UserRoundX aria-hidden="true" /></span>
+            <strong>Churned</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Pipeline() {
   const { user } = useAuth();
   const [tours, setTours] = useState([]);
@@ -371,7 +412,7 @@ function Pipeline() {
   const [viewMode, setViewMode] = useState("stages");
   const [movingTourId, setMovingTourId] = useState(null);
   const [dragOverStatus, setDragOverStatus] = useState("");
-  const [sortDirection, setSortDirection] = useState("asc");
+  const [sortDirection, setSortDirection] = useState("desc");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -526,10 +567,28 @@ function Pipeline() {
 
   return (
     <section className="pipeline-page" aria-label="Pipeline">
+      <div className="pipeline-controls" aria-label="Pipeline filters">
+        <TourFilterControls
+          filters={filters}
+          leadSources={leadSources}
+          locations={locations}
+          onChange={updateFilter}
+          onSortToggle={() => setSortDirection((direction) => (direction === "asc" ? "desc" : "asc"))}
+          searchPlaceholder="Search family name"
+          showStatus={false}
+          showSort
+          sortDirection={sortDirection}
+          staffLocationLabel={user?.location_name}
+          staffLocationOnly={user?.role === "staff"}
+        />
+      </div>
+
       <div className="pipeline-viewbar" aria-label="Pipeline view selector">
-        <div>
-          <p>Pipeline View</p>
-          <span>{viewMode === "stages" ? "Card view" : "Board view"}</span>
+        <div className="pipeline-viewbar__summary">
+          <div>
+            <p>Status Tracker</p>
+          </div>
+          <strong>{sortedTours.length} tours</strong>
         </div>
         <div className="pipeline-view-toggle" role="group" aria-label="Choose pipeline view">
           <button
@@ -553,24 +612,10 @@ function Pipeline() {
         </div>
       </div>
 
-      <div className="pipeline-controls" aria-label="Pipeline filters">
-        <TourFilterControls
-          filters={filters}
-          leadSources={leadSources}
-          locations={locations}
-          onChange={updateFilter}
-          onSortToggle={() => setSortDirection((direction) => (direction === "asc" ? "desc" : "asc"))}
-          searchPlaceholder="Search family name"
-          showStatus={false}
-          showSort
-          sortDirection={sortDirection}
-          staffLocationLabel={user?.location_name}
-          staffLocationOnly={user?.role === "staff"}
-        />
-      </div>
-
       {error && <p className="pipeline-state pipeline-state--error">{error}</p>}
       {isLoading && <p className="pipeline-state">Loading pipeline...</p>}
+
+      <PipelineFlowDiagram />
 
       {viewMode === "stages" ? (
       <div className="pipeline-board pipeline-board--stages">
@@ -627,51 +672,6 @@ function Pipeline() {
       </div>
       ) : (
         <section className="pipeline-kanban" aria-label="Pipeline kanban board">
-          <header className="pipeline-kanban__header">
-            <div>
-              <h2>Pipeline Board</h2>
-              <p>Move Booked tours to Toured or No Show, then move Toured tours to Enrolled or Churned.</p>
-            </div>
-            <span>{sortedTours.length} tours</span>
-          </header>
-
-          <div className="pipeline-kanban__flow pipeline-kanban__flow--branching" aria-hidden="true">
-            <div className="pipeline-kanban__flow-path">
-              <div className="pipeline-kanban__flow-node pipeline-kanban__flow-node--scheduled">
-                <span><CalendarCheck aria-hidden="true" /></span>
-                <strong>Booked</strong>
-              </div>
-              <div className="pipeline-kanban__flow-split">
-                <MoveRight aria-hidden="true" />
-                <span>to</span>
-              </div>
-              <div className="pipeline-kanban__flow-node pipeline-kanban__flow-node--toured">
-                <span><UserRoundCheck aria-hidden="true" /></span>
-                <strong>Toured</strong>
-              </div>
-              <div className="pipeline-kanban__flow-split">
-                <MoveRight aria-hidden="true" />
-                <span>to</span>
-              </div>
-              <div className="pipeline-kanban__flow-node pipeline-kanban__flow-node--enrolled">
-                <span><GraduationCap aria-hidden="true" /></span>
-                <strong>Enrolled</strong>
-              </div>
-            </div>
-            <div className="pipeline-kanban__flow-path pipeline-kanban__flow-path--branch">
-              <span className="pipeline-kanban__flow-branch-label">or</span>
-              <div className="pipeline-kanban__flow-node pipeline-kanban__flow-node--no_show">
-                <span><X aria-hidden="true" /></span>
-                <strong>No Show</strong>
-              </div>
-              <span className="pipeline-kanban__flow-branch-label">or</span>
-              <div className="pipeline-kanban__flow-node pipeline-kanban__flow-node--churned">
-                <span><UserRoundX aria-hidden="true" /></span>
-                <strong>Churned</strong>
-              </div>
-            </div>
-          </div>
-
           <div className="pipeline-kanban__columns">
             {pipelineStatuses.map((status) => {
               const Icon = status.icon;
@@ -697,7 +697,6 @@ function Pipeline() {
                     <span className="pipeline-kanban__column-icon"><Icon aria-hidden="true" /></span>
                     <div>
                       <h3>{status.label}</h3>
-                      <p>{groupTours.length} tours</p>
                     </div>
                     <strong>{groupTours.length}</strong>
                   </header>

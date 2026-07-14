@@ -59,13 +59,23 @@
 }
 
 .tour-status {
+  align-items: center;
   border-radius: var(--radius-sm);
   color: #ffffff;
+  display: inline-flex;
   font-size: clamp(0.85rem, 1.4vw, 0.98rem);
   font-weight: 800;
+  gap: 0.4rem;
+  justify-content: center;
   min-width: 112px;
   padding: 10px 14px;
   text-align: center;
+}
+
+.tour-status svg {
+  display: none;
+  height: 1.1em;
+  width: 1.1em;
 }
 
 .tour-card__side {
@@ -335,6 +345,19 @@
 
   .tour-card__side {
     min-width: 104px;
+  }
+
+  .tour-card__status {
+    min-width: 46px;
+    padding: 10px;
+  }
+
+  .tour-card__status svg {
+    display: block;
+  }
+
+  .tour-card__status span {
+    display: none;
   }
 
   .tour-card__actions button {

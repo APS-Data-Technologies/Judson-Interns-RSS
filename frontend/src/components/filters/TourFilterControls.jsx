@@ -20,6 +20,7 @@ import {
   datePresetOptions,
   statusOptions,
 } from "../../features/tours/filterConfig";
+import { toTitleCaseWords } from "../../utils/displayText";
 import "./TourFilterControls.css";
 
 const datePresetRows = [
@@ -284,11 +285,11 @@ function TourFilterControls({
     .join(" ");
   const locationOptions = locations.map((location) => ({
     value: location.id,
-    label: location.location_name,
+    label: toTitleCaseWords(location.location_name),
   }));
   const leadSourceOptions = leadSources.map((source) => ({
     value: source.id,
-    label: source.source_name,
+    label: toTitleCaseWords(source.source_name),
   }));
   const selectedDateOption =
     datePresetOptions.find((option) => option.value === filters.datePreset) ||
@@ -297,12 +298,13 @@ function TourFilterControls({
     filters.locations,
     locationOptions,
     staffLocationOnly
-      ? staffLocationLabel || locationOptions[0]?.label || "Assigned location"
+      ? toTitleCaseWords(staffLocationLabel) || locationOptions[0]?.label || "Assigned location"
       : "All locations",
   );
   const lockedDateNote =
     "Home always shows today's booked tours and yesterday's no-shows. Go to Tours to view other dates.";
-  const staffLocationNote = `Staff accounts are limited to their assigned location${staffLocationLabel ? `: ${staffLocationLabel}` : ""}. Admins and super admins can filter across locations.`;
+  const staffLocationDisplay = toTitleCaseWords(staffLocationLabel);
+  const staffLocationNote = `Staff accounts are limited to their assigned location${staffLocationDisplay ? `: ${staffLocationDisplay}` : ""}. Admins and super admins can filter across locations.`;
   const mobileFilterOptions = [
     ...(showSort ? [{
       value: "sort",

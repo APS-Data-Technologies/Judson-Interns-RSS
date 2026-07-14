@@ -10,6 +10,7 @@ import {
   todayValue,
 } from "../../features/tours/filterConfig";
 import { getHomeSummary } from "../../features/tours/tourApi";
+import { toTitleCaseWords } from "../../utils/displayText";
 import "./Home.css";
 
 const initialSummary = {
@@ -21,11 +22,10 @@ const initialSummary = {
   },
 };
 
-function formatTourTime(value) {
+function formatTourDateTime(value) {
   return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: "UTC",
+    dateStyle: "medium",
+    timeStyle: "short",
   }).format(new Date(value));
 }
 
@@ -71,11 +71,10 @@ function TourList({ title, tours, tone }) {
             <div className="home-tour-row" key={tour.id}>
               <div className="home-tour-row__family">
                 <strong>{tour.family_name}</strong>
-                <span>Grade {tour.child_grade || "not set"}</span>
+                <span>{toTitleCaseWords(tour.location_name)}</span>
               </div>
               <div className="home-tour-row__meta">
-                <span>{formatTourTime(tour.scheduled_tour_date)}</span>
-                <span>{tour.location_name}</span>
+                <span>{formatTourDateTime(tour.scheduled_tour_date)}</span>
               </div>
               <button
                 className="home-tour-row__view"
