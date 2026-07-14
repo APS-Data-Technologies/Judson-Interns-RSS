@@ -16,29 +16,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(0.5rem, 1.5vmin, 0.9rem);
   max-width: 100%;
   min-width: 0;
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: 0;
 }
 
 .top-banner__logo {
-  flex: 0 0 auto;
-  width: clamp(2rem, 5vmin, 3.25rem);
-  height: clamp(2rem, 5vmin, 3.25rem);
+  display: block;
+  width: min(62vw, 22rem);
+  height: clamp(3rem, 7vmin, 4.75rem);
   object-fit: contain;
   filter: drop-shadow(0 0.3rem 0.65rem rgba(0, 0, 0, 0.18));
-}
-
-.top-banner__name {
-  font-size: clamp(1.7rem, 4.1vmin, 3rem);
-  font-weight: 950;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 @media (max-aspect-ratio: 11/10) {
@@ -46,17 +33,9 @@
     min-height: clamp(7rem, 17vmin, 9rem);
   }
 
-  .top-banner__brand {
-    gap: clamp(0.7rem, 2vmin, 1rem);
-  }
-
   .top-banner__logo {
-    height: clamp(2.7rem, 7vmin, 3.6rem);
-    width: clamp(2.7rem, 7vmin, 3.6rem);
-  }
-
-  .top-banner__name {
-    font-size: clamp(1.7rem, 8.7vw, 2.75rem);
+    width: min(82vw, 25rem);
+    height: clamp(4.4rem, 13vmin, 6.5rem);
   }
 }
 
@@ -65,17 +44,9 @@
     padding: 0 0.85rem;
   }
 
-  .top-banner__brand {
-    gap: 0.55rem;
-  }
-
   .top-banner__logo {
-    height: clamp(2.2rem, 10vw, 2.8rem);
-    width: clamp(2.2rem, 10vw, 2.8rem);
-  }
-
-  .top-banner__name {
-    font-size: clamp(1.65rem, 8vw, 2.2rem);
+    width: min(80vw, 21rem);
+    height: clamp(4rem, 20vw, 5.6rem);
   }
 }
 
@@ -85,7 +56,8 @@
     box-shadow: none;
   }
 
-  .top-banner__name {
-    font-size: clamp(2rem, 4.6vmin, 3.25rem);
+  .top-banner__logo {
+    width: min(44vw, 25rem);
+    height: clamp(3.4rem, 7vmin, 5rem);
   }
 }

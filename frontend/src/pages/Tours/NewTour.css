@@ -23,7 +23,7 @@
 }
 
 .new-tour-header h1 {
-  color: #08265c;
+  color: var(--brand-navy-dark);
   font-size: clamp(1.8rem, 3vw, 2.4rem);
   line-height: 1;
 }

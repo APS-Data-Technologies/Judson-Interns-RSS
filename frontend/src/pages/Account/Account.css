@@ -40,7 +40,7 @@
 }
 
 .account-profile h1 {
-  color: #08265c;
+  color: var(--brand-navy-dark);
   font-size: clamp(1.8rem, 4vw, 2.7rem);
   font-weight: 950;
   line-height: 1.05;
@@ -75,7 +75,7 @@
 }
 
 .account-location strong {
-  color: #08265c;
+  color: var(--brand-navy-dark);
   font-size: 1.18rem;
   font-weight: 950;
 }
@@ -88,7 +88,7 @@
   align-items: center;
   background: #ffffff;
   border: 0;
-  color: #08265c;
+  color: var(--brand-navy-dark);
   cursor: pointer;
   display: grid;
   gap: var(--space-3);
@@ -105,7 +105,7 @@
 }
 
 .settings-panel__trigger > svg {
-  color: #6b7895;
+  color: var(--color-text-muted);
   transition: transform 160ms ease;
 }
 
@@ -185,7 +185,7 @@
   background: var(--color-surface-soft);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  color: #08265c;
+  color: var(--brand-navy-dark);
   display: grid;
   font-weight: 950;
   gap: var(--space-3);

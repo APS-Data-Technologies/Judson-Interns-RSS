@@ -44,7 +44,7 @@
 }
 
 .analytics-card strong {
-  color: #08265c;
+  color: var(--brand-navy-dark);
   font-size: clamp(2.2rem, 4vw, 3.8rem);
   font-weight: 950;
   line-height: 1;

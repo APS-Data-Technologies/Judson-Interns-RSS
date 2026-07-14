@@ -1,10 +1,10 @@
 :root {
-  --status-booked: #0f62fe;
-  --status-toured: #f5b400;
+  --status-booked: var(--brand-blue);
+  --status-toured: var(--rss-gold);
   --status-enrolled: #16a34a;
-  --status-churned: #ef4444;
+  --status-churned: var(--rss-red);
   --status-no-show: #f97316;
-  --status-cancelled: #64748b;
+  --status-cancelled: var(--neutral-action);
   --status-rescheduled: #7c3aed;
 }
 

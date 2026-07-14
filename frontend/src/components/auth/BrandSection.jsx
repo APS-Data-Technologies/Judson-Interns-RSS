@@ -1,4 +1,4 @@
-import logo from "../../assets/login/logo.png";
+import brandLockup from "../../assets/brand/rss-logo-horizontal.png";
 
 function BrandSection() {
   return (
@@ -7,14 +7,10 @@ function BrandSection() {
       <div className="brand-lockup">
 
         <img
-          src={logo}
+          src={brandLockup}
           alt="Ready Set STEM"
           className="auth-brand-logo"
         />
-
-        <div className="auth-brand-text">
-          Ready Set STEM
-        </div>
 
       </div>
 

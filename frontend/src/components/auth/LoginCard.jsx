@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Button, Card } from "../ui";
 import { Input } from "../form";
+import brandLockup from "../../assets/brand/rss-logo-horizontal.png";
 
 function LoginCard({
+  id,
   email,
   password,
   error,
@@ -15,10 +17,16 @@ function LoginCard({
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <section className="auth-login-section">
+    <section className="auth-login-section" id={id}>
       <Card padding="lg" shadow="md" className="auth-login-card">
         <form className="auth-login-form" onSubmit={onSubmit}>
-          <h2>Welcome !</h2>
+          <img className="auth-login-logo" src={brandLockup} alt="Ready Set STEM" />
+
+          <div className="auth-login-heading">
+            <span>Staff Sign In</span>
+            <h2>Welcome !</h2>
+            <p>Sign in to access your workspace.</p>
+          </div>
 
           <Input
             id="email"

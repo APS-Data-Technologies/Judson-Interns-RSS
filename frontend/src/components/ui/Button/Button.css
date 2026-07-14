@@ -14,8 +14,8 @@
 }
 
 .btn--secondary {
-  background: #e5e7eb;
-  color: #111827;
+  background: var(--color-surface-soft);
+  color: var(--brand-navy-dark);
 }
 
 .btn--ghost {

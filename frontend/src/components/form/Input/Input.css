@@ -13,7 +13,7 @@
   padding: 0 clamp(0.75rem, 1.8vmin, 1rem);
 
   font-size: clamp(0.82rem, 2vmin, 1rem);
-  color: #0f172a;
+  color: var(--color-text-primary);
   background: #ffffff;
 
   outline: none;
@@ -38,7 +38,7 @@
   top: 50%;
   transform: translateY(-50%);
 
-  color: #64748b;
+  color: var(--color-text-muted);
 
   display: inline-flex;
   align-items: center;

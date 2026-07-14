@@ -2,7 +2,7 @@
   width: 100vw;
   height: 100svh;
   height: 100dvh;
-  background: #f4f7fb;
+  background: var(--color-background);
   overflow: hidden;
   max-width: none;
   margin: 0;

@@ -21,7 +21,7 @@
 
 .rss-badge--default {
   background: #f1f5f9;
-  color: #475569;
+  color: var(--color-text-secondary);
 }
 
 .rss-badge--booked {
@@ -31,7 +31,7 @@
 
 .rss-badge--toured {
   background: var(--status-toured);
-  color: #08265c;
+  color: var(--brand-navy-dark);
 }
 
 .rss-badge--enrolled {
