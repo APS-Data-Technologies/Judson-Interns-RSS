@@ -8,6 +8,7 @@ import {
   getLocations,
 } from "../../features/tours/tourApi";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
+import { toTitleCaseWords } from "../../utils/displayText";
 import "./NewTour.css";
 
 function getInitialForm() {
@@ -242,7 +243,7 @@ function NewTour() {
             <option value="">Select location</option>
             {locations.map((location) => (
               <option key={location.id} value={location.id}>
-                {location.location_name}
+                {toTitleCaseWords(location.location_name)}
               </option>
             ))}
           </select>
@@ -258,7 +259,7 @@ function NewTour() {
             <option value="">Select lead source</option>
             {leadSources.map((source) => (
               <option key={source.id} value={source.id}>
-                {source.source_name}
+                {toTitleCaseWords(source.source_name)}
               </option>
             ))}
           </select>

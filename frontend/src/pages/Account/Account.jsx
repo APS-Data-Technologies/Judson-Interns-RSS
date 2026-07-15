@@ -13,6 +13,7 @@ import {
 
 import useAuth from "../../features/auth/useAuth";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
+import { formatPersonName, toTitleCaseWords } from "../../utils/displayText";
 import "./Account.css";
 
 function SettingsPanel({ children, icon: Icon, isOpen, onToggle, title }) {
@@ -42,7 +43,7 @@ function Account() {
   const hasUnsavedPassword = Boolean(currentPassword || newPassword || confirmPassword);
   const canOpenAdmin = ["admin", "super_admin"].includes(user.role);
   const canManageUsers = user.role === "super_admin";
-  const displayName = `${user.first_name} ${user.last_name}`.trim() || user.email;
+  const displayName = formatPersonName(user.first_name, user.last_name, user.email);
 
   useUnsavedChangesPrompt(hasUnsavedPassword && !isSubmitting);
 
@@ -96,7 +97,7 @@ function Account() {
           <MapPin aria-hidden="true" />
           <div>
             <span>Assigned location</span>
-            <strong>{user.location_name || "No location assigned"}</strong>
+            <strong>{toTitleCaseWords(user.location_name) || "No location assigned"}</strong>
           </div>
         </section>
       )}

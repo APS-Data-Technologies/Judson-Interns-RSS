@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye } from "lucide-react";
+import { ArrowRight, Eye, Info } from "lucide-react";
 
 import TourFilterControls from "../../components/filters/TourFilterControls";
 import { Button } from "../../components/ui";
@@ -9,7 +9,13 @@ import {
   createDefaultTourFilters,
   todayValue,
 } from "../../features/tours/filterConfig";
-import { getHomeSummary } from "../../features/tours/tourApi";
+import { getHomeSummary, listTours } from "../../features/tours/tourApi";
+import {
+  formatAverageDays,
+  getTourTrackInfo,
+  loadAverageDaysToEnroll,
+} from "../../features/tours/tourTrackUtils";
+import { toTitleCaseWords } from "../../utils/displayText";
 import "./Home.css";
 
 const initialSummary = {
@@ -21,11 +27,17 @@ const initialSummary = {
   },
 };
 
-function formatTourTime(value) {
+const initialPendingSummary = {
+  averageDaysToEnroll: null,
+  pendingTourOutcome: [],
+  pendingEnrollmentOutcome: [],
+  touredWithoutFinalOutcomeCount: 0,
+};
+
+function formatTourDateTime(value) {
   return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: "UTC",
+    dateStyle: "medium",
+    timeStyle: "short",
   }).format(new Date(value));
 }
 
@@ -39,6 +51,13 @@ function yesterdayValue() {
 }
 
 function sortToursByTime(tours) {
+  return [...tours].sort((firstTour, secondTour) => (
+    new Date(firstTour.scheduled_tour_date).getTime() -
+    new Date(secondTour.scheduled_tour_date).getTime()
+  ));
+}
+
+function sortToursOldestFirst(tours) {
   return [...tours].sort((firstTour, secondTour) => (
     new Date(firstTour.scheduled_tour_date).getTime() -
     new Date(secondTour.scheduled_tour_date).getTime()
@@ -71,11 +90,10 @@ function TourList({ title, tours, tone }) {
             <div className="home-tour-row" key={tour.id}>
               <div className="home-tour-row__family">
                 <strong>{tour.family_name}</strong>
-                <span>Grade {tour.child_grade || "not set"}</span>
+                <span>{toTitleCaseWords(tour.location_name)}</span>
               </div>
               <div className="home-tour-row__meta">
-                <span>{formatTourTime(tour.scheduled_tour_date)}</span>
-                <span>{tour.location_name}</span>
+                <span>{formatTourDateTime(tour.scheduled_tour_date)}</span>
               </div>
               <button
                 className="home-tour-row__view"
@@ -95,6 +113,76 @@ function TourList({ title, tours, tone }) {
   );
 }
 
+function ActionNeededInfo({
+  averageDaysToEnroll,
+  pendingEnrollmentOutcome,
+  pendingTourOutcome,
+  touredWithoutFinalOutcomeCount,
+}) {
+  const navigate = useNavigate();
+  const pendingTourCount = pendingTourOutcome.length;
+  const pendingEnrollmentCount = pendingEnrollmentOutcome.length;
+  const reviewPath = "/pipeline?category=off_track";
+
+  return (
+    <section className="home-action-info" aria-label="Action needed">
+      <div className="home-action-info__copy">
+        <div className="home-action-info__heading">
+          <h2>Action Needed</h2>
+          <span className="home-action-info__hint">
+            <button
+              type="button"
+              aria-label="Action needed guidance"
+              title="Go to Pipeline to see details, review these tours and update the status."
+            >
+              <Info aria-hidden="true" />
+            </button>
+            <span role="tooltip">
+              Go to Pipeline to see details, review these tours and update the status.
+            </span>
+          </span>
+        </div>
+        <p>
+          <strong>{pendingTourCount}</strong> booked tours are past the tour date
+          without a toured or no-show outcome.
+        </p>
+        <p>
+          <strong>{pendingEnrollmentCount}</strong> out of{" "}
+          <strong>{touredWithoutFinalOutcomeCount}</strong> toured tours are beyond
+          the average enrollment time ({formatAverageDays(averageDaysToEnroll)})
+          without an enrolled or churned outcome.
+        </p>
+      </div>
+      <div className="home-action-info__summary" aria-label="Pending outcome counts">
+        <button
+          className="home-action-info__chip"
+          type="button"
+          onClick={() => navigate(reviewPath)}
+        >
+          <span>{pendingTourCount}</span>
+          <small>Pending Toured / No Show</small>
+        </button>
+        <button
+          className="home-action-info__chip"
+          type="button"
+          onClick={() => navigate(reviewPath)}
+        >
+          <span>{pendingEnrollmentCount}</span>
+          <small>Pending Enrolled / Churned</small>
+        </button>
+        <button
+          className="home-action-info__cta"
+          type="button"
+          onClick={() => navigate(reviewPath)}
+        >
+          Review in Pipeline
+          <ArrowRight aria-hidden="true" />
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -102,6 +190,7 @@ function Home() {
     createDefaultTourFilters(user, { datePreset: "today" }),
   );
   const [summary, setSummary] = useState(initialSummary);
+  const [pendingSummary, setPendingSummary] = useState(initialPendingSummary);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const bookedTours = useMemo(
@@ -148,6 +237,57 @@ function Home() {
     };
   }, [filters]);
 
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadPendingTours() {
+      try {
+        const locationParam = filters.locations[0] || undefined;
+        const searchParam = filters.search || undefined;
+        const [data, averageDaysToEnroll] = await Promise.all([
+          listTours({
+            location: locationParam,
+            search: searchParam,
+            status: "scheduled,rescheduled,toured",
+          }),
+          loadAverageDaysToEnroll({
+            location: locationParam,
+          }),
+        ]);
+        const tours = Array.isArray(data) ? data : data.results || [];
+
+        const pendingTourOutcome = sortToursOldestFirst(
+          tours.filter((tour) => getTourTrackInfo(tour, averageDaysToEnroll).type === "tour_outcome"),
+        );
+        const touredWithoutFinalOutcome = tours.filter((tour) => tour.current_status === "toured");
+        const pendingEnrollmentOutcome = sortToursOldestFirst(
+          touredWithoutFinalOutcome.filter(
+            (tour) => getTourTrackInfo(tour, averageDaysToEnroll).type === "enrollment_outcome",
+          ),
+        );
+
+        if (isCurrent) {
+          setPendingSummary({
+            averageDaysToEnroll,
+            pendingTourOutcome,
+            pendingEnrollmentOutcome,
+            touredWithoutFinalOutcomeCount: touredWithoutFinalOutcome.length,
+          });
+        }
+      } catch {
+        if (isCurrent) {
+          setPendingSummary(initialPendingSummary);
+        }
+      }
+    }
+
+    loadPendingTours();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [filters.locations, filters.search]);
+
   function updateFilter(name, value) {
     setFilters((currentFilters) => ({
       ...currentFilters,
@@ -187,6 +327,13 @@ function Home() {
           tone="noshow"
         />
       </div>
+
+      <ActionNeededInfo
+        averageDaysToEnroll={pendingSummary.averageDaysToEnroll}
+        pendingTourOutcome={pendingSummary.pendingTourOutcome}
+        pendingEnrollmentOutcome={pendingSummary.pendingEnrollmentOutcome}
+        touredWithoutFinalOutcomeCount={pendingSummary.touredWithoutFinalOutcomeCount}
+      />
 
       <div className="home-fixed-action">
         <Button size="lg" onClick={() => navigate("/tours/new")}>

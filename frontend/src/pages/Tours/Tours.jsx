@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Eye, Pencil } from "lucide-react";
+import { CalendarCheck, Eye, GraduationCap, Pencil, UserRoundCheck, UserRoundX, X } from "lucide-react";
 
 import TourFilterControls from "../../components/filters/TourFilterControls";
 import { Button } from "../../components/ui";
@@ -21,15 +21,21 @@ import {
   rescheduleTour,
   updateTour,
 } from "../../features/tours/tourApi";
+import {
+  filterToursByTrackCategory,
+  getTourTrackInfo,
+  loadAverageDaysToEnroll,
+} from "../../features/tours/tourTrackUtils";
+import { toTitleCaseWords } from "../../utils/displayText";
 import "./Tours.css";
 
-function formatTourDate(value) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
-}
+const tourStatusIcons = {
+  scheduled: CalendarCheck,
+  toured: UserRoundCheck,
+  no_show: X,
+  enrolled: GraduationCap,
+  churned: UserRoundX,
+};
 
 function formatTourDateTime(value) {
   return new Intl.DateTimeFormat("en-US", {
@@ -91,9 +97,20 @@ function sortToursByTime(tours, direction) {
   ) * multiplier);
 }
 
-function TourCard({ isSelected, onEdit, onSelect, onView, tour }) {
+function TrackBadge({ trackInfo }) {
+  if (!trackInfo?.label) return null;
+
+  return (
+    <span className="tour-track-badge" title={trackInfo.label}>
+      {trackInfo.shortLabel || trackInfo.label}
+    </span>
+  );
+}
+
+function TourCard({ isSelected, onEdit, onSelect, onView, tour, trackInfo }) {
   const navigate = useNavigate();
   const statusLabel = statusLabels[tour.current_status] || tour.status_label;
+  const StatusIcon = tourStatusIcons[tour.current_status];
   const familyName = tour.family_name.endsWith("Family")
     ? tour.family_name
     : `${tour.family_name} Family`;
@@ -103,16 +120,15 @@ function TourCard({ isSelected, onEdit, onSelect, onView, tour }) {
       <div className="tour-card__content">
         <button className="tour-card__main" type="button" onClick={onSelect}>
           <h2>{familyName}</h2>
-          <p>
-            Grade {tour.child_grade || "not set"} <span aria-hidden="true">·</span>{" "}
-            {tour.location_name}
-          </p>
-          <p>Tour Date: {formatTourDate(tour.scheduled_tour_date)}</p>
+          <p>{toTitleCaseWords(tour.location_name)}</p>
+          <p>{formatTourDateTime(tour.scheduled_tour_date)}</p>
         </button>
         <div className="tour-card__side">
-          <span className={`tour-status status-color--${tour.current_status}`}>
-            {statusLabel}
+          <span className={`tour-status tour-card__status status-color--${tour.current_status}`}>
+            {StatusIcon && <StatusIcon aria-hidden="true" />}
+            <span>{statusLabel}</span>
           </span>
+          <TrackBadge trackInfo={trackInfo} />
           <div className="tour-card__actions" aria-label={`${familyName} actions`}>
             <button
               type="button"
@@ -298,8 +314,8 @@ function TourDetailPane({
           <label><span>Family name</span><input value={form.familyName} onChange={(event) => updateForm("familyName", event.target.value)} required /></label>
           <label><span>Email</span><input type="email" value={form.contactEmail} onChange={(event) => updateForm("contactEmail", event.target.value)} /></label>
           <label><span>Phone</span><input type="tel" value={form.contactPhone} onChange={(event) => updateForm("contactPhone", event.target.value)} /></label>
-          <label><span>Location</span><select value={form.location} onChange={(event) => updateForm("location", event.target.value)} required>{locations.map((location) => <option key={location.id} value={location.id}>{location.location_name}</option>)}</select></label>
-          <label><span>Lead source</span><select value={form.leadSource} onChange={(event) => updateForm("leadSource", event.target.value)} required>{leadSources.map((source) => <option key={source.id} value={source.id}>{source.source_name}</option>)}</select></label>
+          <label><span>Location</span><select value={form.location} onChange={(event) => updateForm("location", event.target.value)} required>{locations.map((location) => <option key={location.id} value={location.id}>{toTitleCaseWords(location.location_name)}</option>)}</select></label>
+          <label><span>Lead source</span><select value={form.leadSource} onChange={(event) => updateForm("leadSource", event.target.value)} required>{leadSources.map((source) => <option key={source.id} value={source.id}>{toTitleCaseWords(source.source_name)}</option>)}</select></label>
           <label><span>Grade</span><input value={form.childGrade} onChange={(event) => updateForm("childGrade", event.target.value)} /></label>
           <label><span>Date</span><input type="date" value={form.tourDate} onChange={(event) => updateForm("tourDate", event.target.value)} required /></label>
           <label><span>Time</span><input type="time" value={form.tourTime} onChange={(event) => updateForm("tourTime", event.target.value)} required /></label>
@@ -315,10 +331,10 @@ function TourDetailPane({
             <h3>Tour Info</h3>
             <dl className="tours-detail-list">
               <div><dt>Scheduled</dt><dd>{formatTourDateTime(tour.scheduled_tour_date)}</dd></div>
-              <div><dt>Location</dt><dd>{tour.location_name}</dd></div>
-              <div><dt>Lead source</dt><dd>{tour.lead_source_name}</dd></div>
+              <div><dt>Location</dt><dd>{toTitleCaseWords(tour.location_name)}</dd></div>
+              <div><dt>Lead source</dt><dd>{toTitleCaseWords(tour.lead_source_name)}</dd></div>
               <div><dt>Grade</dt><dd>{tour.child_grade || "Not set"}</dd></div>
-              <div><dt>Assigned staff</dt><dd>{tour.assigned_staff_name || "Not assigned"}</dd></div>
+              <div><dt>Assigned staff</dt><dd>{toTitleCaseWords(tour.assigned_staff_name) || "Not assigned"}</dd></div>
             </dl>
           </section>
 
@@ -339,7 +355,7 @@ function TourDetailPane({
                   <article key={event.id}>
                     <strong>{event.status_label}</strong>
                     <span>{formatTourDateTime(event.event_timestamp)}</span>
-                    <p>{event.notes || `Updated by ${event.updated_by_name}`}</p>
+                    <p>{event.notes || `Updated by ${toTitleCaseWords(event.updated_by_name)}`}</p>
                   </article>
                 ))
               ) : (
@@ -368,22 +384,25 @@ function Tours() {
       dateTo: dateParam && datePreset === "custom" ? dateParam : "",
       hasDateParam: Boolean(dateParam),
       statuses: params.get("status")?.split(",").filter(Boolean) || [],
+      categories: params.get("category")?.split(",").filter(Boolean) || [],
     };
   }, [location.search]);
   const [tours, setTours] = useState([]);
   const [locations, setLocations] = useState([]);
   const [leadSources, setLeadSources] = useState([]);
   const [filters, setFilters] = useState(() => createDefaultTourFilters(user, {
-    datePreset: queryFilters.hasDateParam ? queryFilters.datePreset : "last_30_days",
+    datePreset: queryFilters.hasDateParam ? queryFilters.datePreset : "all_time",
     dateFrom: queryFilters.dateFrom,
     dateTo: queryFilters.dateTo,
     statuses: queryFilters.statuses,
+    categories: queryFilters.categories,
   }));
+  const [averageDaysToEnroll, setAverageDaysToEnroll] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedTourId, setSelectedTourId] = useState(null);
   const [detailMode, setDetailMode] = useState("view");
-  const [sortDirection, setSortDirection] = useState("asc");
+  const [sortDirection, setSortDirection] = useState("desc");
 
   const sortedTours = useMemo(
     () => sortToursByTime(tours, sortDirection),
@@ -433,23 +452,37 @@ function Tours() {
       const dateRange = getDateRange(filters);
 
       try {
-        const tourData = await listTours({
+        const locationFilter = joinFilterValues(filters.locations);
+        const leadSourceFilter = joinFilterValues(filters.leadSources);
+        const [tourData, nextAverageDaysToEnroll] = await Promise.all([
+          listTours({
           status: joinFilterValues(filters.statuses),
-          location: joinFilterValues(filters.locations),
-          lead_source: joinFilterValues(filters.leadSources),
+          location: locationFilter,
+          lead_source: leadSourceFilter,
           date_from: dateRange.dateFrom || undefined,
           date_to: dateRange.dateTo || undefined,
           search: filters.search || undefined,
-        });
+          }),
+          loadAverageDaysToEnroll({
+            location: locationFilter,
+            lead_source: leadSourceFilter,
+          }),
+        ]);
 
         if (isCurrent) {
           const nextTours = Array.isArray(tourData) ? tourData : tourData.results || [];
-          setTours(nextTours);
+          const nextFilteredTours = filterToursByTrackCategory(
+            nextTours,
+            filters.categories,
+            nextAverageDaysToEnroll,
+          );
+          setAverageDaysToEnroll(nextAverageDaysToEnroll);
+          setTours(nextFilteredTours);
           setSelectedTourId((currentId) => {
-            if (nextTours.some((tour) => tour.id === currentId)) {
+            if (nextFilteredTours.some((tour) => tour.id === currentId)) {
               return currentId;
             }
-            return nextTours[0]?.id || null;
+            return nextFilteredTours[0]?.id || null;
           });
         }
       } catch {
@@ -500,9 +533,11 @@ function Tours() {
         leadSources={leadSources}
         locations={locations}
         onChange={updateFilter}
+        defaultDatePresetValue="all_time"
         onSortToggle={handleSortToggle}
         searchPlaceholder="Search family name"
         showSort
+        showCategory
         sortDirection={sortDirection}
         staffLocationLabel={user?.location_name}
         staffLocationOnly={user?.role === "staff"}
@@ -520,6 +555,7 @@ function Tours() {
           <TourCard
             key={tour.id}
             tour={tour}
+            trackInfo={getTourTrackInfo(tour, averageDaysToEnroll)}
             isSelected={selectedTour?.id === tour.id}
             onSelect={() => {
               setSelectedTourId(tour.id);

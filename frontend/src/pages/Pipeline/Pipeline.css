@@ -13,10 +13,10 @@
 
 .pipeline-viewbar {
   align-items: center;
-  background: #ffffff;
-  border: 1px solid var(--color-border);
+  background: linear-gradient(105deg, #25135d 0%, var(--brand-navy) 58%, #193f68 100%);
+  border: 1px solid rgba(251, 191, 36, 0.24);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 16px 34px rgba(11, 28, 65, 0.18);
   display: flex;
   gap: var(--space-3);
   justify-content: space-between;
@@ -25,24 +25,46 @@
 }
 
 .pipeline-viewbar p {
-  color: var(--color-text-secondary);
-  font-size: 0.72rem;
+  color: rgba(251, 191, 36, 0.86);
+  font-size: clamp(1.25rem, 2.2vw, 1.7rem);
   font-weight: 950;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1;
 }
 
 .pipeline-viewbar span {
-  color: var(--brand-navy-dark);
+  color: var(--rss-gold);
   display: block;
   font-weight: 850;
   margin-top: 2px;
 }
 
+.pipeline-viewbar__summary {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.pipeline-viewbar__summary > div {
+  min-width: 0;
+}
+
+.pipeline-viewbar__summary > strong {
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  border-radius: var(--radius-sm);
+  color: var(--rss-gold);
+  flex: 0 0 auto;
+  font-size: clamp(0.92rem, 1.25vw, 1.12rem);
+  font-weight: 950;
+  padding: 0.5rem 0.85rem;
+}
+
 .pipeline-view-toggle {
   align-items: center;
-  background: var(--color-surface-muted);
-  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.28);
   border-radius: var(--radius-md);
   display: inline-flex;
   flex: 0 0 auto;
@@ -55,7 +77,7 @@
   background: transparent;
   border: 0;
   border-radius: var(--radius-sm);
-  color: var(--color-text-secondary);
+  color: var(--rss-gold);
   cursor: pointer;
   display: inline-flex;
   font-weight: 850;
@@ -65,9 +87,9 @@
 }
 
 .pipeline-view-toggle button.is-active {
-  background: #ffffff;
-  box-shadow: var(--shadow-card);
-  color: var(--color-action);
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.65), 0 10px 22px rgba(15, 23, 42, 0.18);
+  color: var(--rss-gold);
 }
 
 .pipeline-view-toggle svg {
@@ -89,23 +111,23 @@
 
 .pipeline-tab {
   align-items: center;
-  background: #ffffff;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card);
+  background: color-mix(in srgb, currentColor 8%, #ffffff);
+  border: 1px solid color-mix(in srgb, currentColor 24%, var(--color-border));
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.045);
   color: var(--brand-navy-dark);
   cursor: pointer;
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-1);
   grid-template-columns: auto minmax(0, 1fr) auto;
-  min-height: 78px;
-  padding: 0 var(--space-3);
+  min-height: 56px;
+  padding: 0 var(--space-3) 0 var(--space-2);
   text-align: left;
 }
 
 .pipeline-tab[aria-selected="true"] {
   border-color: currentColor;
-  box-shadow: 0 0 0 1px currentColor, var(--shadow-card);
+  box-shadow: 0 0 0 2px currentColor, 0 14px 28px rgba(15, 23, 42, 0.08);
 }
 
 .pipeline-tab__icon,
@@ -120,17 +142,17 @@
 }
 
 .pipeline-tab__icon {
-  height: 42px;
-  width: 42px;
+  height: 32px;
+  width: 32px;
 }
 
 .pipeline-tab__icon svg {
-  height: 24px;
-  width: 24px;
+  height: 18px;
+  width: 18px;
 }
 
 .pipeline-tab__label {
-  font-size: clamp(0.95rem, 1.5vw, 1.18rem);
+  font-size: clamp(0.82rem, 1.1vw, 0.98rem);
   font-weight: 800;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -138,9 +160,9 @@
 }
 
 .pipeline-tab__count {
-  font-size: 0.95rem;
-  height: 34px;
-  min-width: 34px;
+  font-size: 0.82rem;
+  height: 28px;
+  min-width: 28px;
   padding: 0 var(--space-2);
 }
 
@@ -278,17 +300,42 @@
 }
 
 .pipeline-card__badge {
+  align-items: center;
   border-radius: var(--radius-sm);
   color: #ffffff;
+  display: inline-flex;
   font-weight: 800;
+  gap: 0.4rem;
+  justify-content: center;
   min-width: 96px;
   padding: 8px 12px;
   text-align: center;
 }
 
+.pipeline-card__badge svg {
+  display: none;
+  height: 1.05em;
+  width: 1.05em;
+}
+
 .pipeline-card__side {
   display: grid;
   gap: var(--space-2);
+}
+
+.pipeline-track-badge {
+  background: #fff8df;
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  border-radius: 999px;
+  color: var(--brand-navy-dark);
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 900;
+  justify-content: center;
+  line-height: 1.15;
+  max-width: 132px;
+  padding: 0.32rem 0.55rem;
+  text-align: center;
 }
 
 .pipeline-card__actions {
@@ -402,52 +449,30 @@
   padding: var(--space-4);
 }
 
-.pipeline-kanban__header {
-  align-items: center;
-  display: flex;
-  gap: var(--space-3);
-  justify-content: space-between;
-  min-width: 0;
-}
-
-.pipeline-kanban__header h2 {
-  color: var(--brand-navy-dark);
-  font-size: clamp(1.35rem, 2.1vw, 1.8rem);
-  font-weight: 900;
-  line-height: 1.05;
-}
-
-.pipeline-kanban__header p {
-  color: var(--color-text-secondary);
-  font-weight: 750;
-  margin-top: 2px;
-}
-
-.pipeline-kanban__header > span {
-  background: var(--color-action-soft);
-  border: 1px solid var(--color-action-border);
-  border-radius: var(--radius-sm);
-  color: var(--color-action);
-  flex: 0 0 auto;
-  font-weight: 900;
-  padding: 0.5rem 0.85rem;
+.pipeline-flow-panel {
+  background: linear-gradient(105deg, #fff8df 0%, #fff2c2 100%);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  border-radius: var(--radius-md);
+  box-shadow: 0 14px 26px rgba(251, 191, 36, 0.12);
+  overflow: hidden;
+  padding: var(--space-3);
 }
 
 .pipeline-kanban__flow {
   align-items: center;
-  background: var(--color-surface-muted);
-  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(251, 191, 36, 0.3);
   border-radius: var(--radius-md);
   display: grid;
   gap: var(--space-2);
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  min-width: 880px;
+  min-width: 0;
   padding: var(--space-3);
 }
 
 .pipeline-kanban__flow--branching {
   grid-template-columns: 1fr;
-  min-width: 880px;
+  min-width: 0;
 }
 
 .pipeline-kanban__flow-step,
@@ -464,12 +489,12 @@
   align-items: center;
   display: grid;
   gap: var(--space-2);
-  grid-template-columns: minmax(140px, 1fr) auto minmax(140px, 1fr) auto minmax(140px, 1fr);
+  grid-template-columns: minmax(72px, 1fr) auto minmax(72px, 1fr) auto minmax(72px, 1fr);
   min-width: 0;
 }
 
 .pipeline-kanban__flow-path--branch {
-  grid-template-columns: minmax(140px, 1fr) auto minmax(140px, 1fr) auto minmax(140px, 1fr);
+  grid-template-columns: minmax(72px, 1fr) auto minmax(72px, 1fr) auto minmax(72px, 1fr);
   margin-top: var(--space-2);
 }
 
@@ -478,7 +503,7 @@
 }
 
 .pipeline-kanban__flow-branch-label {
-  color: var(--color-text-secondary);
+  color: var(--rss-gold);
   font-size: 0.72rem;
   font-weight: 950;
   justify-self: center;
@@ -506,7 +531,7 @@
 }
 
 .pipeline-kanban__flow-split span {
-  color: var(--color-text-secondary);
+  color: var(--rss-gold);
   font-size: 0.66rem;
   font-weight: 900;
   text-transform: uppercase;
@@ -628,8 +653,8 @@
   display: grid;
   gap: var(--space-2);
   grid-template-columns: auto minmax(0, 1fr) auto;
-  min-height: 72px;
-  padding: var(--space-3);
+  min-height: 58px;
+  padding: var(--space-2);
 }
 
 .pipeline-kanban__column-icon {
@@ -743,6 +768,12 @@
   min-width: 0;
 }
 
+.pipeline-kanban-card .pipeline-track-badge {
+  justify-self: start;
+  margin-top: var(--space-1);
+  max-width: 100%;
+}
+
 .pipeline-kanban-card__heading {
   align-items: flex-start;
   display: flex;
@@ -761,13 +792,23 @@
 }
 
 .pipeline-kanban-card__badge {
+  align-items: center;
   border-radius: 7px;
   color: #ffffff;
+  display: inline-flex;
   flex: 0 0 auto;
   font-size: 0.66rem;
   font-weight: 900;
+  gap: 0.25rem;
+  justify-content: center;
   line-height: 1;
   padding: 0.38rem 0.45rem;
+}
+
+.pipeline-kanban-card__badge svg {
+  display: none;
+  height: 1em;
+  width: 1em;
 }
 
 .pipeline-kanban-card p {
@@ -911,7 +952,6 @@
     overflow-x: hidden;
   }
 
-  .pipeline-kanban__flow,
   .pipeline-kanban__columns {
     min-width: 0;
   }
@@ -925,13 +965,22 @@
   }
 
   .pipeline-viewbar > div:first-child {
-    display: none;
+    display: flex;
   }
 
   .pipeline-view-toggle {
     display: grid;
     grid-template-columns: 1fr 1fr;
     width: 100%;
+  }
+
+  .pipeline-viewbar {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .pipeline-viewbar__summary {
+    justify-content: space-between;
   }
 
   .pipeline-view-toggle button {
@@ -1006,23 +1055,9 @@
     padding: var(--space-3);
   }
 
-  .pipeline-kanban__header {
-    align-items: flex-start;
-    min-width: 760px;
-  }
-
-  .pipeline-kanban__flow {
-    min-width: 760px;
-  }
-
-  .pipeline-kanban__flow--branching {
-    grid-template-columns: 1fr;
-    min-width: 760px;
-  }
-
   .pipeline-kanban__flow-path,
   .pipeline-kanban__flow-path--branch {
-    grid-template-columns: 140px 42px 140px 42px 140px;
+    grid-template-columns: minmax(54px, 1fr) 28px minmax(54px, 1fr) 28px minmax(54px, 1fr);
   }
 
   .pipeline-kanban__columns {
@@ -1104,6 +1139,28 @@
     min-width: 0;
   }
 
+  .pipeline-card__badge svg {
+    display: block;
+  }
+
+  .pipeline-card__badge > span {
+    display: none;
+  }
+
+  .pipeline-kanban-card__badge {
+    min-height: 30px;
+    min-width: 34px;
+    padding: 0.42rem;
+  }
+
+  .pipeline-kanban-card__badge svg {
+    display: block;
+  }
+
+  .pipeline-kanban-card__badge > span {
+    display: none;
+  }
+
   .pipeline-card__moves {
     grid-template-columns: 1fr;
   }
@@ -1121,32 +1178,19 @@
     padding: var(--space-2);
   }
 
-  .pipeline-kanban__header {
-    min-width: 650px;
-  }
-
-  .pipeline-kanban__header h2 {
-    font-size: 1.25rem;
-  }
-
-  .pipeline-kanban__header p {
-    font-size: 0.82rem;
-  }
-
   .pipeline-kanban__flow {
     gap: var(--space-1);
-    min-width: 650px;
     padding: var(--space-2);
   }
 
   .pipeline-kanban__flow--branching {
     grid-template-columns: 1fr;
-    min-width: 650px;
   }
 
   .pipeline-kanban__flow-path,
   .pipeline-kanban__flow-path--branch {
-    grid-template-columns: 112px 34px 112px 34px 112px;
+    gap: 4px;
+    grid-template-columns: minmax(40px, 1fr) 18px minmax(40px, 1fr) 18px minmax(40px, 1fr);
   }
 
   .pipeline-kanban__flow-step {
@@ -1155,16 +1199,33 @@
 
   .pipeline-kanban__flow-step strong,
   .pipeline-kanban__flow-node strong {
-    font-size: 0.65rem;
+    display: none;
   }
 
   .pipeline-kanban__flow-step > span,
   .pipeline-kanban__flow-node > span {
-    height: 28px;
-    width: 28px;
+    height: 30px;
+    width: 30px;
   }
 
-  .pipeline-kanban__flow-step svg {
+  .pipeline-kanban__flow-node {
+    display: flex;
+    justify-content: center;
+    padding: 0.35rem;
+  }
+
+  .pipeline-kanban__flow-split svg {
+    height: 16px;
+    width: 16px;
+  }
+
+  .pipeline-kanban__flow-split span,
+  .pipeline-kanban__flow-branch-label {
+    font-size: 0.52rem;
+  }
+
+  .pipeline-kanban__flow-step svg,
+  .pipeline-kanban__flow-node svg {
     height: 16px;
     width: 16px;
   }

@@ -1,6 +1,7 @@
 import "./Header.css";
 import { Link, useNavigate } from "react-router-dom";
 import useAuth from "../../../features/auth/useAuth";
+import { toTitleCaseWords } from "../../../utils/displayText";
 
 function Header() {
   const { user, logout } = useAuth();
@@ -18,7 +19,7 @@ function Header() {
         <h1>Dashboard</h1>
       </div>
       <div className="header-account">
-        <Link to="/settings">{user.first_name || user.email}</Link>
+        <Link to="/settings">{toTitleCaseWords(user.first_name) || user.email}</Link>
         <button type="button" onClick={handleLogout}>Sign out</button>
       </div>
     </header>

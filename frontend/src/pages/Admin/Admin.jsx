@@ -19,6 +19,7 @@ import {
   updateLeadSource as saveLeadSource,
 } from "../../features/admin/leadSourceApi";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
+import { formatPersonName, toTitleCaseWords } from "../../utils/displayText";
 import "./Admin.css";
 
 const emptyForm = {
@@ -730,10 +731,10 @@ function Admin() {
           {!isLoading && managedLocations.map((locationItem) => (
             <article className="user-row" key={locationItem.id}>
               <div className="user-summary">
-                <strong>{locationItem.location_name}</strong>
+                <strong>{toTitleCaseWords(locationItem.location_name)}</strong>
                 <span>{locationItem.address}</span>
                 <span>
-                  {locationItem.city}, {locationItem.state} {locationItem.zip_code}
+                  {toTitleCaseWords(locationItem.city)}, {String(locationItem.state || "").toUpperCase()} {locationItem.zip_code}
                 </span>
                 {locationItem.phone && <span>{locationItem.phone}</span>}
               </div>
@@ -791,7 +792,7 @@ function Admin() {
           {!isLoading && managedLeadSources.map((source) => (
             <article className="user-row" key={source.id}>
               <div className="user-summary">
-                <strong>{source.source_name}</strong>
+                <strong>{toTitleCaseWords(source.source_name)}</strong>
                 {source.description && <span>{source.description}</span>}
                 {source.external_id && <span>External ID: {source.external_id}</span>}
               </div>
@@ -854,7 +855,7 @@ function Admin() {
               <label htmlFor="user-location">Location</label>
               <select id="user-location" value={form.location} onChange={(event) => updateForm("location", event.target.value)} required>
                 <option value="">Select location</option>
-                {locations.map((location) => <option key={location.id} value={location.id}>{location.location_name}</option>)}
+                {locations.map((location) => <option key={location.id} value={location.id}>{toTitleCaseWords(location.location_name)}</option>)}
               </select>
             </>
           )}
@@ -873,9 +874,9 @@ function Admin() {
         {!isLoading && users.map((user) => (
           <article className="user-row" key={user.id}>
             <div className="user-summary">
-              <strong>{`${user.first_name} ${user.last_name}`.trim() || user.email}</strong>
+              <strong>{formatPersonName(user.first_name, user.last_name, user.email)}</strong>
               <span>{user.email}</span>
-              <span>{roleLabels[user.role]}{user.location_name ? ` - ${user.location_name}` : ""}</span>
+              <span>{roleLabels[user.role]}{user.location_name ? ` - ${toTitleCaseWords(user.location_name)}` : ""}</span>
             </div>
             <div className="user-status-actions">
               <span className={user.is_active ? "status-active" : "status-inactive"}>{user.is_active ? "Active" : "Inactive"}</span>

@@ -8,6 +8,14 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
+.tour-filters--with-sort.tour-filters--with-category {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.tour-filters--with-sort.tour-filters--with-category.tour-filters--no-status:not(.tour-filters--no-search) {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
 .tour-filters--no-search {
   grid-template-columns: repeat(5, minmax(170px, 1fr));
 }
@@ -251,14 +259,65 @@
 .tour-filter__preset-row {
   display: grid;
   gap: var(--space-2);
+  grid-template-columns: 1fr;
 }
 
 .tour-filter__preset-row:first-child {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.tour-filter__preset-row:nth-child(2) {
+.tour-filter__relative-grid {
+  display: grid;
+  gap: var(--space-2);
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tour-filter__relative-preset {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--brand-navy-dark);
+  display: grid;
+  gap: var(--space-1);
+  grid-template-columns: auto minmax(44px, 1fr) auto;
+  min-height: 42px;
+  padding: 0 var(--space-2);
+}
+
+.tour-filter__relative-preset.is-active {
+  background: var(--color-action-soft);
+  border-color: var(--color-action-border);
+  color: var(--color-action);
+}
+
+.tour-filter__relative-preset button {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+  padding: 0;
+}
+
+.tour-filter__relative-preset input {
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--brand-navy-dark);
+  font-size: 0.9rem;
+  font-weight: 900;
+  min-height: 30px;
+  min-width: 0;
+  padding: 0 var(--space-1);
+  text-align: center;
+}
+
+.tour-filter__relative-preset span {
+  color: inherit;
+  font-size: 0.82rem;
+  font-weight: 900;
 }
 
 .tour-filter__toolbar {
@@ -742,6 +801,10 @@
   }
 
   .tour-filter__range {
+    grid-template-columns: 1fr;
+  }
+
+  .tour-filter__relative-grid {
     grid-template-columns: 1fr;
   }
 }

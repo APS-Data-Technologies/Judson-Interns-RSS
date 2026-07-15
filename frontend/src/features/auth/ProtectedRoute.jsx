@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { AppShell } from "../../components/layout";
+import { toTitleCaseWords } from "../../utils/displayText";
 import useAuth from "./useAuth";
 
 const routeTitles = {
@@ -42,7 +43,7 @@ function ProtectedRoute() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  const firstName = user?.first_name || user?.email?.split("@")[0] || "there";
+  const firstName = toTitleCaseWords(user?.first_name || user?.email?.split("@")[0] || "there");
   const routeTitle = routeTitles[location.pathname];
   const dynamicTitle = routeTitle
     ? null

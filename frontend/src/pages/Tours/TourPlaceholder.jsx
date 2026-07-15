@@ -11,6 +11,7 @@ import {
   updateTour,
 } from "../../features/tours/tourApi";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
+import { toTitleCaseWords } from "../../utils/displayText";
 import "./TourPlaceholder.css";
 
 function formatDateTime(value) {
@@ -295,7 +296,7 @@ function TourPlaceholder({ mode }) {
             <select value={form.location} onChange={(event) => updateForm("location", event.target.value)} aria-invalid={Boolean(fieldErrors.location)}>
               <option value="">Select location</option>
               {locations.map((location) => (
-                <option key={location.id} value={location.id}>{location.location_name}</option>
+                <option key={location.id} value={location.id}>{toTitleCaseWords(location.location_name)}</option>
               ))}
             </select>
             {fieldErrors.location && <small>{fieldErrors.location}</small>}
@@ -305,7 +306,7 @@ function TourPlaceholder({ mode }) {
             <select value={form.leadSource} onChange={(event) => updateForm("leadSource", event.target.value)} aria-invalid={Boolean(fieldErrors.leadSource)}>
               <option value="">Select lead source</option>
               {leadSources.map((source) => (
-                <option key={source.id} value={source.id}>{source.source_name}</option>
+                <option key={source.id} value={source.id}>{toTitleCaseWords(source.source_name)}</option>
               ))}
             </select>
             {fieldErrors.leadSource && <small>{fieldErrors.leadSource}</small>}
@@ -358,10 +359,10 @@ function TourPlaceholder({ mode }) {
             <h2>Tour Info</h2>
             <dl>
               <div><dt>Scheduled</dt><dd>{formatDateTime(tour.scheduled_tour_date)}</dd></div>
-              <div><dt>Location</dt><dd>{tour.location_name}</dd></div>
-              <div><dt>Lead source</dt><dd>{tour.lead_source_name}</dd></div>
+              <div><dt>Location</dt><dd>{toTitleCaseWords(tour.location_name)}</dd></div>
+              <div><dt>Lead source</dt><dd>{toTitleCaseWords(tour.lead_source_name)}</dd></div>
               <div><dt>Grade</dt><dd>{tour.child_grade || "Not set"}</dd></div>
-              <div><dt>Assigned staff</dt><dd>{tour.assigned_staff_name}</dd></div>
+              <div><dt>Assigned staff</dt><dd>{toTitleCaseWords(tour.assigned_staff_name)}</dd></div>
             </dl>
           </section>
 
@@ -382,7 +383,7 @@ function TourPlaceholder({ mode }) {
                   <article key={event.id}>
                     <strong>{event.status_label}</strong>
                     <span>{formatDateTime(event.event_timestamp)}</span>
-                    <p>{event.notes || `Updated by ${event.updated_by_name}`}</p>
+                    <p>{event.notes || `Updated by ${toTitleCaseWords(event.updated_by_name)}`}</p>
                   </article>
                 ))
               ) : (
