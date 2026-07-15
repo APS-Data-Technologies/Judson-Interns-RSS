@@ -73,3 +73,26 @@ class User(AbstractUser):
     def save(self, *args, **kwargs):
         self.email = self.email.strip().lower()
         super().save(*args, **kwargs)
+
+
+class PasswordResetRequest(models.Model):
+    """A one-time, server-side record for a password-reset email.
+
+    Only a SHA-256 digest of the high-entropy token is persisted.  A database
+    record lets us invalidate prior links and enforce true one-time use.
+    """
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="password_reset_requests")
+    token_digest = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+    requested_ip = models.GenericIPAddressField(null=True, blank=True)
+    requested_user_agent = models.CharField(max_length=512, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "used_at", "expires_at"], name="accounts_pa_user_id_dfb792_idx"),
+            models.Index(fields=["expires_at"], name="accounts_pa_expires_e02c58_idx"),
+        ]

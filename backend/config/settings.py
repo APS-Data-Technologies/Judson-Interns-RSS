@@ -149,10 +149,19 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'login': '10/minute',
+        'password_reset': '5/hour',
+        'password_reset_confirm': '15/hour',
     },
 }
 
 AUTH_TOKEN_TTL_HOURS = env.int('AUTH_TOKEN_TTL_HOURS', default=12)
+PASSWORD_RESET_TOKEN_TTL_SECONDS = env.int('PASSWORD_RESET_TOKEN_TTL_SECONDS', default=1800)
+PASSWORD_RESET_FRONTEND_URL = env('PASSWORD_RESET_FRONTEND_URL', default='http://localhost:5173')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='no-reply@readysetstem.org')
+EMAIL_BACKEND = env(
+    'EMAIL_BACKEND',
+    default='django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend',
+)
 
 CORS_ALLOWED_ORIGINS = env.list(
     'CORS_ALLOWED_ORIGINS',
