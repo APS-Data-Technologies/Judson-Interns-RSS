@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   CalendarCheck,
   Check,
@@ -27,6 +27,11 @@ import {
   listTours,
   transitionTourStatus,
 } from "../../features/tours/tourApi";
+import {
+  filterToursByTrackCategory,
+  getTourTrackInfo,
+  loadAverageDaysToEnroll,
+} from "../../features/tours/tourTrackUtils";
 import { toTitleCaseWords } from "../../utils/displayText";
 import "./Pipeline.css";
 
@@ -64,7 +69,17 @@ function sortToursByTime(tours, direction) {
   ) * multiplier);
 }
 
-function PipelineCard({ tour, onMove, isMoving }) {
+function TrackBadge({ trackInfo }) {
+  if (!trackInfo?.label) return null;
+
+  return (
+    <span className="pipeline-track-badge" title={trackInfo.label}>
+      {trackInfo.shortLabel || trackInfo.label}
+    </span>
+  );
+}
+
+function PipelineCard({ tour, onMove, isMoving, trackInfo }) {
   const navigate = useNavigate();
   const [isMoveMenuOpen, setIsMoveMenuOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState("");
@@ -97,6 +112,7 @@ function PipelineCard({ tour, onMove, isMoving }) {
             {StatusIcon && <StatusIcon aria-hidden="true" />}
             <span>{status?.label || tour.status_label}</span>
           </span>
+          <TrackBadge trackInfo={trackInfo} />
           <div className="pipeline-card__actions" aria-label={`${familyName} actions`}>
             <button
               type="button"
@@ -167,7 +183,7 @@ function PipelineCard({ tour, onMove, isMoving }) {
   );
 }
 
-function PipelineKanbanCard({ tour, onMove, isMoving, onTouchDrop }) {
+function PipelineKanbanCard({ tour, onMove, isMoving, onTouchDrop, trackInfo }) {
   const navigate = useNavigate();
   const touchDragRef = useRef(null);
   const [isMoveMenuOpen, setIsMoveMenuOpen] = useState(false);
@@ -277,6 +293,7 @@ function PipelineKanbanCard({ tour, onMove, isMoving, onTouchDrop }) {
         </div>
         <p>{toTitleCaseWords(tour.location_name)}</p>
         <p>{formatTourDateTime(tour.scheduled_tour_date)}</p>
+        <TrackBadge trackInfo={trackInfo} />
         <div className="pipeline-kanban-card__actions" aria-label={`${familyName} actions`}>
           <button
             type="button"
@@ -404,10 +421,14 @@ function PipelineFlowDiagram() {
 
 function Pipeline() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [tours, setTours] = useState([]);
   const [locations, setLocations] = useState([]);
   const [leadSources, setLeadSources] = useState([]);
-  const [filters, setFilters] = useState(() => createDefaultTourFilters(user));
+  const [filters, setFilters] = useState(() => createDefaultTourFilters(user, {
+    datePreset: "all_time",
+  }));
+  const [averageDaysToEnroll, setAverageDaysToEnroll] = useState(null);
   const [activeStatus, setActiveStatus] = useState("scheduled");
   const [viewMode, setViewMode] = useState("stages");
   const [movingTourId, setMovingTourId] = useState(null);
@@ -415,6 +436,29 @@ function Pipeline() {
   const [sortDirection, setSortDirection] = useState("desc");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const requestedStatus = searchParams.get("status");
+    if (pipelineStatuses.some((status) => status.value === requestedStatus)) {
+      setActiveStatus(requestedStatus);
+      setViewMode("stages");
+    }
+    const requestedCategory = searchParams.get("category");
+    const nextCategories = requestedCategory?.split(",").filter(Boolean) || [];
+    setFilters((currentFilters) => {
+      const currentCategories = currentFilters.categories || [];
+      if (
+        currentCategories.length === nextCategories.length &&
+        currentCategories.every((category, index) => category === nextCategories[index])
+      ) {
+        return currentFilters;
+      }
+      return {
+        ...currentFilters,
+        categories: nextCategories,
+      };
+    });
+  }, [searchParams]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -458,17 +502,31 @@ function Pipeline() {
       const dateRange = getDateRange(filters);
 
       try {
-        const tourData = await listTours({
+        const locationFilter = joinFilterValues(filters.locations);
+        const leadSourceFilter = joinFilterValues(filters.leadSources);
+        const [tourData, nextAverageDaysToEnroll] = await Promise.all([
+          listTours({
           date_from: dateRange.dateFrom || undefined,
           date_to: dateRange.dateTo || undefined,
-          location: joinFilterValues(filters.locations),
-          lead_source: joinFilterValues(filters.leadSources),
+          location: locationFilter,
+          lead_source: leadSourceFilter,
           status: joinFilterValues(filters.statuses),
           search: filters.search || undefined,
-        });
+          }),
+          loadAverageDaysToEnroll({
+            location: locationFilter,
+            lead_source: leadSourceFilter,
+          }),
+        ]);
 
         if (isCurrent) {
-          setTours(Array.isArray(tourData) ? tourData : tourData.results || []);
+          const nextTours = Array.isArray(tourData) ? tourData : tourData.results || [];
+          setAverageDaysToEnroll(nextAverageDaysToEnroll);
+          setTours(filterToursByTrackCategory(
+            nextTours,
+            filters.categories,
+            nextAverageDaysToEnroll,
+          ));
         }
       } catch {
         if (isCurrent) {
@@ -573,10 +631,12 @@ function Pipeline() {
           leadSources={leadSources}
           locations={locations}
           onChange={updateFilter}
+          defaultDatePresetValue="all_time"
           onSortToggle={() => setSortDirection((direction) => (direction === "asc" ? "desc" : "asc"))}
           searchPlaceholder="Search family name"
           showStatus={false}
           showSort
+          showCategory
           sortDirection={sortDirection}
           staffLocationLabel={user?.location_name}
           staffLocationOnly={user?.role === "staff"}
@@ -660,6 +720,7 @@ function Pipeline() {
                 <PipelineCard
                   key={tour.id}
                   tour={tour}
+                  trackInfo={getTourTrackInfo(tour, averageDaysToEnroll)}
                   isMoving={movingTourId === tour.id}
                   onMove={moveTour}
                 />
@@ -707,6 +768,7 @@ function Pipeline() {
                         <PipelineKanbanCard
                           key={tour.id}
                           tour={tour}
+                          trackInfo={getTourTrackInfo(tour, averageDaysToEnroll)}
                           isMoving={movingTourId === tour.id}
                           onMove={moveTour}
                           onTouchDrop={handleTouchKanbanDrop}

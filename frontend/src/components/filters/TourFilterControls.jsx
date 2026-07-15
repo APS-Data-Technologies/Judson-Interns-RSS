@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import {
+  categoryOptions,
   currentMonthValue,
   currentYearValue,
   defaultDatePreset,
@@ -24,8 +25,8 @@ import { toTitleCaseWords } from "../../utils/displayText";
 import "./TourFilterControls.css";
 
 const datePresetRows = [
-  ["yesterday", "today", "tomorrow"],
-  ["last_7_days", "last_30_days"],
+  ["all_time", "today"],
+  ["last_30_days"],
 ];
 
 function getSummary(values, options, fallback) {
@@ -35,6 +36,121 @@ function getSummary(values, options, fallback) {
   }
   if (values.length === options.length) return "All selected";
   return `${values.length} selected`;
+}
+
+function getDateSummary(filters) {
+  if (filters.datePreset === "last_n_days") {
+    return `Last ${filters.lastDays || 7} days`;
+  }
+  if (filters.datePreset === "next_n_days") {
+    return `Next ${filters.nextDays || 7} days`;
+  }
+  return (
+    datePresetOptions.find((option) => option.value === filters.datePreset)?.label ||
+    datePresetOptions[0].label
+  );
+}
+
+function RelativeDayPreset({ active, label, onDaysChange, onSelect, value }) {
+  return (
+    <div className={`tour-filter__relative-preset ${active ? "is-active" : ""}`}>
+      <button type="button" onClick={onSelect}>
+        {label}
+      </button>
+      <input
+        aria-label={`${label} number of days`}
+        inputMode="numeric"
+        min="1"
+        max="3650"
+        type="number"
+        value={value ?? 7}
+        onFocus={onSelect}
+        onChange={(event) => onDaysChange(event.target.value)}
+      />
+      <span>days</span>
+    </div>
+  );
+}
+
+function DateOptionsContent({ filters, onChange }) {
+  const optionsByValue = new Map(datePresetOptions.map((option) => [option.value, option]));
+
+  return (
+    <>
+      {datePresetRows.map((row) => (
+        <div className="tour-filter__preset-row" key={row.join("-")}>
+          {row.map((value) => {
+            const option = optionsByValue.get(value);
+            return (
+              <button
+                className="tour-filter__preset"
+                type="button"
+                key={option.value}
+                aria-pressed={filters.datePreset === option.value}
+                onClick={() => onChange("datePreset", option.value)}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      ))}
+
+      <div className="tour-filter__relative-grid">
+        <RelativeDayPreset
+          active={filters.datePreset === "last_n_days"}
+          label="Last"
+          value={filters.lastDays}
+          onSelect={() => onChange("datePreset", "last_n_days")}
+          onDaysChange={(value) => {
+            onChange("datePreset", "last_n_days");
+            onChange("lastDays", value);
+          }}
+        />
+        <RelativeDayPreset
+          active={filters.datePreset === "next_n_days"}
+          label="Next"
+          value={filters.nextDays}
+          onSelect={() => onChange("datePreset", "next_n_days")}
+          onDaysChange={(value) => {
+            onChange("datePreset", "next_n_days");
+            onChange("nextDays", value);
+          }}
+        />
+      </div>
+
+      <div className="tour-filter__range">
+        <label>
+          <small>From</small>
+          <input
+            aria-label="Start date"
+            max="2030-12-31"
+            min="2020-01-01"
+            type="date"
+            value={filters.dateFrom}
+            onChange={(event) => {
+              onChange("datePreset", "custom");
+              onChange("dateFrom", event.target.value);
+            }}
+          />
+        </label>
+        <label>
+          <small>To</small>
+          <input
+            aria-label="End date"
+            max="2030-12-31"
+            min="2020-01-01"
+            type="date"
+            value={filters.dateTo}
+            onChange={(event) => {
+              onChange("datePreset", "custom");
+              onChange("dateTo", event.target.value);
+            }}
+          />
+        </label>
+      </div>
+    </>
+  );
 }
 
 function FilterShell({ children, icon: Icon, isMobileActive = false, isOpen, label, name, onToggle, summary }) {
@@ -176,11 +292,6 @@ function MultiFilter({
 }
 
 function DateFilter({ filters, isMobileActive, isOpen, onChange, onToggle }) {
-  const selectedOption =
-    datePresetOptions.find((option) => option.value === filters.datePreset) ||
-    datePresetOptions[0];
-  const optionsByValue = new Map(datePresetOptions.map((option) => [option.value, option]));
-
   return (
     <FilterShell
       icon={CalendarDays}
@@ -189,58 +300,10 @@ function DateFilter({ filters, isMobileActive, isOpen, onChange, onToggle }) {
       label="Date"
       name="date"
       onToggle={onToggle}
-      summary={selectedOption.label}
+      summary={getDateSummary(filters)}
     >
       <div className="tour-filter__menu tour-filter__menu--date">
-        {datePresetRows.map((row) => (
-          <div className="tour-filter__preset-row" key={row.join("-")}>
-            {row.map((value) => {
-              const option = optionsByValue.get(value);
-              return (
-                <button
-                  className="tour-filter__preset"
-                  type="button"
-                  key={option.value}
-                  aria-pressed={filters.datePreset === option.value}
-                  onClick={() => onChange("datePreset", option.value)}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-        ))}
-
-        <div className="tour-filter__range">
-          <label>
-            <small>From</small>
-            <input
-              aria-label="Start date"
-              max="2030-12-31"
-              min="2020-01-01"
-              type="date"
-              value={filters.dateFrom}
-              onChange={(event) => {
-                onChange("datePreset", "custom");
-                onChange("dateFrom", event.target.value);
-              }}
-            />
-          </label>
-          <label>
-            <small>To</small>
-            <input
-              aria-label="End date"
-              max="2030-12-31"
-              min="2020-01-01"
-              type="date"
-              value={filters.dateTo}
-              onChange={(event) => {
-                onChange("datePreset", "custom");
-                onChange("dateTo", event.target.value);
-              }}
-            />
-          </label>
-        </div>
+        <DateOptionsContent filters={filters} onChange={onChange} />
       </div>
     </FilterShell>
   );
@@ -256,6 +319,7 @@ function TourFilterControls({
   onSortToggle,
   searchPlaceholder = "Search family name",
   showCostBasis = false,
+  showCategory = false,
   showDate = true,
   showLeadSource = true,
   showSearch = true,
@@ -265,6 +329,7 @@ function TourFilterControls({
   staffLocationLabel = "",
   staffLocationOnly = false,
   lockDate = false,
+  defaultDatePresetValue = defaultDatePreset,
 }) {
   const [openFilter, setOpenFilter] = useState("");
   const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(false);
@@ -278,6 +343,7 @@ function TourFilterControls({
     !showLeadSource ? "tour-filters--no-lead-source" : "",
     !showStatus ? "tour-filters--no-status" : "",
     showCostBasis ? "tour-filters--with-cost" : "",
+    showCategory ? "tour-filters--with-category" : "",
     showSort ? "tour-filters--with-sort" : "",
     lockDate ? "tour-filters--locked-date" : "",
   ]
@@ -291,9 +357,6 @@ function TourFilterControls({
     value: source.id,
     label: toTitleCaseWords(source.source_name),
   }));
-  const selectedDateOption =
-    datePresetOptions.find((option) => option.value === filters.datePreset) ||
-    datePresetOptions[0];
   const locationSummary = getSummary(
     filters.locations,
     locationOptions,
@@ -316,7 +379,7 @@ function TourFilterControls({
     ...(showDate ? [{
       value: "date",
       label: "Date",
-      summary: lockDate ? "Default: Today" : selectedDateOption.label,
+      summary: lockDate ? "Default: Today" : getDateSummary(filters),
       icon: CalendarDays,
       locked: lockDate,
       note: lockedDateNote,
@@ -340,6 +403,12 @@ function TourFilterControls({
       label: "Status",
       summary: getSummary(filters.statuses, statusOptions, "All"),
       icon: CircleDot,
+    }] : []),
+    ...(showCategory ? [{
+      value: "categories",
+      label: "Category",
+      summary: getSummary(filters.categories || [], categoryOptions, "All"),
+      icon: SlidersHorizontal,
     }] : []),
     ...(showCostBasis ? [{
       value: "cost",
@@ -390,9 +459,11 @@ function TourFilterControls({
   }
 
   function clearAllFilters() {
-    onChange("datePreset", lockDate ? "today" : defaultDatePreset);
+    onChange("datePreset", lockDate ? "today" : defaultDatePresetValue);
     onChange("dateFrom", "");
     onChange("dateTo", "");
+    onChange("lastDays", 7);
+    onChange("nextDays", 7);
     onChange("month", currentMonthValue());
     onChange("year", currentYearValue());
     if (!staffLocationOnly) {
@@ -400,6 +471,7 @@ function TourFilterControls({
     }
     onChange("leadSources", []);
     onChange("statuses", []);
+    onChange("categories", []);
     onChange("search", "");
     if (showCostBasis && onCostBasisChange) {
       onCostBasisChange("");
@@ -412,57 +484,9 @@ function TourFilterControls({
     if (lockDate) {
       return null;
     }
-    const optionsByValue = new Map(datePresetOptions.map((option) => [option.value, option]));
     return (
       <div className="tour-filters__mobile-expanded">
-        {datePresetRows.map((row) => (
-          <div className="tour-filter__preset-row" key={row.join("-")}>
-            {row.map((value) => {
-              const option = optionsByValue.get(value);
-              return (
-                <button
-                  className="tour-filter__preset"
-                  type="button"
-                  key={option.value}
-                  aria-pressed={filters.datePreset === option.value}
-                  onClick={() => onChange("datePreset", option.value)}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-        ))}
-        <div className="tour-filter__range">
-          <label>
-            <small>From</small>
-            <input
-              aria-label="Start date"
-              max="2030-12-31"
-              min="2020-01-01"
-              type="date"
-              value={filters.dateFrom}
-              onChange={(event) => {
-                onChange("datePreset", "custom");
-                onChange("dateFrom", event.target.value);
-              }}
-            />
-          </label>
-          <label>
-            <small>To</small>
-            <input
-              aria-label="End date"
-              max="2030-12-31"
-              min="2020-01-01"
-              type="date"
-              value={filters.dateTo}
-              onChange={(event) => {
-                onChange("datePreset", "custom");
-                onChange("dateTo", event.target.value);
-              }}
-            />
-          </label>
-        </div>
+        <DateOptionsContent filters={filters} onChange={onChange} />
       </div>
     );
   }
@@ -539,6 +563,14 @@ function TourFilterControls({
         options: statusOptions,
         values: filters.statuses,
         onValuesChange: (values) => onChange("statuses", values),
+      });
+    }
+    if (name === "categories") {
+      return renderMobileMultiOptions({
+        label: "Category",
+        options: categoryOptions,
+        values: filters.categories || [],
+        onValuesChange: (values) => onChange("categories", values),
       });
     }
     if (name === "cost") {
@@ -744,6 +776,21 @@ function TourFilterControls({
           onToggle={() => toggleFilter("statuses")}
           options={statusOptions}
           values={filters.statuses}
+        />
+      )}
+
+      {showCategory && (
+        <MultiFilter
+          fallback="All categories"
+          icon={SlidersHorizontal}
+          isMobileActive={mobileActiveFilter === "categories"}
+          isOpen={openFilter === "categories"}
+          label="Category"
+          name="categories"
+          onChange={(values) => onChange("categories", values)}
+          onToggle={() => toggleFilter("categories")}
+          options={categoryOptions}
+          values={filters.categories || []}
         />
       )}
 

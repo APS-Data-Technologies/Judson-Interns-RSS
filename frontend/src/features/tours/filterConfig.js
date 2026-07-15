@@ -18,15 +18,18 @@ export const statusLabels = {
   no_show: "No Show",
 };
 
+export const categoryOptions = [
+  { value: "on_track", label: "On track" },
+  { value: "off_track", label: "Off track tours" },
+];
+
 export const datePresetOptions = [
+  { value: "all_time", label: "All Time" },
   { value: "today", label: "Today" },
-  { value: "yesterday", label: "Yesterday" },
-  { value: "tomorrow", label: "Tomorrow" },
-  { value: "last_7_days", label: "Last 7 days" },
   { value: "last_30_days", label: "Last 30 days" },
-  { value: "month", label: "Month" },
-  { value: "year", label: "Year" },
-  { value: "custom", label: "Custom range" },
+  { value: "last_n_days", label: "Last custom days" },
+  { value: "next_n_days", label: "Next custom days" },
+  { value: "custom", label: "Custom date" },
 ];
 
 export const defaultDatePreset = "last_30_days";
@@ -61,6 +64,12 @@ function getYearRange(yearValue) {
   };
 }
 
+function normalizedDayCount(value) {
+  const parsedValue = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsedValue)) return 7;
+  return Math.min(Math.max(parsedValue, 1), 3650);
+}
+
 export function todayValue() {
   return toDateInputValue(new Date());
 }
@@ -77,6 +86,8 @@ export function getDateRange(filters) {
   const today = new Date();
 
   switch (filters.datePreset) {
+    case "all_time":
+      return { dateFrom: "", dateTo: "" };
     case "today":
       return { dateFrom: todayValue(), dateTo: todayValue() };
     case "yesterday": {
@@ -91,6 +102,14 @@ export function getDateRange(filters) {
       return { dateFrom: toDateInputValue(addDays(today, -6)), dateTo: todayValue() };
     case "last_30_days":
       return { dateFrom: toDateInputValue(addDays(today, -29)), dateTo: todayValue() };
+    case "last_n_days": {
+      const dayCount = normalizedDayCount(filters.lastDays);
+      return { dateFrom: toDateInputValue(addDays(today, -(dayCount - 1))), dateTo: todayValue() };
+    }
+    case "next_n_days": {
+      const dayCount = normalizedDayCount(filters.nextDays);
+      return { dateFrom: todayValue(), dateTo: toDateInputValue(addDays(today, dayCount - 1)) };
+    }
     case "month":
       return getMonthRange(filters.month || currentMonthValue());
     case "year":
@@ -111,11 +130,14 @@ export function createDefaultTourFilters(user, overrides = {}) {
     datePreset: defaultDatePreset,
     dateFrom: "",
     dateTo: "",
+    lastDays: 7,
+    nextDays: 7,
     month: currentMonthValue(),
     year: currentYearValue(),
     locations: user?.role === "staff" && user.location ? [String(user.location)] : [],
     leadSources: [],
     statuses: [],
+    categories: [],
     search: "",
     ...overrides,
   };

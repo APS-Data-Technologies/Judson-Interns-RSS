@@ -85,6 +85,21 @@
   gap: var(--space-3);
 }
 
+.tour-track-badge {
+  background: #fff8df;
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  border-radius: 999px;
+  color: var(--brand-navy-dark);
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 900;
+  justify-content: center;
+  line-height: 1.15;
+  max-width: 132px;
+  padding: 0.32rem 0.55rem;
+  text-align: center;
+}
+
 .tour-card__actions {
   display: grid;
   gap: var(--space-2);
@@ -358,6 +373,12 @@
 
   .tour-card__status span {
     display: none;
+  }
+
+  .tour-track-badge {
+    font-size: 0.68rem;
+    max-width: 62px;
+    padding: 0.28rem 0.42rem;
   }
 
   .tour-card__actions button {

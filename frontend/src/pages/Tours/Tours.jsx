@@ -21,6 +21,11 @@ import {
   rescheduleTour,
   updateTour,
 } from "../../features/tours/tourApi";
+import {
+  filterToursByTrackCategory,
+  getTourTrackInfo,
+  loadAverageDaysToEnroll,
+} from "../../features/tours/tourTrackUtils";
 import { toTitleCaseWords } from "../../utils/displayText";
 import "./Tours.css";
 
@@ -92,7 +97,17 @@ function sortToursByTime(tours, direction) {
   ) * multiplier);
 }
 
-function TourCard({ isSelected, onEdit, onSelect, onView, tour }) {
+function TrackBadge({ trackInfo }) {
+  if (!trackInfo?.label) return null;
+
+  return (
+    <span className="tour-track-badge" title={trackInfo.label}>
+      {trackInfo.shortLabel || trackInfo.label}
+    </span>
+  );
+}
+
+function TourCard({ isSelected, onEdit, onSelect, onView, tour, trackInfo }) {
   const navigate = useNavigate();
   const statusLabel = statusLabels[tour.current_status] || tour.status_label;
   const StatusIcon = tourStatusIcons[tour.current_status];
@@ -113,6 +128,7 @@ function TourCard({ isSelected, onEdit, onSelect, onView, tour }) {
             {StatusIcon && <StatusIcon aria-hidden="true" />}
             <span>{statusLabel}</span>
           </span>
+          <TrackBadge trackInfo={trackInfo} />
           <div className="tour-card__actions" aria-label={`${familyName} actions`}>
             <button
               type="button"
@@ -368,17 +384,20 @@ function Tours() {
       dateTo: dateParam && datePreset === "custom" ? dateParam : "",
       hasDateParam: Boolean(dateParam),
       statuses: params.get("status")?.split(",").filter(Boolean) || [],
+      categories: params.get("category")?.split(",").filter(Boolean) || [],
     };
   }, [location.search]);
   const [tours, setTours] = useState([]);
   const [locations, setLocations] = useState([]);
   const [leadSources, setLeadSources] = useState([]);
   const [filters, setFilters] = useState(() => createDefaultTourFilters(user, {
-    datePreset: queryFilters.hasDateParam ? queryFilters.datePreset : "last_30_days",
+    datePreset: queryFilters.hasDateParam ? queryFilters.datePreset : "all_time",
     dateFrom: queryFilters.dateFrom,
     dateTo: queryFilters.dateTo,
     statuses: queryFilters.statuses,
+    categories: queryFilters.categories,
   }));
+  const [averageDaysToEnroll, setAverageDaysToEnroll] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedTourId, setSelectedTourId] = useState(null);
@@ -433,23 +452,37 @@ function Tours() {
       const dateRange = getDateRange(filters);
 
       try {
-        const tourData = await listTours({
+        const locationFilter = joinFilterValues(filters.locations);
+        const leadSourceFilter = joinFilterValues(filters.leadSources);
+        const [tourData, nextAverageDaysToEnroll] = await Promise.all([
+          listTours({
           status: joinFilterValues(filters.statuses),
-          location: joinFilterValues(filters.locations),
-          lead_source: joinFilterValues(filters.leadSources),
+          location: locationFilter,
+          lead_source: leadSourceFilter,
           date_from: dateRange.dateFrom || undefined,
           date_to: dateRange.dateTo || undefined,
           search: filters.search || undefined,
-        });
+          }),
+          loadAverageDaysToEnroll({
+            location: locationFilter,
+            lead_source: leadSourceFilter,
+          }),
+        ]);
 
         if (isCurrent) {
           const nextTours = Array.isArray(tourData) ? tourData : tourData.results || [];
-          setTours(nextTours);
+          const nextFilteredTours = filterToursByTrackCategory(
+            nextTours,
+            filters.categories,
+            nextAverageDaysToEnroll,
+          );
+          setAverageDaysToEnroll(nextAverageDaysToEnroll);
+          setTours(nextFilteredTours);
           setSelectedTourId((currentId) => {
-            if (nextTours.some((tour) => tour.id === currentId)) {
+            if (nextFilteredTours.some((tour) => tour.id === currentId)) {
               return currentId;
             }
-            return nextTours[0]?.id || null;
+            return nextFilteredTours[0]?.id || null;
           });
         }
       } catch {
@@ -500,9 +533,11 @@ function Tours() {
         leadSources={leadSources}
         locations={locations}
         onChange={updateFilter}
+        defaultDatePresetValue="all_time"
         onSortToggle={handleSortToggle}
         searchPlaceholder="Search family name"
         showSort
+        showCategory
         sortDirection={sortDirection}
         staffLocationLabel={user?.location_name}
         staffLocationOnly={user?.role === "staff"}
@@ -520,6 +555,7 @@ function Tours() {
           <TourCard
             key={tour.id}
             tour={tour}
+            trackInfo={getTourTrackInfo(tour, averageDaysToEnroll)}
             isSelected={selectedTour?.id === tour.id}
             onSelect={() => {
               setSelectedTourId(tour.id);
