@@ -6,6 +6,8 @@ from .views import (
     CurrentUserView,
     LoginView,
     LogoutView,
+    PasswordResetConfirmView,
+    PasswordResetRequestView,
     UserLocationListView,
     UserViewSet,
 )
@@ -18,6 +20,8 @@ urlpatterns = [
     path("auth/logout/", LogoutView.as_view(), name="auth-logout"),
     path("auth/me/", CurrentUserView.as_view(), name="auth-me"),
     path("auth/change-password/", ChangePasswordView.as_view(), name="auth-change-password"),
+    path("auth/password-reset/", PasswordResetRequestView.as_view(), name="auth-password-reset-request"),
+    path("auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="auth-password-reset-confirm"),
     path("user-locations/", UserLocationListView.as_view(), name="user-location-list"),
     path("", include(router.urls)),
 ]

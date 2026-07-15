@@ -1,5 +1,10 @@
 from datetime import timedelta
+import re
+from urllib.parse import parse_qs, urlparse
 
+from django.core.cache import cache
+from django.core import mail
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -10,6 +15,7 @@ from apps.accounts.models import User
 from apps.sites.models import Location
 
 
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 class AccountApiTests(APITestCase):
     @classmethod
     def setUpTestData(cls):
@@ -49,6 +55,12 @@ class AccountApiTests(APITestCase):
         user.set_password(password)
         user.save()
         return user
+
+    def setUp(self):
+        super().setUp()
+        # DRF scoped throttles use the cache, which otherwise persists across
+        # independent test methods and masks their intended assertions.
+        cache.clear()
 
     def authenticate(self, user):
         token = Token.objects.create(user=user)
@@ -386,3 +398,99 @@ class AccountApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("password", response.data)
+
+    def request_password_reset(self, email):
+        return self.client.post(
+            reverse("auth-password-reset-request"),
+            {"email": email},
+            format="json",
+        )
+
+    def reset_token_from_last_email(self):
+        reset_url = re.search(r"https?://\S+", mail.outbox[-1].body).group(0)
+        return parse_qs(urlparse(reset_url).query)["token"][0]
+
+    def test_all_roles_can_request_and_complete_password_reset(self):
+        for user in (self.staff, self.admin, self.super_admin):
+            with self.subTest(role=user.role):
+                mail.outbox.clear()
+                old_token = Token.objects.create(user=user)
+                response = self.request_password_reset(user.email)
+
+                self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+                self.assertEqual(len(mail.outbox), 1)
+                self.assertNotIn(user.email, response.data["detail"])
+
+                response = self.client.post(
+                    reverse("auth-password-reset-confirm"),
+                    {"token": self.reset_token_from_last_email(), "new_password": "ResetPass789!"},
+                    format="json",
+                )
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                user.refresh_from_db()
+                self.assertTrue(user.check_password("ResetPass789!"))
+                self.assertFalse(Token.objects.filter(key=old_token.key).exists())
+
+    def test_password_reset_request_does_not_enumerate_accounts(self):
+        existing_response = self.request_password_reset(self.staff.email)
+        nonexistent_response = self.request_password_reset("not-an-account@example.com")
+
+        self.assertEqual(existing_response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(nonexistent_response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(existing_response.data, nonexistent_response.data)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_inactive_account_does_not_receive_password_reset_email(self):
+        self.staff.is_active = False
+        self.staff.save(update_fields=["is_active"])
+
+        response = self.request_password_reset(self.staff.email)
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_new_request_invalidates_the_previous_reset_link(self):
+        self.request_password_reset(self.staff.email)
+        first_token = self.reset_token_from_last_email()
+        self.request_password_reset(self.staff.email)
+        second_token = self.reset_token_from_last_email()
+
+        first_response = self.client.post(
+            reverse("auth-password-reset-confirm"),
+            {"token": first_token, "new_password": "ResetPass789!"},
+            format="json",
+        )
+        second_response = self.client.post(
+            reverse("auth-password-reset-confirm"),
+            {"token": second_token, "new_password": "ResetPass789!"},
+            format="json",
+        )
+
+        self.assertEqual(first_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("token", first_response.data)
+        self.assertEqual(second_response.status_code, status.HTTP_200_OK)
+
+    def test_password_reset_link_is_single_use(self):
+        self.request_password_reset(self.staff.email)
+        token = self.reset_token_from_last_email()
+        payload = {"token": token, "new_password": "ResetPass789!"}
+
+        first_response = self.client.post(reverse("auth-password-reset-confirm"), payload, format="json")
+        second_response = self.client.post(reverse("auth-password-reset-confirm"), payload, format="json")
+
+        self.assertEqual(first_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_expired_password_reset_link_is_rejected(self):
+        self.request_password_reset(self.staff.email)
+        token = self.reset_token_from_last_email()
+        self.staff.password_reset_requests.update(expires_at=timezone.now() - timedelta(seconds=1))
+
+        response = self.client.post(
+            reverse("auth-password-reset-confirm"),
+            {"token": token, "new_password": "ResetPass789!"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("token", response.data)

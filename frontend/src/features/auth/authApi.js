@@ -18,3 +18,16 @@ export async function changePasswordRequest(passwords) {
   const response = await api.post("/auth/change-password/", passwords);
   return response.data;
 }
+
+export async function requestPasswordReset(email) {
+  const response = await api.post("/auth/password-reset/", { email });
+  return response.data;
+}
+
+export async function confirmPasswordReset({ token, newPassword }) {
+  const response = await api.post("/auth/password-reset/confirm/", {
+    token,
+    new_password: newPassword,
+  });
+  return response.data;
+}

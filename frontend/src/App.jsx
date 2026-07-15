@@ -1,6 +1,8 @@
 import { Navigate, createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import Login from "./pages/Login/Login";
+import ForgotPassword from "./pages/Login/ForgotPassword";
+import ResetPassword from "./pages/Login/ResetPassword";
 import Home from "./pages/Home/Home";
 import Tours from "./pages/Tours/Tours";
 import NewTour from "./pages/Tours/NewTour";
@@ -17,6 +19,14 @@ const router = createBrowserRouter([
   {
     path: "/login",
     element: <Login />,
+  },
+  {
+    path: "/forgot-password",
+    element: <ForgotPassword />,
+  },
+  {
+    path: "/reset-password",
+    element: <ResetPassword />,
   },
   {
     element: <ProtectedRoute />,
