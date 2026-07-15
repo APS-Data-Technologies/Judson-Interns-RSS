@@ -29,7 +29,7 @@ function useUnsavedChangesPrompt(when, message = defaultMessage, options = {}) {
     } else {
       blocker.reset();
     }
-  }, [allowLeave, blocker, message]);
+  }, [allowLeave, blocker, message, mode]);
 
   useEffect(() => {
     if (!shouldBlock) return undefined;

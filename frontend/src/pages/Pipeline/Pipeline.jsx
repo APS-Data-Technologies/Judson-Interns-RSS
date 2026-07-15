@@ -440,6 +440,8 @@ function Pipeline() {
   useEffect(() => {
     const requestedStatus = searchParams.get("status");
     if (pipelineStatuses.some((status) => status.value === requestedStatus)) {
+      // URL params intentionally control the initial visible pipeline status.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveStatus(requestedStatus);
       setViewMode("stages");
     }
