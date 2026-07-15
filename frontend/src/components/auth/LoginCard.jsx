@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Button, Card } from "../ui";
 import { Input } from "../form";
@@ -63,9 +64,9 @@ function LoginCard({
             }
           />
 
-          <a className="auth-forgot-link" href="#forgot-password">
+          <Link className="auth-forgot-link" to="/forgot-password">
             Forgot password?
-          </a>
+          </Link>
 
           {error && (
             <p className="auth-error" role="alert">
