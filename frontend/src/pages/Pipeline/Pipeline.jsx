@@ -419,46 +419,28 @@ function PipelineFlowDiagram() {
   );
 }
 
-function Pipeline() {
-  const { user } = useAuth();
-  const [searchParams] = useSearchParams();
+function PipelineWorkspace({ searchParams, user }) {
+  const requestedStatus = searchParams.get("status");
+  const requestedCategory = searchParams.get("category");
+  const requestedCategories = requestedCategory?.split(",").filter(Boolean) || [];
+  const hasRequestedStatus = pipelineStatuses.some((status) => status.value === requestedStatus);
   const [tours, setTours] = useState([]);
   const [locations, setLocations] = useState([]);
   const [leadSources, setLeadSources] = useState([]);
   const [filters, setFilters] = useState(() => createDefaultTourFilters(user, {
     datePreset: "all_time",
+    categories: requestedCategories,
   }));
   const [averageDaysToEnroll, setAverageDaysToEnroll] = useState(null);
-  const [activeStatus, setActiveStatus] = useState("scheduled");
+  const [activeStatus, setActiveStatus] = useState(() => (
+    hasRequestedStatus ? requestedStatus : "scheduled"
+  ));
   const [viewMode, setViewMode] = useState("stages");
   const [movingTourId, setMovingTourId] = useState(null);
   const [dragOverStatus, setDragOverStatus] = useState("");
   const [sortDirection, setSortDirection] = useState("desc");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    const requestedStatus = searchParams.get("status");
-    if (pipelineStatuses.some((status) => status.value === requestedStatus)) {
-      setActiveStatus(requestedStatus);
-      setViewMode("stages");
-    }
-    const requestedCategory = searchParams.get("category");
-    const nextCategories = requestedCategory?.split(",").filter(Boolean) || [];
-    setFilters((currentFilters) => {
-      const currentCategories = currentFilters.categories || [];
-      if (
-        currentCategories.length === nextCategories.length &&
-        currentCategories.every((category, index) => category === nextCategories[index])
-      ) {
-        return currentFilters;
-      }
-      return {
-        ...currentFilters,
-        categories: nextCategories,
-      };
-    });
-  }, [searchParams]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -785,6 +767,19 @@ function Pipeline() {
         </section>
       )}
     </section>
+  );
+}
+
+function Pipeline() {
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+
+  return (
+    <PipelineWorkspace
+      key={searchParams.toString()}
+      searchParams={searchParams}
+      user={user}
+    />
   );
 }
 
