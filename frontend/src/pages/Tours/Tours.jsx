@@ -124,13 +124,11 @@ function TourCard({ isSelected, onEdit, onSelect, onView, tour, trackInfo }) {
           <p>{formatTourDateTime(tour.scheduled_tour_date)}</p>
         </button>
         <div className="tour-card__side">
-          <span className="tour-status-cluster">
-            <span className={`tour-status tour-card__status status-color--${tour.current_status}`}>
-              {StatusIcon && <StatusIcon aria-hidden="true" />}
-              <span>{statusLabel}</span>
-            </span>
-            <TrackBadge trackInfo={trackInfo} />
+          <span className={`tour-status tour-card__status status-color--${tour.current_status}`}>
+            {StatusIcon && <StatusIcon aria-hidden="true" />}
+            <span>{statusLabel}</span>
           </span>
+          <TrackBadge trackInfo={trackInfo} />
           <div className="tour-card__actions" aria-label={`${familyName} actions`}>
             <button
               type="button"
@@ -154,7 +152,6 @@ function TourCard({ isSelected, onEdit, onSelect, onView, tour, trackInfo }) {
 }
 
 function TourDetailPane({
-  averageDaysToEnroll,
   leadSources,
   locations,
   mode,
@@ -282,18 +279,14 @@ function TourDetailPane({
   const familyName = tour.family_name?.endsWith("Family")
     ? tour.family_name
     : `${tour.family_name} Family`;
-  const trackInfo = getTourTrackInfo({ ...tour, events }, averageDaysToEnroll);
 
   return (
     <aside className="tours-detail-pane" aria-label="Selected tour details">
       <header className="tours-detail-pane__header">
         <div className="tours-detail-pane__title">
           <h2>{familyName}</h2>
-          <span className="tour-status-cluster tour-status-cluster--detail">
-            <span className={`tour-status tour-status--power status-color--${tour.current_status}`}>
-              {statusLabels[tour.current_status] || tour.status_label}
-            </span>
-            <TrackBadge trackInfo={trackInfo} />
+          <span className={`tour-status tour-status--power status-color--${tour.current_status}`}>
+            {statusLabels[tour.current_status] || tour.status_label}
           </span>
         </div>
         <div className="tours-detail-pane__actions">
@@ -589,7 +582,6 @@ function Tours() {
         </div>
 
         <TourDetailPane
-          averageDaysToEnroll={averageDaysToEnroll}
           leadSources={leadSources}
           locations={locations}
           mode={detailMode}

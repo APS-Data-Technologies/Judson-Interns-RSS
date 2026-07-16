@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  ChevronLeft,
   ArrowDownUp,
   Check,
   ChevronDown,
-  ChevronRight,
   Info,
   TrendingDown,
   TrendingUp,
@@ -47,12 +45,6 @@ const rankingMetricOptions = [
   { value: "margin", label: "Contribution margin" },
 ];
 
-const trendModeOptions = [
-  { value: "daily", label: "Daily" },
-  { value: "weekly", label: "Weekly" },
-  { value: "monthly", label: "Monthly" },
-];
-
 function parseDateInput(value) {
   if (!value) {
     return null;
@@ -71,12 +63,6 @@ function toDateInputValue(date) {
 function addDays(date, days) {
   const nextDate = new Date(date);
   nextDate.setDate(nextDate.getDate() + days);
-  return nextDate;
-}
-
-function addMonths(date, months) {
-  const nextDate = new Date(date);
-  nextDate.setMonth(nextDate.getMonth() + months);
   return nextDate;
 }
 
@@ -354,7 +340,7 @@ function getRankingDetail(item, metric) {
     return `$${Math.round(item.revenue - item.cost).toLocaleString()} margin / $${Math.round(item.revenue).toLocaleString()} revenue`;
   }
   if (metric === "enrollment") {
-    return `${item.enrolled} enrollment${item.enrolled === 1 ? "" : "s"}`;
+    return `${item.enrolled} enrolled / ${item.booked} booked`;
   }
   if (metric === "average_days") {
     if (!item.enrollmentDurationCount) {
@@ -549,15 +535,8 @@ function DeltaBadge({ delta }) {
 }
 
 function RateDeltaBadge({ delta }) {
-  if (delta === null) {
+  if (delta === null || delta === 0) {
     return null;
-  }
-  if (delta === 0) {
-    return (
-      <span className="analytics-rate-delta analytics-rate-delta--neutral">
-        <span>0 pts</span>
-      </span>
-    );
   }
   const isIncrease = delta > 0;
   const Icon = isIncrease ? TrendingUp : TrendingDown;
@@ -646,259 +625,95 @@ function RateCard({ delta, formula, label, tone, value, variant = "default" }) {
   );
 }
 
-function formatTrendLabel(startDate, endDate, mode) {
-  if (mode === "monthly") {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      year: "2-digit",
-    }).format(startDate);
+function formatCompactDate(value) {
+  const date = parseDateInput(value);
+  if (!date) {
+    return "";
   }
-
-  if (startDate.toDateString() === endDate.toDateString()) {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-    }).format(startDate);
-  }
-
-  return `${new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
-  }).format(startDate)} - ${new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-  }).format(endDate)}`;
+  }).format(date);
 }
 
-function getTrendBucketWindows(chartData, mode, offset) {
-  const dates = chartData
-    .map((item) => parseDateInput(item.date))
-    .filter(Boolean)
-    .sort((first, second) => first - second);
-
-  const baseEnd = dates[dates.length - 1] || new Date();
-
-  if (mode === "monthly") {
-    const end = addMonths(new Date(baseEnd.getFullYear(), baseEnd.getMonth(), 1), offset * 6);
-    const start = addMonths(end, -5);
-    return Array.from({ length: 6 }, (_, index) => {
-      const bucketStart = addMonths(start, index);
-      const bucketEnd = new Date(bucketStart.getFullYear(), bucketStart.getMonth() + 1, 0);
-      return { start: bucketStart, end: bucketEnd };
-    });
-  }
-
-  if (mode === "weekly") {
-    const end = addDays(baseEnd, offset * 42);
-    const start = addDays(end, -41);
-    return Array.from({ length: 6 }, (_, index) => {
-      const bucketStart = addDays(start, index * 7);
-      return { start: bucketStart, end: addDays(bucketStart, 6) };
-    });
-  }
-
-  const end = addDays(baseEnd, offset * 7);
-  const start = addDays(end, -6);
-  return Array.from({ length: 7 }, (_, index) => {
-    const day = addDays(start, index);
-    return { start: day, end: day };
-  });
-}
-
-function getTrendBuckets(chartData, mode, offset) {
+function getTrendBuckets(chartData) {
   if (!chartData.length) {
     return [];
   }
 
-  const windows = getTrendBucketWindows(chartData, mode, offset);
-  const rows = chartData.map((item) => ({
-    ...item,
-    parsedDate: parseDateInput(item.date),
-  })).filter((item) => item.parsedDate);
+  const bucketCount = Math.min(6, Math.max(1, Math.ceil(chartData.length / 5)));
+  const bucketSize = Math.ceil(chartData.length / bucketCount);
 
-  return windows.map(({ start, end }) => {
-    const items = rows.filter((item) => item.parsedDate >= start && item.parsedDate <= end);
+  return Array.from({ length: bucketCount }, (_, index) => {
+    const items = chartData.slice(index * bucketSize, (index + 1) * bucketSize);
+    if (!items.length) {
+      return null;
+    }
 
     const booked = items.reduce((total, item) => total + item.booked, 0);
     const toured = items.reduce((total, item) => total + item.toured, 0);
     const enrolled = items.reduce((total, item) => total + item.enrolled, 0);
+    const label = items.length === 1
+      ? formatCompactDate(items[0].date)
+      : `${formatCompactDate(items[0].date)} - ${formatCompactDate(items[items.length - 1].date)}`;
 
     return {
       booked,
       conversion: toured ? Math.round((enrolled / toured) * 100) : null,
       enrolled,
-      label: formatTrendLabel(start, end, mode),
+      label,
       toured,
     };
-  });
+  }).filter(Boolean);
+}
+
+function TrendBar({ label, max, tone, value }) {
+  const width = max ? Math.max(4, Math.round((value / max) * 100)) : 0;
+
+  return (
+    <div className="analytics-trend-bar">
+      <span className="analytics-trend-bar__row">
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </span>
+      <span className="analytics-trend-bar__track" aria-hidden="true">
+        <span
+          className={`analytics-trend-bar__fill analytics-trend-bar__fill--${tone}`}
+          style={{ width: `${width}%` }}
+        />
+      </span>
+    </div>
+  );
 }
 
 function TrendChart({ data }) {
-  const [trendMode, setTrendMode] = useState("daily");
-  const [trendOffset, setTrendOffset] = useState(0);
   const chartData = data.length ? data : [];
-  const trendBuckets = getTrendBuckets(chartData, trendMode, trendOffset);
+  const trendBuckets = getTrendBuckets(chartData);
   const maxCount = Math.max(
     1,
     ...trendBuckets.flatMap((item) => [item.booked, item.toured, item.enrolled]),
   );
-  const chartWidth = 720;
-  const chartHeight = 300;
-  const padding = { top: 32, right: 42, bottom: 58, left: 52 };
-  const plotWidth = chartWidth - padding.left - padding.right;
-  const plotHeight = chartHeight - padding.top - padding.bottom;
-  const bucketWidth = plotWidth / Math.max(1, trendBuckets.length);
-  const barWidth = Math.min(18, Math.max(7, bucketWidth / 7));
-  const yTicks = [
-    { label: String(maxCount), value: maxCount },
-    { label: String(Math.round(maxCount / 2)), value: maxCount / 2 },
-    { label: "0", value: 0 },
-  ];
-
-  function getCountY(value) {
-    return padding.top + plotHeight - ((value / maxCount) * plotHeight);
-  }
-
-  function getRateY(value) {
-    return padding.top + plotHeight - (((value ?? 0) / 100) * plotHeight);
-  }
-
-  const conversionPoints = trendBuckets
-    .map((bucket, index) => {
-      if (bucket.conversion === null) {
-        return null;
-      }
-      const x = padding.left + (index * bucketWidth) + (bucketWidth / 2);
-      return `${x},${getRateY(bucket.conversion)}`;
-    })
-    .filter(Boolean)
-    .join(" ");
-
-  function renderBar(bucket, index, key, className, offset) {
-    const x = padding.left + (index * bucketWidth) + (bucketWidth / 2) + offset - (barWidth / 2);
-    const y = getCountY(bucket[key]);
-    const height = padding.top + plotHeight - y;
-    const labelY = Math.max(padding.top + 12, y - 6);
-
-    return (
-      <g key={`${bucket.label}-${key}`}>
-        <rect
-          className={className}
-          height={Math.max(0, height)}
-          rx="4"
-          width={barWidth}
-          x={x}
-          y={y}
-        />
-        {bucket[key] > 0 && (
-          <text
-            className="analytics-trend-chart__value"
-            x={x + (barWidth / 2)}
-            y={labelY}
-          >
-            {bucket[key]}
-          </text>
-        )}
-      </g>
-    );
-  }
 
   return (
     <section className="analytics-panel analytics-trend" aria-label="Status trend">
       <div className="analytics-section-heading">
         <h3>Trend</h3>
-        <div className="analytics-trend-controls" aria-label="Trend controls">
-          <button
-            aria-label="Previous timeline"
-            onClick={() => setTrendOffset((current) => current - 1)}
-            type="button"
-          >
-            <ChevronLeft aria-hidden="true" />
-          </button>
-          <select
-            aria-label="Trend grouping"
-            onChange={(event) => {
-              setTrendMode(event.target.value);
-              setTrendOffset(0);
-            }}
-            value={trendMode}
-          >
-            {trendModeOptions.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-          <button
-            aria-label="Next timeline"
-            onClick={() => setTrendOffset((current) => current + 1)}
-            type="button"
-          >
-            <ChevronRight aria-hidden="true" />
-          </button>
-        </div>
+        <p>Grouped period view for booked, toured, enrolled, and conversion.</p>
       </div>
-      <div className="analytics-trend-chart" aria-label="Booked, toured, enrolled, and conversion trend">
-        {trendBuckets.length ? (
-          <svg role="img" viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
-            <line className="analytics-trend-chart__axis" x1={padding.left} x2={chartWidth - padding.right} y1={padding.top + plotHeight} y2={padding.top + plotHeight} />
-            <line className="analytics-trend-chart__axis" x1={padding.left} x2={padding.left} y1={padding.top} y2={padding.top + plotHeight} />
-            {yTicks.map((tick, index) => (
-              <g key={`${tick.label}-${index}`}>
-                <line
-                  className="analytics-trend-chart__grid"
-                  x1={padding.left}
-                  x2={chartWidth - padding.right}
-                  y1={getCountY(tick.value)}
-                  y2={getCountY(tick.value)}
-                />
-                <text
-                  className="analytics-trend-chart__y-label"
-                  x={padding.left - 12}
-                  y={getCountY(tick.value) + 4}
-                >
-                  {tick.label}
-                </text>
-              </g>
-            ))}
-            {trendBuckets.map((bucket, index) => (
-              <g key={bucket.label}>
-                {renderBar(bucket, index, "booked", "analytics-trend-chart__bar analytics-trend-chart__bar--booked", -barWidth * 1.25)}
-                {renderBar(bucket, index, "toured", "analytics-trend-chart__bar analytics-trend-chart__bar--toured", 0)}
-                {renderBar(bucket, index, "enrolled", "analytics-trend-chart__bar analytics-trend-chart__bar--enrolled", barWidth * 1.25)}
-                <text className="analytics-trend-chart__label" x={padding.left + (index * bucketWidth) + (bucketWidth / 2)} y={chartHeight - 24}>
-                  {bucket.label}
-                </text>
-              </g>
-            ))}
-            {conversionPoints && (
-              <polyline className="analytics-trend-chart__line" points={conversionPoints} />
-            )}
-            {trendBuckets.map((bucket, index) => bucket.conversion !== null && (
-              <g key={`${bucket.label}-conversion`}>
-                <circle
-                  className="analytics-trend-chart__point"
-                  cx={padding.left + (index * bucketWidth) + (bucketWidth / 2)}
-                  cy={getRateY(bucket.conversion)}
-                  r="4"
-                />
-                <text
-                  className="analytics-trend-chart__rate-label"
-                  x={padding.left + (index * bucketWidth) + (bucketWidth / 2)}
-                  y={Math.max(padding.top + 12, getRateY(bucket.conversion) - 10)}
-                >
-                  {bucket.conversion}%
-                </text>
-              </g>
-            ))}
-          </svg>
-        ) : (
+      <div className="analytics-trend__cards" aria-label="Grouped trend chart">
+        {trendBuckets.length ? trendBuckets.map((bucket) => (
+          <article className="analytics-trend-card" key={bucket.label}>
+            <strong>{bucket.label}</strong>
+            <TrendBar label="Booked" max={maxCount} tone="booked" value={bucket.booked} />
+            <TrendBar label="Toured" max={maxCount} tone="toured" value={bucket.toured} />
+            <TrendBar label="Enrolled" max={maxCount} tone="enrolled" value={bucket.enrolled} />
+            <span className="analytics-trend-card__conversion">
+              {bucket.conversion === null ? "--" : `${bucket.conversion}%`} conversion
+            </span>
+          </article>
+        )) : (
           <p className="analytics-ranking__empty">No trend data for this period.</p>
         )}
-      </div>
-      <div className="analytics-trend-legend" aria-label="Trend legend">
-        <span><i className="is-booked" />Booked</span>
-        <span><i className="is-toured" />Toured</span>
-        <span><i className="is-enrolled" />Enrolled</span>
-        <span><i className="is-conversion" />Conversion rate</span>
       </div>
     </section>
   );
@@ -1211,29 +1026,13 @@ function Analytics() {
 
         <div className="analytics-summary-grid">
           <section className="analytics-flow" aria-label="Enrollment analytics flow">
-            <div className="analytics-flow__stage analytics-flow__stage--entry">
-              <MetricNode {...metricByStatus.scheduled} />
-            </div>
-
-            <div className="analytics-flow__branch">
-              <div className="analytics-flow__branch-header">
-                <span>Booked outcomes</span>
-              </div>
-              <div className="analytics-flow__branch-grid">
-                <MetricNode {...metricByStatus.toured} />
-                <MetricNode {...metricByStatus.no_show} />
-              </div>
-            </div>
-
-            <div className="analytics-flow__branch">
-              <div className="analytics-flow__branch-header">
-                <span>Toured outcomes</span>
-              </div>
-              <div className="analytics-flow__branch-grid">
-                <MetricNode {...metricByStatus.enrolled} />
-                <MetricNode {...metricByStatus.churned} />
-              </div>
-            </div>
+            <MetricNode {...metricByStatus.scheduled} className="analytics-flow-node--booked-position analytics-flow-node--with-down-arrow" />
+            <span className="analytics-flow__arrow analytics-flow__arrow--top" aria-hidden="true">↘</span>
+            <MetricNode {...metricByStatus.no_show} className="analytics-flow-node--no-show-position" />
+            <MetricNode {...metricByStatus.toured} className="analytics-flow-node--toured-position analytics-flow-node--with-down-arrow" />
+            <span className="analytics-flow__arrow analytics-flow__arrow--bottom" aria-hidden="true">↘</span>
+            <MetricNode {...metricByStatus.churned} className="analytics-flow-node--churned-position" />
+            <MetricNode {...metricByStatus.enrolled} className="analytics-flow-node--enrolled-position" />
           </section>
 
           <aside className="analytics-insights" aria-label="Analytics rates">

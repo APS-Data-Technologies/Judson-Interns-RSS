@@ -60,58 +60,68 @@
 }
 
 .analytics-flow {
-  --flow-card-height: clamp(86px, 6vw, 118px);
+  --flow-line: #7b8ba6;
+  --flow-row-height: clamp(68px, 7.2vw, 84px);
+  --flow-arrow-size: 1.35rem;
+  --flow-gap: clamp(0.75rem, 1vw, 1rem);
   background:
     radial-gradient(circle at 18% 8%, rgba(255, 190, 24, 0.1), transparent 32%),
     #ffffff;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   display: grid;
-  gap: clamp(0.7rem, 1.2vw, 1rem);
-  height: 100%;
-  min-height: 100%;
-  padding: clamp(0.75rem, 1.2vw, 1rem);
-  position: relative;
+  gap: var(--flow-gap);
+  grid-template-columns: minmax(120px, 1fr) 38px minmax(120px, 1fr);
+  grid-template-rows: repeat(3, minmax(var(--flow-row-height), 1fr));
+  padding: clamp(0.65rem, 1.1vw, 1rem);
 }
 
-.analytics-flow__stage {
-  display: grid;
-  min-width: 0;
-}
-
-.analytics-flow__stage--entry {
-  justify-self: center;
-  width: min(100%, 420px);
-}
-
-.analytics-flow__branch {
-  background: rgba(244, 248, 253, 0.72);
-  border: 1px solid rgba(215, 225, 238, 0.95);
-  border-radius: var(--radius-sm);
-  display: grid;
-  gap: clamp(0.45rem, 0.9vw, 0.7rem);
-  padding: clamp(0.55rem, 1vw, 0.8rem);
-}
-
-.analytics-flow__branch-header {
-  align-items: center;
-  color: var(--color-text-secondary);
-  display: flex;
+.analytics-flow__arrow {
+  align-self: center;
+  color: var(--flow-line);
   font-family: var(--font-family-heading);
-  font-size: clamp(0.76rem, 0.9vw, 0.9rem);
-  font-weight: 900;
-  justify-content: center;
-  letter-spacing: 0;
-  line-height: 1.1;
-  text-transform: uppercase;
+  font-size: var(--flow-arrow-size);
+  font-weight: 950;
+  justify-self: center;
+  line-height: 1;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
-.analytics-flow__branch-grid {
-  align-items: stretch;
-  display: grid;
-  gap: clamp(0.55rem, 1vw, 0.85rem);
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  min-width: 0;
+.analytics-flow__arrow--top {
+  grid-column: 2;
+  grid-row: 1;
+  transform: translateY(50%);
+}
+
+.analytics-flow__arrow--bottom {
+  grid-column: 2;
+  grid-row: 2;
+  transform: translateY(50%);
+}
+
+.analytics-flow-node--booked-position {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.analytics-flow-node--toured-position {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.analytics-flow-node--enrolled-position {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.analytics-flow-node--no-show-position {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.analytics-flow-node--churned-position {
+  grid-column: 3;
+  grid-row: 3;
 }
 
 .analytics-flow-node {
@@ -124,15 +134,24 @@
   display: grid;
   gap: 3px;
   justify-items: center;
-  min-height: var(--flow-card-height);
-  padding: clamp(0.45rem, 0.72vw, 0.65rem);
+  min-height: var(--flow-row-height);
+  padding: clamp(0.45rem, 0.85vw, 0.75rem);
   position: relative;
   text-align: center;
-  z-index: 1;
 }
 
 .analytics-flow-node--with-down-arrow::after {
-  content: none;
+  bottom: calc((var(--flow-gap) * -1) - 0.48rem);
+  color: var(--flow-line);
+  content: "↓";
+  font-family: var(--font-family-heading);
+  font-size: var(--flow-arrow-size);
+  font-weight: 950;
+  left: 50%;
+  line-height: 1;
+  position: absolute;
+  transform: translateX(-50%);
+  z-index: 2;
 }
 
 .analytics-flow-node--scheduled {
@@ -173,7 +192,7 @@
 .analytics-flow-node__label {
   color: var(--status-color);
   font-family: var(--font-family-heading);
-  font-size: clamp(0.68rem, 0.9vw, 0.82rem);
+  font-size: clamp(0.55rem, 0.75vw, 0.68rem);
   font-weight: 900;
   letter-spacing: 0;
   text-transform: uppercase;
@@ -182,7 +201,7 @@
 .analytics-flow-node strong {
   color: var(--brand-navy-dark);
   font-family: var(--font-family-heading);
-  font-size: clamp(1.25rem, 2vw, 1.8rem);
+  font-size: clamp(1.35rem, 2.4vw, 2rem);
   font-weight: 900;
   line-height: 0.95;
 }
@@ -224,173 +243,87 @@
   overflow: hidden;
 }
 
-.analytics-trend-controls {
-  align-items: center;
-  display: flex;
-  gap: 0.35rem;
+.analytics-trend__cards {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
-.analytics-trend-controls button,
-.analytics-trend-controls select {
-  background: #ffffff;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  color: var(--brand-navy-dark);
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 950;
-  min-height: 38px;
-}
-
-.analytics-trend-controls button {
-  align-items: center;
-  cursor: pointer;
-  display: inline-flex;
-  justify-content: center;
-  padding: 0;
-  width: 40px;
-}
-
-.analytics-trend-controls button:hover,
-.analytics-trend-controls select:hover {
-  border-color: color-mix(in srgb, var(--status-booked) 42%, white);
-}
-
-.analytics-trend-controls svg {
-  height: 1rem;
-  width: 1rem;
-}
-
-.analytics-trend-controls select {
-  appearance: none;
-  background:
-    linear-gradient(45deg, transparent 50%, var(--brand-navy-dark) 50%) calc(100% - 15px) 52% / 6px 6px no-repeat,
-    linear-gradient(135deg, var(--brand-navy-dark) 50%, transparent 50%) calc(100% - 10px) 52% / 6px 6px no-repeat,
-    #ffffff;
-  cursor: pointer;
-  padding: 0.45rem 1.9rem 0.45rem 0.75rem;
-}
-
-.analytics-trend-chart {
-  background:
-    linear-gradient(180deg, rgba(248, 251, 255, 0.95), #ffffff);
+.analytics-trend-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  overflow-x: auto;
+  display: grid;
+  gap: 0.48rem;
+  min-height: 172px;
   padding: var(--space-2);
 }
 
-.analytics-trend-chart svg {
-  display: block;
-  height: auto;
-  min-width: 620px;
-  width: 100%;
-}
-
-.analytics-trend-chart__axis {
-  stroke: #d9e3ef;
-  stroke-linecap: round;
-  stroke-width: 2;
-}
-
-.analytics-trend-chart__grid {
-  stroke: #e7eef7;
-  stroke-width: 1;
-}
-
-.analytics-trend-chart__bar {
-  filter: drop-shadow(0 2px 2px rgba(15, 23, 42, 0.08));
-}
-
-.analytics-trend-chart__bar--booked {
-  fill: var(--status-booked);
-}
-
-.analytics-trend-chart__bar--toured {
-  fill: var(--status-toured);
-}
-
-.analytics-trend-chart__bar--enrolled {
-  fill: var(--status-enrolled);
-}
-
-.analytics-trend-chart__line {
-  fill: none;
-  stroke: var(--rss-gold);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 4;
-}
-
-.analytics-trend-chart__point {
-  fill: #ffffff;
-  stroke: var(--rss-gold);
-  stroke-width: 3;
-}
-
-.analytics-trend-chart__label {
-  fill: var(--color-text-secondary);
-  font-size: 0.58rem;
-  font-weight: 900;
-  text-anchor: middle;
-}
-
-.analytics-trend-chart__value,
-.analytics-trend-chart__rate-label,
-.analytics-trend-chart__y-label {
-  fill: var(--brand-navy-dark);
-  font-size: 0.6rem;
+.analytics-trend-card > strong {
+  color: var(--brand-navy-dark);
+  font-size: 0.82rem;
   font-weight: 950;
-  text-anchor: middle;
 }
 
-.analytics-trend-chart__rate-label {
-  fill: color-mix(in srgb, var(--rss-gold) 82%, #6b4b00);
+.analytics-trend-bar {
+  display: grid;
+  gap: 4px;
 }
 
-.analytics-trend-chart__y-label {
-  fill: var(--color-text-secondary);
-  text-anchor: end;
-}
-
-.analytics-trend-legend {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  margin-top: var(--space-2);
-}
-
-.analytics-trend-legend span {
+.analytics-trend-bar__row {
   align-items: center;
   color: var(--color-text-secondary);
-  display: inline-flex;
-  font-size: 0.78rem;
-  font-weight: 900;
-  gap: 0.35rem;
+  display: flex;
+  font-size: 0.68rem;
+  font-weight: 850;
+  justify-content: space-between;
 }
 
-.analytics-trend-legend i {
+.analytics-trend-bar__row strong {
+  color: var(--brand-navy-dark);
+  font-size: 0.74rem;
+  font-weight: 950;
+}
+
+.analytics-trend-bar__track {
+  background: #eaf2fb;
   border-radius: 999px;
-  display: inline-block;
-  height: 10px;
-  width: 10px;
+  display: block;
+  height: 8px;
+  overflow: hidden;
 }
 
-.analytics-trend-legend .is-booked {
+.analytics-trend-bar__fill {
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+  min-width: 4px;
+}
+
+.analytics-trend-bar__fill--booked {
   background: var(--status-booked);
 }
 
-.analytics-trend-legend .is-toured {
+.analytics-trend-bar__fill--toured {
   background: var(--status-toured);
 }
 
-.analytics-trend-legend .is-enrolled {
+.analytics-trend-bar__fill--enrolled {
   background: var(--status-enrolled);
 }
 
-.analytics-trend-legend .is-conversion {
-  background: var(--rss-gold);
+.analytics-trend-card__conversion {
+  align-self: end;
+  background: color-mix(in srgb, var(--rss-gold) 14%, white);
+  border: 1px solid color-mix(in srgb, var(--rss-gold) 38%, white);
+  border-radius: 999px;
+  color: var(--brand-navy-dark);
+  display: inline-flex;
+  font-size: 0.68rem;
+  font-weight: 950;
+  justify-content: center;
+  padding: 0.35rem 0.45rem;
+  text-align: center;
 }
 
 .analytics-ranking-grid {
@@ -555,7 +488,6 @@
   gap: var(--space-2);
   grid-template-rows: auto 342px;
   height: 100%;
-  min-height: 454px;
 }
 
 .analytics-ranking .analytics-section-heading {
@@ -578,10 +510,8 @@
 }
 
 .analytics-ranking__list {
-  align-content: start;
   display: grid;
   gap: var(--space-2);
-  grid-auto-rows: 58px;
   height: 342px;
   overflow-y: auto;
   padding-right: 2px;
@@ -595,8 +525,7 @@
   display: grid;
   gap: var(--space-2);
   grid-template-columns: auto minmax(0, 1fr) auto;
-  height: 58px;
-  min-height: 0;
+  min-height: 58px;
   padding: var(--space-2);
 }
 
@@ -645,14 +574,14 @@
 .analytics-delta {
   align-items: center;
   display: inline-flex;
-  font-size: clamp(0.68rem, 0.9vw, 0.86rem);
+  font-size: clamp(0.58rem, 0.8vw, 0.72rem);
   font-weight: 900;
   gap: 3px;
 }
 
 .analytics-delta svg {
-  height: 14px;
-  width: 14px;
+  height: 12px;
+  width: 12px;
 }
 
 .analytics-delta--up {
@@ -846,14 +775,14 @@
 .analytics-rate-delta {
   align-items: center;
   display: inline-flex;
-  font-size: clamp(0.72rem, 0.9vw, 0.88rem);
+  font-size: clamp(0.62rem, 0.8vw, 0.76rem);
   font-weight: 900;
   gap: 3px;
 }
 
 .analytics-rate-delta svg {
-  height: 15px;
-  width: 15px;
+  height: 12px;
+  width: 12px;
 }
 
 .analytics-rate-delta--up {
@@ -864,19 +793,9 @@
   color: var(--rss-red);
 }
 
-.analytics-rate-delta--neutral {
-  color: var(--color-text-secondary);
-}
-
 @media (max-width: 980px) {
   .analytics-summary-grid {
-    align-items: start;
     grid-template-columns: 1fr;
-  }
-
-  .analytics-flow {
-    height: auto;
-    min-height: 0;
   }
 
   .analytics-ranking-grid {
@@ -900,23 +819,42 @@
   }
 
   .analytics-flow {
-    --flow-card-height: 78px;
-    height: auto;
-    min-height: 0;
+    --flow-arrow-size: 1rem;
+    --flow-row-height: 66px;
+    --flow-gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(var(--flow-row-height), auto));
     padding: var(--space-2);
   }
 
-  .analytics-flow__branch {
-    gap: 0.45rem;
-    padding: 0.55rem;
+  .analytics-flow-node--booked-position {
+    grid-column: 1 / -1;
+    grid-row: 1;
   }
 
-  .analytics-flow__branch-grid {
-    gap: 0.5rem;
+  .analytics-flow-node--toured-position {
+    grid-column: 1;
+    grid-row: 2;
   }
 
-  .analytics-flow__branch-header {
-    font-size: 0.68rem;
+  .analytics-flow-node--no-show-position {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .analytics-flow-node--enrolled-position {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .analytics-flow-node--churned-position {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .analytics-flow__arrow,
+  .analytics-flow-node--with-down-arrow::after {
+    display: none;
   }
 
   .analytics-flow-node {
@@ -970,20 +908,7 @@
   }
 
   .analytics-flow {
-    --flow-card-height: 64px;
-    gap: 0.5rem;
-  }
-
-  .analytics-flow__stage--entry {
-    width: 100%;
-  }
-
-  .analytics-flow__branch {
-    padding: 0.45rem;
-  }
-
-  .analytics-flow__branch-grid {
-    gap: 0.45rem;
+    --flow-row-height: 58px;
   }
 
   .analytics-flow-node__label {
