@@ -10,6 +10,10 @@ import {
   rescheduleTour,
   updateTour,
 } from "../../features/tours/tourApi";
+import {
+  getTourTrackInfo,
+  loadAverageDaysToEnroll,
+} from "../../features/tours/tourTrackUtils";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
 import { toTitleCaseWords } from "../../utils/displayText";
 import "./TourPlaceholder.css";
@@ -60,6 +64,16 @@ function getFamilyDisplayName(familyName) {
   return familyName.endsWith("Family") ? familyName : `${familyName} Family`;
 }
 
+function TrackBadge({ trackInfo }) {
+  if (!trackInfo?.label) return null;
+
+  return (
+    <span className="tour-detail-track-badge" title={trackInfo.label}>
+      {trackInfo.shortLabel || trackInfo.label}
+    </span>
+  );
+}
+
 function TourPlaceholder({ mode }) {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -68,6 +82,7 @@ function TourPlaceholder({ mode }) {
   const [locations, setLocations] = useState([]);
   const [leadSources, setLeadSources] = useState([]);
   const [events, setEvents] = useState([]);
+  const [averageDaysToEnroll, setAverageDaysToEnroll] = useState(null);
   const [form, setForm] = useState(null);
   const [initialForm, setInitialForm] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,10 +111,11 @@ function TourPlaceholder({ mode }) {
       setError("");
 
       try {
-        const [tourData, locationData, sourceData] = await Promise.all([
+        const [tourData, locationData, sourceData, averageDays] = await Promise.all([
           getTour(id),
           getLocations(),
           getLeadSources(),
+          loadAverageDaysToEnroll(),
         ]);
         const eventData = await getTourEvents(id);
 
@@ -110,6 +126,7 @@ function TourPlaceholder({ mode }) {
         setEvents(eventData);
         setLocations(locationData);
         setLeadSources(sourceData);
+        setAverageDaysToEnroll(averageDays);
         setForm(nextForm);
         setInitialForm(nextForm);
       } catch {
@@ -235,14 +252,18 @@ function TourPlaceholder({ mode }) {
   }
 
   const familyDisplayName = getFamilyDisplayName(tour.family_name);
+  const trackInfo = getTourTrackInfo({ ...tour, events }, averageDaysToEnroll);
 
   return (
     <section className="tour-detail-page">
       <header className="tour-detail-hero">
         <div className="tour-detail-hero__title">
           <h1>{familyDisplayName}</h1>
-          <span className={`tour-detail-hero__status status-color--${tour.current_status}`}>
-            {tour.status_label}
+          <span className="tour-detail-status-cluster">
+            <span className={`tour-detail-hero__status status-color--${tour.current_status}`}>
+              {tour.status_label}
+            </span>
+            <TrackBadge trackInfo={trackInfo} />
           </span>
         </div>
         <div className="tour-detail-hero__actions">
