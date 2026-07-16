@@ -91,7 +91,7 @@ function ChatAssistant() {
   }
 
   async function handleIntent(rawIntent) {
-    const intent = rawIntent.trim().toLowerCase();
+    const intent = rawIntent.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
     if (!intent) return;
 
     setMessages((current) => [...current, { id: `${Date.now()}-user`, from: "user", text: rawIntent }]);
@@ -107,7 +107,7 @@ function ChatAssistant() {
         setIsWorking(true);
         const tours = normalizeTours(await listTours({ date_from: today }));
         addAssistantMessage(formatTourSummary(tours, "Upcoming tours"), { label: "Open tours", to: "/tours" });
-      } else if (intent.includes("no show")) {
+      } else if (intent.includes("no show") || intent.includes("noshow")) {
         setIsWorking(true);
         const tours = normalizeTours(await listTours({ date_from: today.slice(0, 8) + "01", date_to: today, status: "no_show" }));
         addAssistantMessage(formatTourSummary(tours, "No-shows this month"), { label: "Open analytics", to: "/analytics" });
