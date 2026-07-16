@@ -108,11 +108,13 @@ function PipelineCard({ tour, onMove, isMoving, trackInfo }) {
           <p>{formatTourDateTime(tour.scheduled_tour_date)}</p>
         </div>
         <div className="pipeline-card__side">
-          <span className={`pipeline-card__badge status-color--${tour.current_status}`}>
-            {StatusIcon && <StatusIcon aria-hidden="true" />}
-            <span>{status?.label || tour.status_label}</span>
+          <span className="pipeline-status-cluster">
+            <span className={`pipeline-card__badge status-color--${tour.current_status}`}>
+              {StatusIcon && <StatusIcon aria-hidden="true" />}
+              <span>{status?.label || tour.status_label}</span>
+            </span>
+            <TrackBadge trackInfo={trackInfo} />
           </span>
-          <TrackBadge trackInfo={trackInfo} />
           <div className="pipeline-card__actions" aria-label={`${familyName} actions`}>
             <button
               type="button"
@@ -286,14 +288,16 @@ function PipelineKanbanCard({ tour, onMove, isMoving, onTouchDrop, trackInfo }) 
       <div className="pipeline-kanban-card__body">
         <div className="pipeline-kanban-card__heading">
           <h3>{familyName}</h3>
-          <span className={`pipeline-kanban-card__badge status-color--${tour.current_status}`}>
-            {StatusIcon && <StatusIcon aria-hidden="true" />}
-            <span>{status?.label || tour.status_label}</span>
+          <span className="pipeline-status-cluster pipeline-status-cluster--kanban">
+            <span className={`pipeline-kanban-card__badge status-color--${tour.current_status}`}>
+              {StatusIcon && <StatusIcon aria-hidden="true" />}
+              <span>{status?.label || tour.status_label}</span>
+            </span>
+            <TrackBadge trackInfo={trackInfo} />
           </span>
         </div>
         <p>{toTitleCaseWords(tour.location_name)}</p>
         <p>{formatTourDateTime(tour.scheduled_tour_date)}</p>
-        <TrackBadge trackInfo={trackInfo} />
         <div className="pipeline-kanban-card__actions" aria-label={`${familyName} actions`}>
           <button
             type="button"
@@ -440,6 +444,8 @@ function Pipeline() {
   useEffect(() => {
     const requestedStatus = searchParams.get("status");
     if (pipelineStatuses.some((status) => status.value === requestedStatus)) {
+      // The URL can deep-link users from Home directly into a status-focused Pipeline view.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveStatus(requestedStatus);
       setViewMode("stages");
     }

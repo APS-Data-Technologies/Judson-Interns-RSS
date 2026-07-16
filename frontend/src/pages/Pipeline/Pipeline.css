@@ -276,6 +276,7 @@
   display: grid;
   gap: var(--space-3);
   padding: var(--space-4);
+  position: relative;
 }
 
 .pipeline-card__content {
@@ -323,19 +324,41 @@
   gap: var(--space-2);
 }
 
+.pipeline-status-cluster {
+  align-items: flex-start;
+  display: inline-block;
+  justify-content: flex-end;
+  position: relative;
+  width: fit-content;
+}
+
+.pipeline-card__side .pipeline-status-cluster {
+  justify-self: end;
+  position: static;
+}
+
+.pipeline-status-cluster--kanban {
+  flex: 0 0 auto;
+}
+
 .pipeline-track-badge {
   background: #fff8df;
   border: 1px solid rgba(251, 191, 36, 0.55);
   border-radius: 999px;
   color: var(--brand-navy-dark);
   display: inline-flex;
-  font-size: 0.72rem;
+  font-size: clamp(0.48rem, 0.7vw, 0.58rem);
   font-weight: 900;
   justify-content: center;
-  line-height: 1.15;
-  max-width: 132px;
-  padding: 0.32rem 0.55rem;
+  line-height: 1;
+  max-width: 76px;
+  padding: 0.18rem 0.34rem;
+  position: absolute;
+  right: -0.28rem;
   text-align: center;
+  top: -0.44rem;
+  white-space: nowrap;
+  z-index: 1;
 }
 
 .pipeline-card__actions {
@@ -715,6 +738,7 @@
   grid-template-columns: auto minmax(0, 1fr);
   min-width: 0;
   padding: var(--space-2);
+  position: relative;
 }
 
 .pipeline-kanban-card.is-touch-dragging {
@@ -769,9 +793,17 @@
 }
 
 .pipeline-kanban-card .pipeline-track-badge {
-  justify-self: start;
-  margin-top: var(--space-1);
-  max-width: 100%;
+  max-width: 60px;
+  right: var(--space-2);
+  top: -0.48rem;
+}
+
+.pipeline-card__side .pipeline-track-badge {
+  font-size: 0.66rem;
+  max-width: none;
+  padding: 0.22rem 0.48rem;
+  right: var(--space-4);
+  top: -0.62rem;
 }
 
 .pipeline-kanban-card__heading {
