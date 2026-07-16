@@ -1211,13 +1211,29 @@ function Analytics() {
 
         <div className="analytics-summary-grid">
           <section className="analytics-flow" aria-label="Enrollment analytics flow">
-            <MetricNode {...metricByStatus.scheduled} className="analytics-flow-node--booked-position" />
-            <span className="analytics-flow__connector analytics-flow__connector--booked-outcomes" aria-hidden="true" />
-            <MetricNode {...metricByStatus.toured} className="analytics-flow-node--toured-position" />
-            <MetricNode {...metricByStatus.no_show} className="analytics-flow-node--no-show-position" />
-            <span className="analytics-flow__connector analytics-flow__connector--toured-outcomes" aria-hidden="true" />
-            <MetricNode {...metricByStatus.enrolled} className="analytics-flow-node--enrolled-position" />
-            <MetricNode {...metricByStatus.churned} className="analytics-flow-node--churned-position" />
+            <div className="analytics-flow__stage analytics-flow__stage--entry">
+              <MetricNode {...metricByStatus.scheduled} />
+            </div>
+
+            <div className="analytics-flow__branch">
+              <div className="analytics-flow__branch-header">
+                <span>Booked outcomes</span>
+              </div>
+              <div className="analytics-flow__branch-grid">
+                <MetricNode {...metricByStatus.toured} />
+                <MetricNode {...metricByStatus.no_show} />
+              </div>
+            </div>
+
+            <div className="analytics-flow__branch">
+              <div className="analytics-flow__branch-header">
+                <span>Toured outcomes</span>
+              </div>
+              <div className="analytics-flow__branch-grid">
+                <MetricNode {...metricByStatus.enrolled} />
+                <MetricNode {...metricByStatus.churned} />
+              </div>
+            </div>
           </section>
 
           <aside className="analytics-insights" aria-label="Analytics rates">
