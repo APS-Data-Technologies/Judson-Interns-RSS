@@ -5,6 +5,7 @@ import Sidebar from "../Sidebar";
 import TopBanner from "../TopBanner";
 import TitleBar from "../TitleBar";
 import BottomNavigation from "../BottomNavigation";
+import ChatAssistant from "../../chat/ChatAssistant";
 
 function AppShell({ title = "Home", children, showBack = false }) {
   const navigate = useNavigate();
@@ -36,6 +37,8 @@ function AppShell({ title = "Home", children, showBack = false }) {
       <div className="app-shell__bottom-nav">
         <BottomNavigation />
       </div>
+
+      <ChatAssistant />
     </div>
   );
 }
