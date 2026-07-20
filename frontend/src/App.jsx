@@ -61,7 +61,15 @@ const router = createBrowserRouter([
       },
       {
         path: "/analytics",
-        element: <Analytics />,
+        element: <Navigate to="/analytics/overview" replace />,
+      },
+      {
+        path: "/analytics/overview",
+        element: <Analytics view="overview" />,
+      },
+      {
+        path: "/analytics/cohort",
+        element: <Analytics view="cohort" />,
       },
       {
         path: "/settings",

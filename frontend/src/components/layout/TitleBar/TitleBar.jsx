@@ -2,6 +2,8 @@ import { ArrowLeft } from "lucide-react";
 import "./TitleBar.css";
 
 function TitleBar({ onBack, showBack = false, title }) {
+  const TitleElement = typeof title === "string" ? "h1" : "div";
+
   return (
     <section className="title-bar">
       {showBack ? (
@@ -11,7 +13,7 @@ function TitleBar({ onBack, showBack = false, title }) {
       ) : (
         <span className="title-bar__back-spacer" aria-hidden="true" />
       )}
-      <h1>{title}</h1>
+      <TitleElement className="title-bar__title">{title}</TitleElement>
     </section>
   );
 }

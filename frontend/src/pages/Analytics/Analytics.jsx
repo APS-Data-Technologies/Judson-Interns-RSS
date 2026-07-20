@@ -12,6 +12,7 @@ import {
 
 import TourFilterControls from "../../components/filters/TourFilterControls";
 import useAuth from "../../features/auth/useAuth";
+import { getCohortAnalytics } from "../../features/analytics/analyticsApi";
 import {
   createDefaultTourFilters,
   getDateRange,
@@ -506,6 +507,38 @@ async function attachEventsToTours(tourData) {
   }));
 }
 
+async function fetchLocalAnalyticsTours(filters) {
+  const dateRange = getDateRange(filters);
+  const previousDateRange = getPreviousComparableRange(filters, dateRange);
+  const commonParams = {
+    location: joinFilterValues(filters.locations),
+    lead_source: joinFilterValues(filters.leadSources),
+    status: joinFilterValues(filters.statuses),
+  };
+
+  const [tourData, previousTourData] = await Promise.all([
+    listTours({
+      ...commonParams,
+      date_from: dateRange.dateFrom || undefined,
+      date_to: dateRange.dateTo || undefined,
+    }),
+    previousDateRange
+      ? listTours({
+          ...commonParams,
+          date_from: previousDateRange.dateFrom,
+          date_to: previousDateRange.dateTo,
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const [cohortTours, previousCohortTours] = await Promise.all([
+    attachEventsToTours(tourData),
+    attachEventsToTours(previousTourData),
+  ]);
+
+  return { cohortTours, previousCohortTours };
+}
+
 function getPercent(numerator, denominator) {
   if (!denominator) {
     return null;
@@ -527,6 +560,138 @@ function getDelta(currentValue, previousValue, canCompare) {
   const difference = currentValue - previousValue;
   const percent = previousValue ? Math.round((difference / previousValue) * 100) : null;
   return { difference, percent };
+}
+
+function safeNumber(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function normalizeRateValue(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function getBackendMetricName(metric) {
+  if (metric === "enrollment") {
+    return "enrollments";
+  }
+  if (metric === "margin") {
+    return "contribution_margin";
+  }
+  return metric;
+}
+
+function getBackendRankingSort(sortDirection) {
+  return sortDirection === "worst" ? "least" : "best";
+}
+
+function buildAnalyticsParams(filters, rankingMetric, rankingSort, costBasis) {
+  const dateRange = getDateRange(filters);
+  return {
+    date_from: dateRange.dateFrom || undefined,
+    date_to: dateRange.dateTo || undefined,
+    location: joinFilterValues(filters.locations),
+    lead_source: joinFilterValues(filters.leadSources),
+    status: joinFilterValues(filters.statuses),
+    search: filters.search || undefined,
+    category: joinFilterValues(filters.categories),
+    metric: getBackendMetricName(rankingMetric),
+    ranking_metric: getBackendMetricName(rankingMetric),
+    ranking_sort: getBackendRankingSort(rankingSort),
+    cost_basis: costBasis || undefined,
+  };
+}
+
+function normalizeBackendCounts(counts = {}) {
+  return analyticsStatuses.reduce((summary, { status }) => ({
+    ...summary,
+    [status]: safeNumber(counts[status]),
+  }), {});
+}
+
+function adaptBackendRankingItem(item, metric) {
+  const normalized = {
+    ...item,
+    name: item.name || "Unassigned",
+    booked: safeNumber(item.booked ?? item.scheduled),
+    toured: safeNumber(item.toured),
+    enrolled: safeNumber(item.enrolled),
+    churned: safeNumber(item.churned),
+    noShow: safeNumber(item.noShow ?? item.no_show),
+    enrollmentDurationCount: safeNumber(item.enrollmentDurationCount),
+    enrollmentDurationTotal: safeNumber(item.enrollmentDurationTotal),
+    revenue: safeNumber(item.revenue),
+    cost: safeNumber(item.cost),
+    metric,
+    value: normalizeRateValue(item.value),
+  };
+  return {
+    ...normalized,
+    detail: item.detail || getRankingDetail(normalized, metric),
+  };
+}
+
+function adaptBackendTrendRow(row) {
+  return {
+    ...row,
+    date: row.date,
+    label: row.label || row.date,
+    booked: safeNumber(row.booked),
+    toured: safeNumber(row.toured),
+    enrolled: safeNumber(row.enrolled),
+    conversion: normalizeRateValue(row.conversion ?? row.conversionRate),
+  };
+}
+
+function adaptBackendCohortAnalytics(data, rankingMetric) {
+  const counts = normalizeBackendCounts(data.counts);
+  const previousCounts = normalizeBackendCounts(data.previousCounts);
+  const deltas = data.deltas || {};
+  const rates = data.rates || {};
+  const rateDeltas = data.rateDeltas || {};
+  const pendingCounts = data.pendingCounts || {};
+  const hasPreviousData = Object.values(previousCounts).some((value) => value > 0);
+
+  return {
+    rankings: {
+      locations: (data.rankings?.locations || []).map((item) => adaptBackendRankingItem(item, rankingMetric)),
+      leadSources: (data.rankings?.leadSources || data.rankings?.lead_sources || []).map((item) => (
+        adaptBackendRankingItem(item, rankingMetric)
+      )),
+      staff: (data.rankings?.staff || []).map((item) => adaptBackendRankingItem(item, rankingMetric)),
+    },
+    trendData: (data.trendData || []).map(adaptBackendTrendRow),
+    metrics: analyticsStatuses.map(({ status, label }) => ({
+      label,
+      value: counts[status] || 0,
+      delta: deltas[status] || getDelta(counts[status] || 0, previousCounts[status] || 0, hasPreviousData),
+      status,
+    })),
+    pendingOutcomes: {
+      pendingTourOutcome: safeNumber(pendingCounts.pendingTourOutcome),
+      pendingEnrollmentOutcome: safeNumber(pendingCounts.pendingEnrollmentOutcome),
+    },
+    averageDaysToEnroll:
+      data.averageDaysToEnroll === null || data.averageDaysToEnroll === undefined
+        ? null
+        : safeNumber(data.averageDaysToEnroll, null),
+    rates: {
+      toured: normalizeRateValue(rates.toured),
+      no_show: normalizeRateValue(rates.no_show ?? rates.noShow),
+      close: normalizeRateValue(rates.close),
+      conversion: normalizeRateValue(rates.conversion),
+    },
+    rateDeltas: {
+      toured: normalizeRateValue(rateDeltas.toured),
+      no_show: normalizeRateValue(rateDeltas.no_show ?? rateDeltas.noShow),
+      close: normalizeRateValue(rateDeltas.close),
+      conversion: normalizeRateValue(rateDeltas.conversion),
+    },
+  };
 }
 
 function DeltaBadge({ delta }) {
@@ -580,6 +745,69 @@ function MetricNode({ className = "", delta, label, status, value }) {
       </span>
       <strong>{value}</strong>
       <DeltaBadge delta={delta} />
+    </article>
+  );
+}
+
+const overviewTrendFields = {
+  scheduled: ["booked", "scheduled"],
+  toured: ["toured"],
+  enrolled: ["enrolled"],
+  churned: ["churned"],
+  no_show: ["no_show", "noShow"],
+};
+
+function getOverviewTrendValues(trendData, status) {
+  const fields = overviewTrendFields[status] || [status];
+  return (trendData || []).map((bucket) => {
+    const field = fields.find((key) => bucket[key] !== undefined);
+    return field ? Number(bucket[field] || 0) : 0;
+  });
+}
+
+function OverviewSparkline({ status, values }) {
+  const usableValues = values?.length ? values : [0, 0];
+  const max = Math.max(...usableValues);
+  const min = Math.min(...usableValues);
+  const range = Math.max(max - min, 1);
+  const width = 120;
+  const height = 34;
+  const points = usableValues.map((value, index) => {
+    const x = usableValues.length === 1 ? width : (index / (usableValues.length - 1)) * width;
+    const y = height - ((value - min) / range) * (height - 8) - 4;
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  }).join(" ");
+
+  return (
+    <svg
+      aria-hidden="true"
+      className={`analytics-overview-sparkline analytics-overview-sparkline--${status}`}
+      focusable="false"
+      viewBox={`0 0 ${width} ${height}`}
+    >
+      <polyline points={points} />
+    </svg>
+  );
+}
+
+function OverviewMetricCard({ delta, label, status, trendValues, value }) {
+  return (
+    <article className={`analytics-overview-card analytics-overview-card--${status}`}>
+      <span className="analytics-overview-card__label">{label}</span>
+      <strong>{value}</strong>
+      <DeltaBadge delta={delta} />
+      <OverviewSparkline status={status} values={trendValues} />
+    </article>
+  );
+}
+
+function OverviewPerformanceCard({ delta, info, label, tone, value, valueKind = "rate" }) {
+  return (
+    <article className={`analytics-overview-performance-card analytics-overview-performance-card--${tone}`}>
+      <span className="analytics-overview-performance-card__label">{label}</span>
+      <strong>{valueKind === "days" ? formatAverageDays(value) : formatRate(value)}</strong>
+      {valueKind === "rate" && <RateDeltaBadge delta={delta} />}
+      <InfoHint label={info} />
     </article>
   );
 }
@@ -1002,13 +1230,14 @@ function RankingList({ items, metric, metricLabel, sortLabel, title }) {
   );
 }
 
-function Analytics() {
+function Analytics({ view = "overview" }) {
   const { user } = useAuth();
   const [filters, setFilters] = useState(() => createDefaultTourFilters(user));
   const [locations, setLocations] = useState([]);
   const [leadSources, setLeadSources] = useState([]);
   const [tours, setTours] = useState([]);
   const [previousTours, setPreviousTours] = useState([]);
+  const [cohortAnalytics, setCohortAnalytics] = useState(null);
   const [costBasis, setCostBasis] = useState("");
   const [rankingMetric, setRankingMetric] = useState("conversion");
   const [rankingSort, setRankingSort] = useState("best");
@@ -1054,43 +1283,27 @@ function Analytics() {
     async function loadTours() {
       setIsLoading(true);
       setError("");
-      const dateRange = getDateRange(filters);
-      const previousDateRange = getPreviousComparableRange(filters, dateRange);
-      const commonParams = {
-        location: joinFilterValues(filters.locations),
-        lead_source: joinFilterValues(filters.leadSources),
-        status: joinFilterValues(filters.statuses),
-      };
 
       try {
-        const [tourData, previousTourData] = await Promise.all([
-          listTours({
-            ...commonParams,
-            date_from: dateRange.dateFrom || undefined,
-            date_to: dateRange.dateTo || undefined,
-          }),
-          previousDateRange
-            ? listTours({
-                ...commonParams,
-                date_from: previousDateRange.dateFrom,
-                date_to: previousDateRange.dateTo,
-              })
-            : Promise.resolve([]),
-        ]);
-
+        const data = await getCohortAnalytics(buildAnalyticsParams(filters, rankingMetric, rankingSort, costBasis));
         if (isCurrent) {
-          const [cohortTours, previousCohortTours] = await Promise.all([
-            attachEventsToTours(tourData),
-            attachEventsToTours(previousTourData),
-          ]);
+          setCohortAnalytics(data);
+          setTours([]);
+          setPreviousTours([]);
+        }
+      } catch {
+        try {
+          const { cohortTours, previousCohortTours } = await fetchLocalAnalyticsTours(filters);
           if (isCurrent) {
+            setCohortAnalytics(null);
             setTours(cohortTours);
             setPreviousTours(previousCohortTours);
           }
-        }
-      } catch {
-        if (isCurrent) {
-          setError("Unable to load analytics.");
+        } catch {
+          if (isCurrent) {
+            setCohortAnalytics(null);
+            setError("Unable to load analytics.");
+          }
         }
       } finally {
         if (isCurrent) {
@@ -1104,9 +1317,13 @@ function Analytics() {
     return () => {
       isCurrent = false;
     };
-  }, [filters]);
+  }, [costBasis, filters, rankingMetric, rankingSort]);
 
   const analytics = useMemo(() => {
+    if (cohortAnalytics) {
+      return adaptBackendCohortAnalytics(cohortAnalytics, rankingMetric);
+    }
+
     const counts = countCohortProgress(tours);
     const previousCounts = countCohortProgress(previousTours);
     const canCompare = previousCounts.scheduled > 0;
@@ -1148,7 +1365,7 @@ function Analytics() {
         conversion: getRateDelta(rates.conversion, previousRates.conversion, canCompare),
       },
     };
-  }, [filters, previousTours, rankingMetric, tours]);
+  }, [cohortAnalytics, filters, previousTours, rankingMetric, tours]);
 
   const metricByStatus = useMemo(() => (
     analytics.metrics.reduce((summary, metric) => ({
@@ -1201,114 +1418,191 @@ function Analytics() {
       {error && <p className="analytics-state analytics-state--error">{error}</p>}
       {isLoading && <p className="analytics-state">Loading analytics...</p>}
 
-      <section className="analytics-workspace" aria-label="Enrollment analytics">
-        <div className="analytics-period">
-          <strong>{periodComparison.selected}</strong>
-          {periodComparison.previous && (
-            <span>vs {periodComparison.previous}</span>
-          )}
-        </div>
-
-        <div className="analytics-summary-grid">
-          <section className="analytics-flow" aria-label="Enrollment analytics flow">
-            <div className="analytics-flow__stage analytics-flow__stage--entry">
-              <MetricNode {...metricByStatus.scheduled} />
+      {view === "overview" ? (
+        <section className="analytics-workspace analytics-workspace--overview" aria-label="Analytics overview">
+          <div className="analytics-overview-header">
+            <div className="analytics-period">
+              <strong>{periodComparison.selected}</strong>
+              {periodComparison.previous && (
+                <span>vs {periodComparison.previous}</span>
+              )}
             </div>
+            <p>Volume and trend analysis for the selected period.</p>
+          </div>
 
-            <div className="analytics-flow__branch">
-              <div className="analytics-flow__branch-header">
-                <span>Booked outcomes</span>
-              </div>
-              <div className="analytics-flow__branch-grid">
-                <MetricNode {...metricByStatus.toured} />
-                <MetricNode {...metricByStatus.no_show} />
-              </div>
+          <section className="analytics-overview-section" aria-labelledby="analytics-overview-volume">
+            <div className="analytics-overview-section__title">
+              <span>1</span>
+              <h3 id="analytics-overview-volume">Volume (Counts)</h3>
             </div>
-
-            <div className="analytics-flow__branch">
-              <div className="analytics-flow__branch-header">
-                <span>Toured outcomes</span>
-              </div>
-              <div className="analytics-flow__branch-grid">
-                <MetricNode {...metricByStatus.enrolled} />
-                <MetricNode {...metricByStatus.churned} />
-              </div>
+            <div className="analytics-overview-grid" aria-label="Selected period volume">
+              {analytics.metrics.map((metric) => (
+                <OverviewMetricCard
+                  delta={metric.delta}
+                  key={metric.status}
+                  label={metric.label}
+                  status={metric.status}
+                  trendValues={getOverviewTrendValues(analytics.trendData, metric.status)}
+                  value={metric.value}
+                />
+              ))}
             </div>
           </section>
 
-          <aside className="analytics-insights" aria-label="Analytics rates">
-            <div className="analytics-rate-stack">
-              <RateCard
-                delta={analytics.rateDeltas.toured}
-                formula={"Toured ÷ Booked.\nCompared with previous period."}
-                label="Toured rate"
+          <section className="analytics-overview-section" aria-labelledby="analytics-overview-performance">
+            <div className="analytics-overview-section__title">
+              <span>2</span>
+              <h3 id="analytics-overview-performance">Rates &amp; Performance</h3>
+            </div>
+            <div className="analytics-overview-performance-grid">
+              <OverviewPerformanceCard
+                delta={analytics.rateDeltas?.toured}
+                info="Toured rate = toured tours divided by booked tours."
+                label="Toured Rate"
                 tone="toured"
                 value={analytics.rates.toured}
               />
-              <RateCard
-                delta={analytics.rateDeltas.no_show}
-                formula={"No Show ÷ Booked.\nCompared with previous period."}
-                label="No show rate"
+              <OverviewPerformanceCard
+                delta={analytics.rateDeltas?.no_show}
+                info="No show rate = no-show tours divided by booked tours."
+                label="No Show Rate"
                 tone="no-show"
                 value={analytics.rates.no_show}
               />
-              <RateCard
-                delta={analytics.rateDeltas.close}
-                formula={"(Enrolled + Churned) ÷ Toured.\nCompared with previous period."}
-                label="Close rate"
+              <OverviewPerformanceCard
+                delta={analytics.rateDeltas?.close}
+                info="Close rate = enrolled plus churned tours divided by toured tours."
+                label="Close Rate"
                 tone="close"
                 value={analytics.rates.close}
               />
+              <OverviewPerformanceCard
+                delta={analytics.rateDeltas?.conversion}
+                info="Conversion rate = enrolled tours divided by toured tours."
+                label="Conversion Rate"
+                tone="conversion"
+                value={analytics.rates.conversion}
+              />
+              <OverviewPerformanceCard
+                info="Average days to enroll = days from tour date to enrolled status change."
+                label="Avg. Days to Enroll"
+                tone="average"
+                value={analytics.averageDaysToEnroll}
+                valueKind="days"
+              />
             </div>
-            <RateCard
-              delta={analytics.rateDeltas.conversion}
-              formula={"Enrolled ÷ Toured.\nCompared with previous period."}
-              label="Conversion rate"
-              tone="conversion"
-              value={analytics.rates.conversion}
-              variant="featured"
-            />
-            <div className="analytics-secondary-metrics">
-              <div className="analytics-insight analytics-insight--average">
-                <span className="analytics-insight__label">
-                  <span>Average days to enroll</span>
-                  <InfoHint label={"Tour date to enrolled date.\nAverage across enrolled tours."} />
-                </span>
-                <strong>{formatAverageDays(analytics.averageDaysToEnroll)}</strong>
-              </div>
-              <div className="analytics-insight analytics-insight--active">
-                <span className="analytics-insight__label">
-                  <span>Pending Toured / No Show</span>
-                  <InfoHint label={"Booked tours past tour date.\nMissing toured or no-show outcome."} />
-                </span>
-                <strong>{analytics.pendingOutcomes.pendingTourOutcome}</strong>
-              </div>
-              <div className="analytics-insight analytics-insight--active">
-                <span className="analytics-insight__label">
-                  <span>Pending Enrolled / Churned</span>
-                  <InfoHint label={"Toured families past follow-up window.\nMissing enrolled or churned outcome."} />
-                </span>
-                <strong>{analytics.pendingOutcomes.pendingEnrollmentOutcome}</strong>
-              </div>
-            </div>
-          </aside>
-        </div>
+          </section>
+        </section>
+      ) : (
+        <section className="analytics-workspace" aria-label="Cohort analytics">
+          <div className="analytics-period">
+            <strong>{periodComparison.selected}</strong>
+            {periodComparison.previous && (
+              <span>vs {periodComparison.previous}</span>
+            )}
+          </div>
 
-        <TrendChart data={analytics.trendData} />
+          <div className="analytics-summary-grid">
+            <section className="analytics-flow" aria-label="Enrollment analytics flow">
+              <div className="analytics-flow__stage analytics-flow__stage--entry">
+                <MetricNode {...metricByStatus.scheduled} />
+              </div>
 
-        <RankingSortControl
-          metric={rankingMetric}
-          onMetricChange={setRankingMetric}
-          onSortChange={setRankingSort}
-          sort={rankingSort}
-        />
+              <div className="analytics-flow__branch">
+                <div className="analytics-flow__branch-header">
+                  <span>Booked outcomes</span>
+                </div>
+                <div className="analytics-flow__branch-grid">
+                  <MetricNode {...metricByStatus.toured} />
+                  <MetricNode {...metricByStatus.no_show} />
+                </div>
+              </div>
 
-        <div className="analytics-ranking-grid" aria-label="Conversion rankings">
-          <RankingList items={sortedRankings.locations} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Location" />
-          <RankingList items={sortedRankings.leadSources} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Lead Source" />
-          <RankingList items={sortedRankings.staff} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Staff" />
-        </div>
-      </section>
+              <div className="analytics-flow__branch">
+                <div className="analytics-flow__branch-header">
+                  <span>Toured outcomes</span>
+                </div>
+                <div className="analytics-flow__branch-grid">
+                  <MetricNode {...metricByStatus.enrolled} />
+                  <MetricNode {...metricByStatus.churned} />
+                </div>
+              </div>
+            </section>
+
+            <aside className="analytics-insights" aria-label="Analytics rates">
+              <div className="analytics-rate-stack">
+                <RateCard
+                  delta={analytics.rateDeltas.toured}
+                  formula={"Toured ÷ Booked.\nCompared with previous period."}
+                  label="Toured rate"
+                  tone="toured"
+                  value={analytics.rates.toured}
+                />
+                <RateCard
+                  delta={analytics.rateDeltas.no_show}
+                  formula={"No Show ÷ Booked.\nCompared with previous period."}
+                  label="No show rate"
+                  tone="no-show"
+                  value={analytics.rates.no_show}
+                />
+                <RateCard
+                  delta={analytics.rateDeltas.close}
+                  formula={"(Enrolled + Churned) ÷ Toured.\nCompared with previous period."}
+                  label="Close rate"
+                  tone="close"
+                  value={analytics.rates.close}
+                />
+              </div>
+              <RateCard
+                delta={analytics.rateDeltas.conversion}
+                formula={"Enrolled ÷ Toured.\nCompared with previous period."}
+                label="Conversion rate"
+                tone="conversion"
+                value={analytics.rates.conversion}
+                variant="featured"
+              />
+              <div className="analytics-secondary-metrics">
+                <div className="analytics-insight analytics-insight--average">
+                  <span className="analytics-insight__label">
+                    <span>Average days to enroll</span>
+                    <InfoHint label={"Tour date to enrolled date.\nAverage across enrolled tours."} />
+                  </span>
+                  <strong>{formatAverageDays(analytics.averageDaysToEnroll)}</strong>
+                </div>
+                <div className="analytics-insight analytics-insight--active">
+                  <span className="analytics-insight__label">
+                    <span>Pending Toured / No Show</span>
+                    <InfoHint label={"Booked tours past tour date.\nMissing toured or no-show outcome."} />
+                  </span>
+                  <strong>{analytics.pendingOutcomes.pendingTourOutcome}</strong>
+                </div>
+                <div className="analytics-insight analytics-insight--active">
+                  <span className="analytics-insight__label">
+                    <span>Pending Enrolled / Churned</span>
+                    <InfoHint label={"Toured families past follow-up window.\nMissing enrolled or churned outcome."} />
+                  </span>
+                  <strong>{analytics.pendingOutcomes.pendingEnrollmentOutcome}</strong>
+                </div>
+              </div>
+            </aside>
+          </div>
+
+          <TrendChart data={analytics.trendData} />
+
+          <RankingSortControl
+            metric={rankingMetric}
+            onMetricChange={setRankingMetric}
+            onSortChange={setRankingSort}
+            sort={rankingSort}
+          />
+
+          <div className="analytics-ranking-grid" aria-label="Conversion rankings">
+            <RankingList items={sortedRankings.locations} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Location" />
+            <RankingList items={sortedRankings.leadSources} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Lead Source" />
+            <RankingList items={sortedRankings.staff} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Staff" />
+          </div>
+        </section>
+      )}
     </section>
   );
 }
