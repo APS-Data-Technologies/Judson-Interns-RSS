@@ -67,6 +67,39 @@
   margin: 0;
 }
 
+.analytics-overview-section {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.analytics-overview-section__title {
+  align-items: center;
+  display: flex;
+  gap: 0.65rem;
+}
+
+.analytics-overview-section__title span {
+  align-items: center;
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  border-radius: 8px;
+  color: #ffffff;
+  display: inline-flex;
+  font-family: var(--font-family-heading);
+  font-size: 0.85rem;
+  font-weight: 950;
+  height: 1.55rem;
+  justify-content: center;
+  width: 1.55rem;
+}
+
+.analytics-overview-section__title h3 {
+  color: var(--brand-navy-dark);
+  font-family: var(--font-family-heading);
+  font-size: clamp(1.05rem, 1.5vw, 1.45rem);
+  font-weight: 950;
+  margin: 0;
+}
+
 .analytics-overview-grid {
   display: grid;
   gap: var(--space-3);
@@ -82,8 +115,9 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-card);
   display: grid;
-  gap: 0.35rem;
-  min-height: clamp(7.5rem, 10vw, 9rem);
+  gap: 0.45rem;
+  grid-template-rows: auto auto auto 1fr;
+  min-height: clamp(10rem, 12vw, 11.5rem);
   padding: clamp(0.85rem, 1.5vw, 1.15rem);
   text-align: center;
 }
@@ -127,6 +161,103 @@
   font-size: clamp(2rem, 4vw, 3.2rem);
   font-weight: 950;
   line-height: 0.95;
+}
+
+.analytics-overview-card .analytics-delta {
+  justify-content: center;
+  min-height: 1rem;
+}
+
+.analytics-overview-sparkline {
+  align-self: end;
+  filter: drop-shadow(0 10px 12px color-mix(in srgb, var(--overview-color) 14%, transparent));
+  height: clamp(1.55rem, 3vw, 2.25rem);
+  margin-top: 0.1rem;
+  overflow: visible;
+  width: 100%;
+}
+
+.analytics-overview-sparkline polyline {
+  fill: none;
+  stroke: var(--overview-color);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
+.analytics-overview-performance-grid {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  overflow: hidden;
+}
+
+.analytics-overview-performance-card {
+  --performance-color: var(--brand-primary);
+  align-items: center;
+  display: grid;
+  gap: 0.45rem;
+  min-height: clamp(7rem, 9vw, 8.25rem);
+  padding: clamp(0.85rem, 1.4vw, 1.15rem);
+  position: relative;
+  text-align: center;
+}
+
+.analytics-overview-performance-card + .analytics-overview-performance-card {
+  border-left: 1px solid var(--color-border);
+}
+
+.analytics-overview-performance-card--toured {
+  --performance-color: var(--status-toured);
+}
+
+.analytics-overview-performance-card--no-show {
+  --performance-color: var(--status-no-show);
+}
+
+.analytics-overview-performance-card--close {
+  --performance-color: var(--rss-yellow);
+}
+
+.analytics-overview-performance-card--conversion {
+  --performance-color: var(--brand-primary);
+}
+
+.analytics-overview-performance-card--average {
+  --performance-color: var(--rss-purple);
+}
+
+.analytics-overview-performance-card__label {
+  color: var(--brand-navy-dark);
+  font-family: var(--font-family-heading);
+  font-size: clamp(0.72rem, 0.9vw, 0.9rem);
+  font-weight: 950;
+}
+
+.analytics-overview-performance-card strong {
+  color: var(--brand-navy-dark);
+  font-family: var(--font-family-heading);
+  font-size: clamp(1.75rem, 3vw, 2.45rem);
+  font-weight: 950;
+  line-height: 1;
+}
+
+.analytics-overview-performance-card .analytics-rate-delta {
+  justify-content: center;
+  min-height: 1rem;
+}
+
+.analytics-overview-performance-card .analytics-info-wrap {
+  bottom: 0.6rem;
+  position: absolute;
+  right: 0.6rem;
+}
+
+.analytics-overview-performance-card .analytics-info-popover {
+  max-width: min(220px, 70vw);
 }
 
 .analytics-summary-grid {
@@ -950,6 +1081,22 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .analytics-overview-performance-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .analytics-overview-performance-card + .analytics-overview-performance-card {
+    border-left: 0;
+  }
+
+  .analytics-overview-performance-card {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .analytics-overview-performance-card:nth-last-child(-n + 1) {
+    border-bottom: 0;
+  }
+
   .analytics-summary-grid {
     align-items: start;
     grid-template-columns: 1fr;
@@ -1056,6 +1203,18 @@
 
   .analytics-overview-card {
     min-height: 6.5rem;
+  }
+
+  .analytics-overview-performance-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-overview-performance-card {
+    min-height: 6rem;
+  }
+
+  .analytics-overview-performance-card:not(:last-child) {
+    border-bottom: 1px solid var(--color-border);
   }
 
   .analytics-flow {

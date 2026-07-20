@@ -749,12 +749,65 @@ function MetricNode({ className = "", delta, label, status, value }) {
   );
 }
 
-function OverviewMetricCard({ delta, label, status, value }) {
+const overviewTrendFields = {
+  scheduled: ["booked", "scheduled"],
+  toured: ["toured"],
+  enrolled: ["enrolled"],
+  churned: ["churned"],
+  no_show: ["no_show", "noShow"],
+};
+
+function getOverviewTrendValues(trendData, status) {
+  const fields = overviewTrendFields[status] || [status];
+  return (trendData || []).map((bucket) => {
+    const field = fields.find((key) => bucket[key] !== undefined);
+    return field ? Number(bucket[field] || 0) : 0;
+  });
+}
+
+function OverviewSparkline({ status, values }) {
+  const usableValues = values?.length ? values : [0, 0];
+  const max = Math.max(...usableValues);
+  const min = Math.min(...usableValues);
+  const range = Math.max(max - min, 1);
+  const width = 120;
+  const height = 34;
+  const points = usableValues.map((value, index) => {
+    const x = usableValues.length === 1 ? width : (index / (usableValues.length - 1)) * width;
+    const y = height - ((value - min) / range) * (height - 8) - 4;
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  }).join(" ");
+
+  return (
+    <svg
+      aria-hidden="true"
+      className={`analytics-overview-sparkline analytics-overview-sparkline--${status}`}
+      focusable="false"
+      viewBox={`0 0 ${width} ${height}`}
+    >
+      <polyline points={points} />
+    </svg>
+  );
+}
+
+function OverviewMetricCard({ delta, label, status, trendValues, value }) {
   return (
     <article className={`analytics-overview-card analytics-overview-card--${status}`}>
       <span className="analytics-overview-card__label">{label}</span>
       <strong>{value}</strong>
       <DeltaBadge delta={delta} />
+      <OverviewSparkline status={status} values={trendValues} />
+    </article>
+  );
+}
+
+function OverviewPerformanceCard({ delta, info, label, tone, value, valueKind = "rate" }) {
+  return (
+    <article className={`analytics-overview-performance-card analytics-overview-performance-card--${tone}`}>
+      <span className="analytics-overview-performance-card__label">{label}</span>
+      <strong>{valueKind === "days" ? formatAverageDays(value) : formatRate(value)}</strong>
+      {valueKind === "rate" && <RateDeltaBadge delta={delta} />}
+      <InfoHint label={info} />
     </article>
   );
 }
@@ -1377,19 +1430,68 @@ function Analytics({ view = "overview" }) {
             <p>Volume and trend analysis for the selected period.</p>
           </div>
 
-          <div className="analytics-overview-grid" aria-label="Selected period volume">
-            {analytics.metrics.map((metric) => (
-              <OverviewMetricCard
-                delta={metric.delta}
-                key={metric.status}
-                label={metric.label}
-                status={metric.status}
-                value={metric.value}
-              />
-            ))}
-          </div>
+          <section className="analytics-overview-section" aria-labelledby="analytics-overview-volume">
+            <div className="analytics-overview-section__title">
+              <span>1</span>
+              <h3 id="analytics-overview-volume">Volume (Counts)</h3>
+            </div>
+            <div className="analytics-overview-grid" aria-label="Selected period volume">
+              {analytics.metrics.map((metric) => (
+                <OverviewMetricCard
+                  delta={metric.delta}
+                  key={metric.status}
+                  label={metric.label}
+                  status={metric.status}
+                  trendValues={getOverviewTrendValues(analytics.trendData, metric.status)}
+                  value={metric.value}
+                />
+              ))}
+            </div>
+          </section>
 
-          <TrendChart data={analytics.trendData} />
+          <section className="analytics-overview-section" aria-labelledby="analytics-overview-performance">
+            <div className="analytics-overview-section__title">
+              <span>2</span>
+              <h3 id="analytics-overview-performance">Rates &amp; Performance</h3>
+            </div>
+            <div className="analytics-overview-performance-grid">
+              <OverviewPerformanceCard
+                delta={analytics.rateDeltas?.toured}
+                info="Toured rate = toured tours divided by booked tours."
+                label="Toured Rate"
+                tone="toured"
+                value={analytics.rates.toured}
+              />
+              <OverviewPerformanceCard
+                delta={analytics.rateDeltas?.no_show}
+                info="No show rate = no-show tours divided by booked tours."
+                label="No Show Rate"
+                tone="no-show"
+                value={analytics.rates.no_show}
+              />
+              <OverviewPerformanceCard
+                delta={analytics.rateDeltas?.close}
+                info="Close rate = enrolled plus churned tours divided by toured tours."
+                label="Close Rate"
+                tone="close"
+                value={analytics.rates.close}
+              />
+              <OverviewPerformanceCard
+                delta={analytics.rateDeltas?.conversion}
+                info="Conversion rate = enrolled tours divided by toured tours."
+                label="Conversion Rate"
+                tone="conversion"
+                value={analytics.rates.conversion}
+              />
+              <OverviewPerformanceCard
+                info="Average days to enroll = days from tour date to enrolled status change."
+                label="Avg. Days to Enroll"
+                tone="average"
+                value={analytics.averageDaysToEnroll}
+                valueKind="days"
+              />
+            </div>
+          </section>
         </section>
       ) : (
         <section className="analytics-workspace" aria-label="Cohort analytics">
