@@ -12,6 +12,7 @@ import {
 
 import TourFilterControls from "../../components/filters/TourFilterControls";
 import useAuth from "../../features/auth/useAuth";
+import { getCohortAnalytics } from "../../features/analytics/analyticsApi";
 import {
   createDefaultTourFilters,
   getDateRange,
@@ -506,6 +507,38 @@ async function attachEventsToTours(tourData) {
   }));
 }
 
+async function fetchLocalAnalyticsTours(filters) {
+  const dateRange = getDateRange(filters);
+  const previousDateRange = getPreviousComparableRange(filters, dateRange);
+  const commonParams = {
+    location: joinFilterValues(filters.locations),
+    lead_source: joinFilterValues(filters.leadSources),
+    status: joinFilterValues(filters.statuses),
+  };
+
+  const [tourData, previousTourData] = await Promise.all([
+    listTours({
+      ...commonParams,
+      date_from: dateRange.dateFrom || undefined,
+      date_to: dateRange.dateTo || undefined,
+    }),
+    previousDateRange
+      ? listTours({
+          ...commonParams,
+          date_from: previousDateRange.dateFrom,
+          date_to: previousDateRange.dateTo,
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const [cohortTours, previousCohortTours] = await Promise.all([
+    attachEventsToTours(tourData),
+    attachEventsToTours(previousTourData),
+  ]);
+
+  return { cohortTours, previousCohortTours };
+}
+
 function getPercent(numerator, denominator) {
   if (!denominator) {
     return null;
@@ -527,6 +560,138 @@ function getDelta(currentValue, previousValue, canCompare) {
   const difference = currentValue - previousValue;
   const percent = previousValue ? Math.round((difference / previousValue) * 100) : null;
   return { difference, percent };
+}
+
+function safeNumber(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function normalizeRateValue(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function getBackendMetricName(metric) {
+  if (metric === "enrollment") {
+    return "enrollments";
+  }
+  if (metric === "margin") {
+    return "contribution_margin";
+  }
+  return metric;
+}
+
+function getBackendRankingSort(sortDirection) {
+  return sortDirection === "worst" ? "least" : "best";
+}
+
+function buildAnalyticsParams(filters, rankingMetric, rankingSort, costBasis) {
+  const dateRange = getDateRange(filters);
+  return {
+    date_from: dateRange.dateFrom || undefined,
+    date_to: dateRange.dateTo || undefined,
+    location: joinFilterValues(filters.locations),
+    lead_source: joinFilterValues(filters.leadSources),
+    status: joinFilterValues(filters.statuses),
+    search: filters.search || undefined,
+    category: joinFilterValues(filters.categories),
+    metric: getBackendMetricName(rankingMetric),
+    ranking_metric: getBackendMetricName(rankingMetric),
+    ranking_sort: getBackendRankingSort(rankingSort),
+    cost_basis: costBasis || undefined,
+  };
+}
+
+function normalizeBackendCounts(counts = {}) {
+  return analyticsStatuses.reduce((summary, { status }) => ({
+    ...summary,
+    [status]: safeNumber(counts[status]),
+  }), {});
+}
+
+function adaptBackendRankingItem(item, metric) {
+  const normalized = {
+    ...item,
+    name: item.name || "Unassigned",
+    booked: safeNumber(item.booked ?? item.scheduled),
+    toured: safeNumber(item.toured),
+    enrolled: safeNumber(item.enrolled),
+    churned: safeNumber(item.churned),
+    noShow: safeNumber(item.noShow ?? item.no_show),
+    enrollmentDurationCount: safeNumber(item.enrollmentDurationCount),
+    enrollmentDurationTotal: safeNumber(item.enrollmentDurationTotal),
+    revenue: safeNumber(item.revenue),
+    cost: safeNumber(item.cost),
+    metric,
+    value: normalizeRateValue(item.value),
+  };
+  return {
+    ...normalized,
+    detail: item.detail || getRankingDetail(normalized, metric),
+  };
+}
+
+function adaptBackendTrendRow(row) {
+  return {
+    ...row,
+    date: row.date,
+    label: row.label || row.date,
+    booked: safeNumber(row.booked),
+    toured: safeNumber(row.toured),
+    enrolled: safeNumber(row.enrolled),
+    conversion: normalizeRateValue(row.conversion ?? row.conversionRate),
+  };
+}
+
+function adaptBackendCohortAnalytics(data, rankingMetric) {
+  const counts = normalizeBackendCounts(data.counts);
+  const previousCounts = normalizeBackendCounts(data.previousCounts);
+  const deltas = data.deltas || {};
+  const rates = data.rates || {};
+  const rateDeltas = data.rateDeltas || {};
+  const pendingCounts = data.pendingCounts || {};
+  const hasPreviousData = Object.values(previousCounts).some((value) => value > 0);
+
+  return {
+    rankings: {
+      locations: (data.rankings?.locations || []).map((item) => adaptBackendRankingItem(item, rankingMetric)),
+      leadSources: (data.rankings?.leadSources || data.rankings?.lead_sources || []).map((item) => (
+        adaptBackendRankingItem(item, rankingMetric)
+      )),
+      staff: (data.rankings?.staff || []).map((item) => adaptBackendRankingItem(item, rankingMetric)),
+    },
+    trendData: (data.trendData || []).map(adaptBackendTrendRow),
+    metrics: analyticsStatuses.map(({ status, label }) => ({
+      label,
+      value: counts[status] || 0,
+      delta: deltas[status] || getDelta(counts[status] || 0, previousCounts[status] || 0, hasPreviousData),
+      status,
+    })),
+    pendingOutcomes: {
+      pendingTourOutcome: safeNumber(pendingCounts.pendingTourOutcome),
+      pendingEnrollmentOutcome: safeNumber(pendingCounts.pendingEnrollmentOutcome),
+    },
+    averageDaysToEnroll:
+      data.averageDaysToEnroll === null || data.averageDaysToEnroll === undefined
+        ? null
+        : safeNumber(data.averageDaysToEnroll, null),
+    rates: {
+      toured: normalizeRateValue(rates.toured),
+      no_show: normalizeRateValue(rates.no_show ?? rates.noShow),
+      close: normalizeRateValue(rates.close),
+      conversion: normalizeRateValue(rates.conversion),
+    },
+    rateDeltas: {
+      toured: normalizeRateValue(rateDeltas.toured),
+      no_show: normalizeRateValue(rateDeltas.no_show ?? rateDeltas.noShow),
+      close: normalizeRateValue(rateDeltas.close),
+      conversion: normalizeRateValue(rateDeltas.conversion),
+    },
+  };
 }
 
 function DeltaBadge({ delta }) {
@@ -1019,6 +1184,7 @@ function Analytics({ view = "overview" }) {
   const [leadSources, setLeadSources] = useState([]);
   const [tours, setTours] = useState([]);
   const [previousTours, setPreviousTours] = useState([]);
+  const [cohortAnalytics, setCohortAnalytics] = useState(null);
   const [costBasis, setCostBasis] = useState("");
   const [rankingMetric, setRankingMetric] = useState("conversion");
   const [rankingSort, setRankingSort] = useState("best");
@@ -1064,43 +1230,27 @@ function Analytics({ view = "overview" }) {
     async function loadTours() {
       setIsLoading(true);
       setError("");
-      const dateRange = getDateRange(filters);
-      const previousDateRange = getPreviousComparableRange(filters, dateRange);
-      const commonParams = {
-        location: joinFilterValues(filters.locations),
-        lead_source: joinFilterValues(filters.leadSources),
-        status: joinFilterValues(filters.statuses),
-      };
 
       try {
-        const [tourData, previousTourData] = await Promise.all([
-          listTours({
-            ...commonParams,
-            date_from: dateRange.dateFrom || undefined,
-            date_to: dateRange.dateTo || undefined,
-          }),
-          previousDateRange
-            ? listTours({
-                ...commonParams,
-                date_from: previousDateRange.dateFrom,
-                date_to: previousDateRange.dateTo,
-              })
-            : Promise.resolve([]),
-        ]);
-
+        const data = await getCohortAnalytics(buildAnalyticsParams(filters, rankingMetric, rankingSort, costBasis));
         if (isCurrent) {
-          const [cohortTours, previousCohortTours] = await Promise.all([
-            attachEventsToTours(tourData),
-            attachEventsToTours(previousTourData),
-          ]);
+          setCohortAnalytics(data);
+          setTours([]);
+          setPreviousTours([]);
+        }
+      } catch {
+        try {
+          const { cohortTours, previousCohortTours } = await fetchLocalAnalyticsTours(filters);
           if (isCurrent) {
+            setCohortAnalytics(null);
             setTours(cohortTours);
             setPreviousTours(previousCohortTours);
           }
-        }
-      } catch {
-        if (isCurrent) {
-          setError("Unable to load analytics.");
+        } catch {
+          if (isCurrent) {
+            setCohortAnalytics(null);
+            setError("Unable to load analytics.");
+          }
         }
       } finally {
         if (isCurrent) {
@@ -1114,9 +1264,13 @@ function Analytics({ view = "overview" }) {
     return () => {
       isCurrent = false;
     };
-  }, [filters]);
+  }, [costBasis, filters, rankingMetric, rankingSort]);
 
   const analytics = useMemo(() => {
+    if (cohortAnalytics) {
+      return adaptBackendCohortAnalytics(cohortAnalytics, rankingMetric);
+    }
+
     const counts = countCohortProgress(tours);
     const previousCounts = countCohortProgress(previousTours);
     const canCompare = previousCounts.scheduled > 0;
@@ -1158,7 +1312,7 @@ function Analytics({ view = "overview" }) {
         conversion: getRateDelta(rates.conversion, previousRates.conversion, canCompare),
       },
     };
-  }, [filters, previousTours, rankingMetric, tours]);
+  }, [cohortAnalytics, filters, previousTours, rankingMetric, tours]);
 
   const metricByStatus = useMemo(() => (
     analytics.metrics.reduce((summary, metric) => ({
