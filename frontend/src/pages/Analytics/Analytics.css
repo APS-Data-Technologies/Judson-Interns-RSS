@@ -52,6 +52,83 @@
   font-weight: 800;
 }
 
+.analytics-workspace--overview {
+  gap: var(--space-4);
+}
+
+.analytics-overview-header {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.analytics-overview-header p {
+  color: var(--color-text-secondary);
+  font-weight: 800;
+  margin: 0;
+}
+
+.analytics-overview-grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.analytics-overview-card {
+  --overview-color: var(--status-booked);
+  --overview-soft: var(--status-booked-soft);
+  align-items: center;
+  background: linear-gradient(180deg, #ffffff, var(--overview-soft));
+  border: 1px solid color-mix(in srgb, var(--overview-color) 35%, white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  display: grid;
+  gap: 0.35rem;
+  min-height: clamp(7.5rem, 10vw, 9rem);
+  padding: clamp(0.85rem, 1.5vw, 1.15rem);
+  text-align: center;
+}
+
+.analytics-overview-card--scheduled {
+  --overview-color: var(--status-booked);
+  --overview-soft: var(--status-booked-soft);
+}
+
+.analytics-overview-card--toured {
+  --overview-color: var(--status-toured);
+  --overview-soft: var(--status-toured-soft);
+}
+
+.analytics-overview-card--no_show {
+  --overview-color: var(--status-no-show);
+  --overview-soft: var(--status-no-show-soft);
+}
+
+.analytics-overview-card--enrolled {
+  --overview-color: var(--status-enrolled);
+  --overview-soft: var(--status-enrolled-soft);
+}
+
+.analytics-overview-card--churned {
+  --overview-color: var(--status-churned);
+  --overview-soft: var(--status-churned-soft);
+}
+
+.analytics-overview-card__label {
+  color: var(--overview-color);
+  font-family: var(--font-family-heading);
+  font-size: clamp(0.85rem, 1vw, 1rem);
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.analytics-overview-card strong {
+  color: var(--brand-navy-dark);
+  font-family: var(--font-family-heading);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 950;
+  line-height: 0.95;
+}
+
 .analytics-summary-grid {
   align-items: stretch;
   display: grid;
@@ -869,6 +946,10 @@
 }
 
 @media (max-width: 980px) {
+  .analytics-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .analytics-summary-grid {
     align-items: start;
     grid-template-columns: 1fr;
@@ -967,6 +1048,14 @@
 @media (max-width: 520px) {
   .analytics-period {
     display: grid;
+  }
+
+  .analytics-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-overview-card {
+    min-height: 6.5rem;
   }
 
   .analytics-flow {

@@ -584,6 +584,16 @@ function MetricNode({ className = "", delta, label, status, value }) {
   );
 }
 
+function OverviewMetricCard({ delta, label, status, value }) {
+  return (
+    <article className={`analytics-overview-card analytics-overview-card--${status}`}>
+      <span className="analytics-overview-card__label">{label}</span>
+      <strong>{value}</strong>
+      <DeltaBadge delta={delta} />
+    </article>
+  );
+}
+
 function formatRate(value) {
   return value === null ? "--" : `${value}%`;
 }
@@ -1002,7 +1012,7 @@ function RankingList({ items, metric, metricLabel, sortLabel, title }) {
   );
 }
 
-function Analytics() {
+function Analytics({ view = "overview" }) {
   const { user } = useAuth();
   const [filters, setFilters] = useState(() => createDefaultTourFilters(user));
   const [locations, setLocations] = useState([]);
@@ -1201,114 +1211,142 @@ function Analytics() {
       {error && <p className="analytics-state analytics-state--error">{error}</p>}
       {isLoading && <p className="analytics-state">Loading analytics...</p>}
 
-      <section className="analytics-workspace" aria-label="Enrollment analytics">
-        <div className="analytics-period">
-          <strong>{periodComparison.selected}</strong>
-          {periodComparison.previous && (
-            <span>vs {periodComparison.previous}</span>
-          )}
-        </div>
-
-        <div className="analytics-summary-grid">
-          <section className="analytics-flow" aria-label="Enrollment analytics flow">
-            <div className="analytics-flow__stage analytics-flow__stage--entry">
-              <MetricNode {...metricByStatus.scheduled} />
+      {view === "overview" ? (
+        <section className="analytics-workspace analytics-workspace--overview" aria-label="Analytics overview">
+          <div className="analytics-overview-header">
+            <div className="analytics-period">
+              <strong>{periodComparison.selected}</strong>
+              {periodComparison.previous && (
+                <span>vs {periodComparison.previous}</span>
+              )}
             </div>
+            <p>Volume and trend analysis for the selected period.</p>
+          </div>
 
-            <div className="analytics-flow__branch">
-              <div className="analytics-flow__branch-header">
-                <span>Booked outcomes</span>
-              </div>
-              <div className="analytics-flow__branch-grid">
-                <MetricNode {...metricByStatus.toured} />
-                <MetricNode {...metricByStatus.no_show} />
-              </div>
-            </div>
-
-            <div className="analytics-flow__branch">
-              <div className="analytics-flow__branch-header">
-                <span>Toured outcomes</span>
-              </div>
-              <div className="analytics-flow__branch-grid">
-                <MetricNode {...metricByStatus.enrolled} />
-                <MetricNode {...metricByStatus.churned} />
-              </div>
-            </div>
-          </section>
-
-          <aside className="analytics-insights" aria-label="Analytics rates">
-            <div className="analytics-rate-stack">
-              <RateCard
-                delta={analytics.rateDeltas.toured}
-                formula={"Toured ÷ Booked.\nCompared with previous period."}
-                label="Toured rate"
-                tone="toured"
-                value={analytics.rates.toured}
+          <div className="analytics-overview-grid" aria-label="Selected period volume">
+            {analytics.metrics.map((metric) => (
+              <OverviewMetricCard
+                delta={metric.delta}
+                key={metric.status}
+                label={metric.label}
+                status={metric.status}
+                value={metric.value}
               />
+            ))}
+          </div>
+
+          <TrendChart data={analytics.trendData} />
+        </section>
+      ) : (
+        <section className="analytics-workspace" aria-label="Cohort analytics">
+          <div className="analytics-period">
+            <strong>{periodComparison.selected}</strong>
+            {periodComparison.previous && (
+              <span>vs {periodComparison.previous}</span>
+            )}
+          </div>
+
+          <div className="analytics-summary-grid">
+            <section className="analytics-flow" aria-label="Enrollment analytics flow">
+              <div className="analytics-flow__stage analytics-flow__stage--entry">
+                <MetricNode {...metricByStatus.scheduled} />
+              </div>
+
+              <div className="analytics-flow__branch">
+                <div className="analytics-flow__branch-header">
+                  <span>Booked outcomes</span>
+                </div>
+                <div className="analytics-flow__branch-grid">
+                  <MetricNode {...metricByStatus.toured} />
+                  <MetricNode {...metricByStatus.no_show} />
+                </div>
+              </div>
+
+              <div className="analytics-flow__branch">
+                <div className="analytics-flow__branch-header">
+                  <span>Toured outcomes</span>
+                </div>
+                <div className="analytics-flow__branch-grid">
+                  <MetricNode {...metricByStatus.enrolled} />
+                  <MetricNode {...metricByStatus.churned} />
+                </div>
+              </div>
+            </section>
+
+            <aside className="analytics-insights" aria-label="Analytics rates">
+              <div className="analytics-rate-stack">
+                <RateCard
+                  delta={analytics.rateDeltas.toured}
+                  formula={"Toured ÷ Booked.\nCompared with previous period."}
+                  label="Toured rate"
+                  tone="toured"
+                  value={analytics.rates.toured}
+                />
+                <RateCard
+                  delta={analytics.rateDeltas.no_show}
+                  formula={"No Show ÷ Booked.\nCompared with previous period."}
+                  label="No show rate"
+                  tone="no-show"
+                  value={analytics.rates.no_show}
+                />
+                <RateCard
+                  delta={analytics.rateDeltas.close}
+                  formula={"(Enrolled + Churned) ÷ Toured.\nCompared with previous period."}
+                  label="Close rate"
+                  tone="close"
+                  value={analytics.rates.close}
+                />
+              </div>
               <RateCard
-                delta={analytics.rateDeltas.no_show}
-                formula={"No Show ÷ Booked.\nCompared with previous period."}
-                label="No show rate"
-                tone="no-show"
-                value={analytics.rates.no_show}
+                delta={analytics.rateDeltas.conversion}
+                formula={"Enrolled ÷ Toured.\nCompared with previous period."}
+                label="Conversion rate"
+                tone="conversion"
+                value={analytics.rates.conversion}
+                variant="featured"
               />
-              <RateCard
-                delta={analytics.rateDeltas.close}
-                formula={"(Enrolled + Churned) ÷ Toured.\nCompared with previous period."}
-                label="Close rate"
-                tone="close"
-                value={analytics.rates.close}
-              />
-            </div>
-            <RateCard
-              delta={analytics.rateDeltas.conversion}
-              formula={"Enrolled ÷ Toured.\nCompared with previous period."}
-              label="Conversion rate"
-              tone="conversion"
-              value={analytics.rates.conversion}
-              variant="featured"
-            />
-            <div className="analytics-secondary-metrics">
-              <div className="analytics-insight analytics-insight--average">
-                <span className="analytics-insight__label">
-                  <span>Average days to enroll</span>
-                  <InfoHint label={"Tour date to enrolled date.\nAverage across enrolled tours."} />
-                </span>
-                <strong>{formatAverageDays(analytics.averageDaysToEnroll)}</strong>
+              <div className="analytics-secondary-metrics">
+                <div className="analytics-insight analytics-insight--average">
+                  <span className="analytics-insight__label">
+                    <span>Average days to enroll</span>
+                    <InfoHint label={"Tour date to enrolled date.\nAverage across enrolled tours."} />
+                  </span>
+                  <strong>{formatAverageDays(analytics.averageDaysToEnroll)}</strong>
+                </div>
+                <div className="analytics-insight analytics-insight--active">
+                  <span className="analytics-insight__label">
+                    <span>Pending Toured / No Show</span>
+                    <InfoHint label={"Booked tours past tour date.\nMissing toured or no-show outcome."} />
+                  </span>
+                  <strong>{analytics.pendingOutcomes.pendingTourOutcome}</strong>
+                </div>
+                <div className="analytics-insight analytics-insight--active">
+                  <span className="analytics-insight__label">
+                    <span>Pending Enrolled / Churned</span>
+                    <InfoHint label={"Toured families past follow-up window.\nMissing enrolled or churned outcome."} />
+                  </span>
+                  <strong>{analytics.pendingOutcomes.pendingEnrollmentOutcome}</strong>
+                </div>
               </div>
-              <div className="analytics-insight analytics-insight--active">
-                <span className="analytics-insight__label">
-                  <span>Pending Toured / No Show</span>
-                  <InfoHint label={"Booked tours past tour date.\nMissing toured or no-show outcome."} />
-                </span>
-                <strong>{analytics.pendingOutcomes.pendingTourOutcome}</strong>
-              </div>
-              <div className="analytics-insight analytics-insight--active">
-                <span className="analytics-insight__label">
-                  <span>Pending Enrolled / Churned</span>
-                  <InfoHint label={"Toured families past follow-up window.\nMissing enrolled or churned outcome."} />
-                </span>
-                <strong>{analytics.pendingOutcomes.pendingEnrollmentOutcome}</strong>
-              </div>
-            </div>
-          </aside>
-        </div>
+            </aside>
+          </div>
 
-        <TrendChart data={analytics.trendData} />
+          <TrendChart data={analytics.trendData} />
 
-        <RankingSortControl
-          metric={rankingMetric}
-          onMetricChange={setRankingMetric}
-          onSortChange={setRankingSort}
-          sort={rankingSort}
-        />
+          <RankingSortControl
+            metric={rankingMetric}
+            onMetricChange={setRankingMetric}
+            onSortChange={setRankingSort}
+            sort={rankingSort}
+          />
 
-        <div className="analytics-ranking-grid" aria-label="Conversion rankings">
-          <RankingList items={sortedRankings.locations} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Location" />
-          <RankingList items={sortedRankings.leadSources} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Lead Source" />
-          <RankingList items={sortedRankings.staff} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Staff" />
-        </div>
-      </section>
+          <div className="analytics-ranking-grid" aria-label="Conversion rankings">
+            <RankingList items={sortedRankings.locations} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Location" />
+            <RankingList items={sortedRankings.leadSources} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Lead Source" />
+            <RankingList items={sortedRankings.staff} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Staff" />
+          </div>
+        </section>
+      )}
     </section>
   );
 }

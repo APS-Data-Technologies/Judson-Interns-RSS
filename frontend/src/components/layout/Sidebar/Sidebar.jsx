@@ -7,7 +7,7 @@ const navItems = [
   { label: "Home", to: "/home", icon: Home },
   { label: "Tours", to: "/tours", icon: CalendarCheck },
   { label: "Pipeline", to: "/pipeline", icon: ListChecks },
-  { label: "Analytics", to: "/analytics", icon: BarChart3 },
+  { label: "Analytics", to: "/analytics/overview", icon: BarChart3 },
   { label: "Settings", to: "/settings", icon: Settings },
 ];
 
@@ -30,7 +30,10 @@ function Sidebar() {
                 const isSettingsArea =
                   item.to === "/settings" &&
                   location.pathname.startsWith("/admin");
-                return `sidebar-nav-item ${isActive || isSettingsArea ? "active" : ""}`;
+                const isAnalyticsArea =
+                  item.to === "/analytics/overview" &&
+                  location.pathname.startsWith("/analytics");
+                return `sidebar-nav-item ${isActive || isSettingsArea || isAnalyticsArea ? "active" : ""}`;
               }}
             >
               <span className="sidebar-nav-icon-wrap">

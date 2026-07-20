@@ -6,7 +6,7 @@ const navItems = [
   { label: "Home", to: "/home", icon: Home },
   { label: "Tours", to: "/tours", icon: CalendarCheck },
   { label: "Pipeline", to: "/pipeline", icon: ListChecks },
-  { label: "Analytics", to: "/analytics", icon: BarChart3 },
+  { label: "Analytics", to: "/analytics/overview", icon: BarChart3 },
   { label: "Settings", to: "/settings", icon: Settings },
 ];
 
@@ -27,7 +27,10 @@ function BottomNavigation() {
               const isSettingsArea =
                 item.to === "/settings" &&
                 location.pathname.startsWith("/admin");
-              return `bottom-navigation__item ${isActive || isSettingsArea ? "active" : ""}`;
+              const isAnalyticsArea =
+                item.to === "/analytics/overview" &&
+                location.pathname.startsWith("/analytics");
+              return `bottom-navigation__item ${isActive || isSettingsArea || isAnalyticsArea ? "active" : ""}`;
             }}
           >
             <Icon className="bottom-navigation__icon" aria-hidden="true" />
