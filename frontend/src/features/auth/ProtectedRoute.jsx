@@ -39,11 +39,11 @@ const analyticsViews = [
   { value: "cohort", label: "Conversion and Cohort", path: "/analytics/cohort" },
   { value: "locations", label: "Location", path: "/analytics/locations" },
   { value: "lead-sources", label: "Lead Source", path: "/analytics/lead-sources" },
-  { value: "cost-margin", label: "Cost and Margin", path: "/analytics/cost-margin" },
   { value: "staff", label: "Staff", path: "/analytics/staff" },
+  { value: "cost-margin", label: "Cost and Margin", path: "/analytics/cost-margin" },
 ];
 
-function AnalyticsTitlePicker({ pathname }) {
+function AnalyticsTitlePicker({ isLoading, pathname }) {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const activeView =
@@ -76,6 +76,13 @@ function AnalyticsTitlePicker({ pathname }) {
         <span>{activeView.label}</span>
         <ChevronDown aria-hidden="true" />
       </button>
+      {isLoading && (
+        <span
+          aria-label="Loading analytics"
+          className="analytics-title-picker__loading"
+          role="status"
+        />
+      )}
       {isOpen && (
         <span className="analytics-title-picker__menu" role="menu">
           {analyticsViews.map((view) => (
@@ -99,6 +106,7 @@ function AnalyticsTitlePicker({ pathname }) {
 function ProtectedRoute() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
+  const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
 
   if (isLoading) {
     return <div className="route-loading">Loading...</div>;
@@ -122,7 +130,7 @@ function ProtectedRoute() {
     location.pathname === "/home"
       ? `Hello ${firstName}`
       : isAnalyticsRoute
-        ? <AnalyticsTitlePicker pathname={location.pathname} />
+        ? <AnalyticsTitlePicker isLoading={isAnalyticsLoading} pathname={location.pathname} />
       : routeTitle || dynamicTitle || "Ready Set STEM";
   const isAnalyticsOverview = location.pathname === "/analytics" || location.pathname === "/analytics/overview";
   const showBack = isAnalyticsRoute
@@ -131,7 +139,7 @@ function ProtectedRoute() {
 
   return (
     <AppShell title={pageTitle} showBack={showBack}>
-      <Outlet />
+      <Outlet context={{ setAnalyticsLoading: setIsAnalyticsLoading }} />
     </AppShell>
   );
 }

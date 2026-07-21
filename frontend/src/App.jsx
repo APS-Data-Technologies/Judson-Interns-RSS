@@ -73,10 +73,10 @@ const router = createBrowserRouter([
         element: <Analytics view="cohort" />,
       },
       { path: "/analytics/volume", element: <Analytics view="volume" /> },
-      { path: "/analytics/locations", element: <AnalyticsPlaceholder title="Location Analytics" /> },
-      { path: "/analytics/lead-sources", element: <AnalyticsPlaceholder title="Lead Source Analytics" /> },
+      { path: "/analytics/locations", element: <Analytics view="locations" /> },
+      { path: "/analytics/lead-sources", element: <Analytics view="leadSources" /> },
       { path: "/analytics/cost-margin", element: <AnalyticsPlaceholder title="Cost and Margin Analytics" /> },
-      { path: "/analytics/staff", element: <AnalyticsPlaceholder title="Staff Analytics" /> },
+      { path: "/analytics/staff", element: <Analytics view="staff" /> },
       {
         path: "/settings",
         element: <Account />,
