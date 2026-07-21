@@ -7,6 +7,7 @@ import {
   CalendarDays,
   ChevronDown,
   CircleHelp,
+  GripVertical,
   MapPin,
   MessageCircle,
   Plus,
@@ -60,10 +61,54 @@ function ChatAssistant() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState(() => [initialMessage(user)]);
   const [isWorking, setIsWorking] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const assistantRef = useRef(null);
+  const dragRef = useRef(null);
+  const didDragRef = useRef(false);
   const feedRef = useRef(null);
   const inputRef = useRef(null);
   const isAdmin = ["admin", "super_admin"].includes(user.role);
   const isSuperAdmin = user.role === "super_admin";
+
+  function startDrag(event) {
+    if (event.button !== undefined && event.button !== 0) return;
+    const rect = assistantRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    didDragRef.current = false;
+    dragRef.current = { pointerX: event.clientX, pointerY: event.clientY, rect };
+  }
+
+  function moveDrag(event) {
+    if (!dragRef.current) return;
+    const { pointerX, pointerY, rect } = dragRef.current;
+    const rawX = event.clientX - pointerX;
+    const rawY = event.clientY - pointerY;
+    const deltaX = Math.min(window.innerWidth - 8 - rect.right, Math.max(8 - rect.left, rawX));
+    const deltaY = Math.min(window.innerHeight - 8 - rect.bottom, Math.max(8 - rect.top, rawY));
+    if (Math.abs(rawX) > 4 || Math.abs(rawY) > 4) didDragRef.current = true;
+    setPosition((current) => ({ x: current.x + deltaX, y: current.y + deltaY }));
+    dragRef.current = {
+      pointerX: event.clientX,
+      pointerY: event.clientY,
+      rect: { ...rect, left: rect.left + deltaX, right: rect.right + deltaX, top: rect.top + deltaY, bottom: rect.bottom + deltaY },
+    };
+  }
+
+  function endDrag(event) {
+    if (dragRef.current && event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    dragRef.current = null;
+  }
+
+  function toggleAssistant() {
+    if (didDragRef.current) {
+      didDragRef.current = false;
+      return;
+    }
+    setIsOpen((current) => !current);
+  }
 
   useEffect(() => {
     if (isOpen) {
@@ -152,10 +197,10 @@ function ChatAssistant() {
   ];
 
   return (
-    <aside className={`chat-assistant ${isOpen ? "chat-assistant--open" : ""}`} aria-label="RSS Assistant">
+    <aside className={`chat-assistant ${isOpen ? "chat-assistant--open" : ""}`} aria-label="RSS Assistant" ref={assistantRef} style={{ transform: `translate3d(${position.x}px, ${position.y}px, 0)` }}>
       {isOpen && (
         <section className="chat-assistant__panel" aria-live="polite">
-          <header className="chat-assistant__header">
+          <header className="chat-assistant__header" onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
             <div className="chat-assistant__identity">
               <span className="chat-assistant__bot-icon"><Bot size={19} aria-hidden="true" /></span>
               <div>
@@ -163,7 +208,10 @@ function ChatAssistant() {
                 <span>{roleLabels[user.role] || "Workspace assistant"}</span>
               </div>
             </div>
-            <button className="chat-assistant__close" type="button" onClick={() => setIsOpen(false)} aria-label="Close assistant"><X size={20} /></button>
+            <div className="chat-assistant__header-actions">
+              <span className="chat-assistant__drag-handle" aria-label="Drag to move assistant"><GripVertical size={18} aria-hidden="true" /></span>
+              <button className="chat-assistant__close" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => setIsOpen(false)} aria-label="Close assistant"><X size={20} /></button>
+            </div>
           </header>
 
           <div className="chat-assistant__feed" ref={feedRef}>
@@ -188,7 +236,7 @@ function ChatAssistant() {
           </form>
         </section>
       )}
-      <button className="chat-assistant__launcher" type="button" onClick={() => setIsOpen((current) => !current)} aria-expanded={isOpen} aria-controls="chat-assistant-message">
+      <button className="chat-assistant__launcher" type="button" onClick={toggleAssistant} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} aria-expanded={isOpen} aria-controls="chat-assistant-message">
         {isOpen ? <ChevronDown size={22} aria-hidden="true" /> : <MessageCircle size={23} aria-hidden="true" />}
         <span>{isOpen ? "Minimize" : "Ask RSS"}</span>
         {!isOpen && <i aria-hidden="true" />}
