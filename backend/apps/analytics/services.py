@@ -190,16 +190,30 @@ def count_cohort_progress(tours):
     }
 
 
-def volume_event_date(tour, status):
+def volume_event_timestamp(tour, status):
     if status == "scheduled":
-        return timezone.localtime(tour.created_at).date()
+        return timezone.localtime(tour.created_at)
     status_map = {
         "toured": {TourStatus.TOURED},
         "no_show": {TourStatus.NO_SHOW},
         "enrolled": {TourStatus.ENROLLED},
         "churned": {TourStatus.CHURNED},
     }
-    return first_event_date(tour, status_map[status])
+    matching_dates = [
+        event.event_timestamp
+        for event in tour.events.all()
+        if event.status in status_map[status] and event.event_timestamp
+    ]
+    if matching_dates:
+        return timezone.localtime(min(matching_dates))
+    if tour.current_status in status_map[status]:
+        return timezone.localtime(tour.updated_at)
+    return None
+
+
+def volume_event_date(tour, status):
+    timestamp = volume_event_timestamp(tour, status)
+    return timestamp.date() if timestamp else None
 
 
 def count_period_volume(tours, start, end):
@@ -241,6 +255,75 @@ def build_volume_trend_data(tours, start, end):
         })
         bucket_start = bucket_end + timedelta(days=1)
     return rows
+
+
+def build_volume_heatmap(tours, start, end):
+    hours = range(8, 21)
+    rows = {
+        (day, hour): {
+            "day": day,
+            "hour": hour,
+            "booked": 0,
+            "toured": 0,
+            "noShow": 0,
+            "enrolled": 0,
+            "churned": 0,
+        }
+        for day in range(7)
+        for hour in hours
+    }
+    output_keys = {
+        "scheduled": "booked",
+        "toured": "toured",
+        "no_show": "noShow",
+        "enrolled": "enrolled",
+        "churned": "churned",
+    }
+    for tour in tours:
+        for status, output_key in output_keys.items():
+            timestamp = volume_event_timestamp(tour, status)
+            if not timestamp:
+                continue
+            event_date = timestamp.date()
+            if start and event_date < start:
+                continue
+            if end and event_date > end:
+                continue
+            key = (timestamp.weekday(), timestamp.hour)
+            if key in rows:
+                rows[key][output_key] += 1
+    return list(rows.values())
+
+
+def build_volume_calendar_data(tours, start, end):
+    dated_events = []
+    for tour in tours:
+        for status in ("scheduled", "toured", "no_show", "enrolled", "churned"):
+            event_date = volume_event_date(tour, status)
+            if event_date:
+                dated_events.append((event_date, status))
+    if not start or not end:
+        if not dated_events:
+            return []
+        start = min(event_date for event_date, _ in dated_events)
+        end = max(event_date for event_date, _ in dated_events)
+
+    output_keys = {
+        "scheduled": "booked",
+        "toured": "toured",
+        "no_show": "noShow",
+        "enrolled": "enrolled",
+        "churned": "churned",
+    }
+    rows = {}
+    cursor = start
+    while cursor <= end:
+        rows[cursor] = {"date": cursor.isoformat(), **{key: 0 for key in output_keys.values()}}
+        cursor += timedelta(days=1)
+    for event_date, status in dated_events:
+        if event_date in rows:
+            rows[event_date][output_keys[status]] += 1
+    return list(rows.values())
 
 
 def build_rates(counts):
@@ -503,6 +586,14 @@ def cohort_analytics(user, query_params):
         "pendingCounts": pending_counts(current_tours, average_days),
         "trendData": build_trend_data(current_tours, period["date_from"], period["date_to"]),
         "volumeTrendData": build_volume_trend_data(all_tours, period["date_from"], period["date_to"]),
+        "previousVolumeTrendData": build_volume_trend_data(
+            all_tours,
+            period["previous_date_from"],
+            period["previous_date_to"],
+        ) if period["previous_date_from"] and period["previous_date_to"] else [],
+        "volumeHeatmap": build_volume_heatmap(all_tours, period["date_from"], period["date_to"]),
+        "volumeCalendarData": build_volume_calendar_data(all_tours, period["date_from"], period["date_to"]),
+        "allTimeVolumeCalendarData": build_volume_calendar_data(all_tours, None, None),
         "rankings": rankings,
     }
 
