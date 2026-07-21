@@ -190,6 +190,59 @@ def count_cohort_progress(tours):
     }
 
 
+def volume_event_date(tour, status):
+    if status == "scheduled":
+        return timezone.localtime(tour.created_at).date()
+    status_map = {
+        "toured": {TourStatus.TOURED},
+        "no_show": {TourStatus.NO_SHOW},
+        "enrolled": {TourStatus.ENROLLED},
+        "churned": {TourStatus.CHURNED},
+    }
+    return first_event_date(tour, status_map[status])
+
+
+def count_period_volume(tours, start, end):
+    counts = {status: 0 for status in ("scheduled", "toured", "no_show", "enrolled", "churned")}
+    for tour in tours:
+        for status in counts:
+            event_date = volume_event_date(tour, status)
+            if event_date and (not start or event_date >= start) and (not end or event_date <= end):
+                counts[status] += 1
+    return counts
+
+
+def build_volume_trend_data(tours, start, end):
+    if not start or not end:
+        dates = [
+            event_date
+            for tour in tours
+            for status in ("scheduled", "toured", "no_show", "enrolled", "churned")
+            if (event_date := volume_event_date(tour, status))
+        ]
+        if not dates:
+            return []
+        start, end = min(dates), max(dates)
+
+    step = 7 if (end - start).days + 1 > 45 else 1
+    rows = []
+    bucket_start = start
+    while bucket_start <= end:
+        bucket_end = min(bucket_start + timedelta(days=step - 1), end)
+        counts = count_period_volume(tours, bucket_start, bucket_end)
+        rows.append({
+            "date": bucket_start.isoformat(),
+            "label": bucket_start.strftime("%b %-d") if step == 1 else f"{bucket_start:%b %-d} - {bucket_end:%b %-d}",
+            "booked": counts["scheduled"],
+            "toured": counts["toured"],
+            "noShow": counts["no_show"],
+            "enrolled": counts["enrolled"],
+            "churned": counts["churned"],
+        })
+        bucket_start = bucket_end + timedelta(days=1)
+    return rows
+
+
 def build_rates(counts):
     return {
         "toured": percent(counts["toured"], counts["scheduled"]),
@@ -382,6 +435,7 @@ def cohort_analytics(user, query_params):
     cost_basis = parse_cost_basis(cost_basis)
 
     queryset = apply_filters(base_queryset(user), query_params)
+    all_tours = list(queryset.order_by("scheduled_tour_date", "family__family_name"))
     selected_queryset = filter_by_scheduled_period(
         queryset,
         period["date_from"],
@@ -410,6 +464,12 @@ def cohort_analytics(user, query_params):
     rates = build_rates(counts)
     previous_rates = build_rates(previous_counts)
     average_days = average_days_to_enroll(current_tours)
+    volume_counts = count_period_volume(all_tours, period["date_from"], period["date_to"])
+    previous_volume_counts = count_period_volume(
+        all_tours,
+        period["previous_date_from"],
+        period["previous_date_to"],
+    ) if period["previous_date_from"] and period["previous_date_to"] else {status: 0 for status in volume_counts}
 
     rankings = {
         "locations": sort_ranking(
@@ -432,6 +492,9 @@ def cohort_analytics(user, query_params):
     return {
         "period": period,
         "counts": counts,
+        "volumeCounts": volume_counts,
+        "previousVolumeCounts": previous_volume_counts,
+        "volumeDeltas": {status: delta(volume_counts[status], previous_volume_counts[status]) for status in volume_counts},
         "previousCounts": previous_counts,
         "deltas": {status: delta(counts[status], previous_counts[status]) for status in counts},
         "rates": rates,
@@ -439,6 +502,7 @@ def cohort_analytics(user, query_params):
         "averageDaysToEnroll": average_days,
         "pendingCounts": pending_counts(current_tours, average_days),
         "trendData": build_trend_data(current_tours, period["date_from"], period["date_to"]),
+        "volumeTrendData": build_volume_trend_data(all_tours, period["date_from"], period["date_to"]),
         "rankings": rankings,
     }
 

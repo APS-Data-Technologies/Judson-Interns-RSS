@@ -1,11 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   ChevronLeft,
   ArrowDownUp,
   Check,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   Info,
+  MapPin,
+  Megaphone,
+  CircleDollarSign,
+  UsersRound,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
@@ -649,8 +655,10 @@ function adaptBackendTrendRow(row) {
 
 function adaptBackendCohortAnalytics(data, rankingMetric) {
   const counts = normalizeBackendCounts(data.counts);
+  const volumeCounts = normalizeBackendCounts(data.volumeCounts || data.counts);
   const previousCounts = normalizeBackendCounts(data.previousCounts);
   const deltas = data.deltas || {};
+  const volumeDeltas = data.volumeDeltas || deltas;
   const rates = data.rates || {};
   const rateDeltas = data.rateDeltas || {};
   const pendingCounts = data.pendingCounts || {};
@@ -665,10 +673,17 @@ function adaptBackendCohortAnalytics(data, rankingMetric) {
       staff: (data.rankings?.staff || []).map((item) => adaptBackendRankingItem(item, rankingMetric)),
     },
     trendData: (data.trendData || []).map(adaptBackendTrendRow),
+    volumeTrendData: data.volumeTrendData || data.trendData || [],
     metrics: analyticsStatuses.map(({ status, label }) => ({
       label,
       value: counts[status] || 0,
       delta: deltas[status] || getDelta(counts[status] || 0, previousCounts[status] || 0, hasPreviousData),
+      status,
+    })),
+    volumeMetrics: analyticsStatuses.map(({ status, label }) => ({
+      label,
+      value: volumeCounts[status] || 0,
+      delta: volumeDeltas[status] || null,
       status,
     })),
     pendingOutcomes: {
@@ -790,9 +805,9 @@ function OverviewSparkline({ status, values }) {
   );
 }
 
-function OverviewMetricCard({ delta, label, status, trendValues, value }) {
+function OverviewMetricCard({ delta, isKeyMetric = false, label, status, trendValues, value }) {
   return (
-    <article className={`analytics-overview-card analytics-overview-card--${status}`}>
+    <article className={`analytics-overview-card analytics-overview-card--${status}${isKeyMetric ? " analytics-overview-card--key" : ""}`}>
       <span className="analytics-overview-card__label">{label}</span>
       <strong>{value}</strong>
       <DeltaBadge delta={delta} />
@@ -801,13 +816,76 @@ function OverviewMetricCard({ delta, label, status, trendValues, value }) {
   );
 }
 
-function OverviewPerformanceCard({ delta, info, label, tone, value, valueKind = "rate" }) {
+function OverviewPerformanceCard({ delta, info, isKeyMetric = false, label, tone, value, valueKind = "rate" }) {
   return (
-    <article className={`analytics-overview-performance-card analytics-overview-performance-card--${tone}`}>
+    <article className={`analytics-overview-performance-card analytics-overview-performance-card--${tone}${isKeyMetric ? " analytics-overview-performance-card--key" : ""}`}>
       <span className="analytics-overview-performance-card__label">{label}</span>
-      <strong>{valueKind === "days" ? formatAverageDays(value) : formatRate(value)}</strong>
+      <strong>
+        {valueKind === "days"
+          ? value === null
+            ? "--"
+            : <>{value}<small> day{value === 1 ? "" : "s"}</small></>
+          : formatRate(value)}
+      </strong>
       {valueKind === "rate" && <RateDeltaBadge delta={delta} />}
+      {valueKind === "days" && <span className="analytics-rate-delta analytics-rate-delta--placeholder" aria-hidden="true">No comparison</span>}
       <InfoHint label={info} />
+    </article>
+  );
+}
+
+function OverviewRankingCard({ icon: Icon, items, metric, path, title }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const rankedItems = items.slice(0, 3);
+  const first = rankedItems[0];
+
+  return (
+    <article className={`analytics-preview-card${isExpanded ? " analytics-preview-card--expanded" : ""}`}>
+      <h3><button aria-expanded={isExpanded} onClick={() => setIsExpanded((current) => !current)} type="button"><Icon aria-hidden="true" /><span>{title}</span>{isExpanded ? <ChevronUp className="analytics-preview-card__toggle" aria-hidden="true" /> : <ChevronDown className="analytics-preview-card__toggle" aria-hidden="true" />}</button></h3>
+      {first ? (
+        <>
+          <div className="analytics-preview-card__winner">
+            <span>1</span>
+            <div><small>Top performer</small><strong>{first.name}</strong></div>
+            <b>{formatRankingValue(first.value, metric)}</b>
+          </div>
+          <div className="analytics-preview-card__ranking">
+            {rankedItems.slice(1).map((item, index) => (
+              <div key={item.name}>
+                <span>{index + 2}</span>
+                <strong>{item.name}</strong>
+                <b>{formatRankingValue(item.value, metric)}</b>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : <p className="analytics-preview-card__empty">No ranking data for this period.</p>}
+      <Link to={path}>Explore more</Link>
+    </article>
+  );
+}
+
+function OverviewFinancialCard({ items }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const totals = items.reduce((summary, item) => ({
+    revenue: summary.revenue + Number(item.revenue || 0),
+    cost: summary.cost + Number(item.cost || 0),
+  }), { revenue: 0, cost: 0 });
+  const margin = totals.revenue - totals.cost;
+  const marginRate = totals.revenue ? Math.round((margin / totals.revenue) * 100) : null;
+
+  return (
+    <article className={`analytics-preview-card analytics-preview-card--financial${isExpanded ? " analytics-preview-card--expanded" : ""}`}>
+      <h3><button aria-expanded={isExpanded} onClick={() => setIsExpanded((current) => !current)} type="button"><CircleDollarSign aria-hidden="true" /><span>Cost and Margin Analytics</span>{isExpanded ? <ChevronUp className="analytics-preview-card__toggle" aria-hidden="true" /> : <ChevronDown className="analytics-preview-card__toggle" aria-hidden="true" />}</button></h3>
+      <div className="analytics-preview-card__winner">
+        <div><small>Contribution margin</small><strong>{totals.revenue ? `$${Math.round(margin).toLocaleString()}` : "--"}</strong></div>
+        <b>{marginRate === null ? "--" : `${marginRate}%`}</b>
+      </div>
+      <div className="analytics-preview-card__financial-rows">
+        <div><span>Revenue</span><strong>{totals.revenue ? `$${Math.round(totals.revenue).toLocaleString()}` : "--"}</strong></div>
+        <div><span>Cost</span><strong>{totals.cost ? `$${Math.round(totals.cost).toLocaleString()}` : "--"}</strong></div>
+      </div>
+      <Link to="/analytics/cost-margin">Explore more</Link>
     </article>
   );
 }
@@ -1354,7 +1432,9 @@ function Analytics({ view = "overview" }) {
         staff: buildRanking(tours, ["assigned_staff_name", "staff_name", "assigned_staff", "created_by_name"], rankingMetric),
       },
       trendData: getTrendData(tours, filters),
+      volumeTrendData: getTrendData(tours, filters),
       metrics: metricList,
+      volumeMetrics: metricList,
       pendingOutcomes: countPendingOutcomes(tours),
       averageDaysToEnroll: getAverageDaysToEnroll(tours),
       rates,
@@ -1427,22 +1507,23 @@ function Analytics({ view = "overview" }) {
                 <span>vs {periodComparison.previous}</span>
               )}
             </div>
-            <p>Volume and trend analysis for the selected period.</p>
           </div>
 
           <section className="analytics-overview-section" aria-labelledby="analytics-overview-volume">
             <div className="analytics-overview-section__title">
-              <span>1</span>
-              <h3 id="analytics-overview-volume">Volume (Counts)</h3>
+              <h3 id="analytics-overview-volume">Volume and Trend Analysis</h3>
+              <InfoHint label={"• Date = event date\n• Booked uses creation date"} />
+              <Link to="/analytics/volume">Explore more</Link>
             </div>
             <div className="analytics-overview-grid" aria-label="Selected period volume">
-              {analytics.metrics.map((metric) => (
+              {analytics.volumeMetrics.map((metric) => (
                 <OverviewMetricCard
                   delta={metric.delta}
+                  isKeyMetric={metric.status === "enrolled"}
                   key={metric.status}
                   label={metric.label}
                   status={metric.status}
-                  trendValues={getOverviewTrendValues(analytics.trendData, metric.status)}
+                  trendValues={getOverviewTrendValues(analytics.volumeTrendData, metric.status)}
                   value={metric.value}
                 />
               ))}
@@ -1451,45 +1532,60 @@ function Analytics({ view = "overview" }) {
 
           <section className="analytics-overview-section" aria-labelledby="analytics-overview-performance">
             <div className="analytics-overview-section__title">
-              <span>2</span>
-              <h3 id="analytics-overview-performance">Rates &amp; Performance</h3>
+              <h3 id="analytics-overview-performance">Conversion and Cohort Analysis</h3>
+              <InfoHint label={"• Date = scheduled tour date\n• Later outcomes stay with the cohort"} />
+              <Link to="/analytics/cohort">Explore more</Link>
             </div>
             <div className="analytics-overview-performance-grid">
               <OverviewPerformanceCard
                 delta={analytics.rateDeltas?.toured}
-                info="Toured rate = toured tours divided by booked tours."
+                info="Toured Rate = Toured ÷ Booked"
                 label="Toured Rate"
                 tone="toured"
                 value={analytics.rates.toured}
               />
               <OverviewPerformanceCard
-                delta={analytics.rateDeltas?.no_show}
-                info="No show rate = no-show tours divided by booked tours."
-                label="No Show Rate"
-                tone="no-show"
-                value={analytics.rates.no_show}
-              />
-              <OverviewPerformanceCard
                 delta={analytics.rateDeltas?.close}
-                info="Close rate = enrolled plus churned tours divided by toured tours."
+                info="Close Rate = (Enrolled + Churned) ÷ Toured"
                 label="Close Rate"
                 tone="close"
                 value={analytics.rates.close}
               />
               <OverviewPerformanceCard
+                delta={analytics.rateDeltas?.no_show}
+                info="No Show Rate = No Show ÷ Booked"
+                label="No Show Rate"
+                tone="no-show"
+                value={analytics.rates.no_show}
+              />
+              <OverviewPerformanceCard
                 delta={analytics.rateDeltas?.conversion}
-                info="Conversion rate = enrolled tours divided by toured tours."
+                info="Conversion Rate = Enrolled ÷ Toured"
+                isKeyMetric
                 label="Conversion Rate"
                 tone="conversion"
                 value={analytics.rates.conversion}
               />
               <OverviewPerformanceCard
-                info="Average days to enroll = days from tour date to enrolled status change."
+                info="Avg. Days to Enroll = Σ(Enrollment Date − Tour Date) ÷ Enrollments"
                 label="Avg. Days to Enroll"
                 tone="average"
                 value={analytics.averageDaysToEnroll}
                 valueKind="days"
               />
+            </div>
+          </section>
+
+          <section className="analytics-overview-section" aria-labelledby="analytics-overview-performance-insights">
+            <div className="analytics-overview-section__title">
+              <h3 id="analytics-overview-performance-insights">Performance Insights</h3>
+              <InfoHint label={"• Ranked by Conversion Rate\n• Enrolled ÷ Toured\n• Date = scheduled tour date"} />
+            </div>
+            <div className="analytics-overview-links" aria-label="Performance insight summaries">
+              <OverviewFinancialCard items={analytics.rankings.locations} />
+              <OverviewRankingCard icon={MapPin} items={sortedRankings.locations} metric={rankingMetric} path="/analytics/locations" title="Location Analytics" />
+              <OverviewRankingCard icon={Megaphone} items={sortedRankings.leadSources} metric={rankingMetric} path="/analytics/lead-sources" title="Lead Source Analytics" />
+              <OverviewRankingCard icon={UsersRound} items={sortedRankings.staff} metric={rankingMetric} path="/analytics/staff" title="Staff Analytics" />
             </div>
           </section>
         </section>

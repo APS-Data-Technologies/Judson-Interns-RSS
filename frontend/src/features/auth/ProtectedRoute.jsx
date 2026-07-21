@@ -35,7 +35,12 @@ const primaryRoutes = new Set([
 
 const analyticsViews = [
   { value: "overview", label: "Overview", path: "/analytics/overview" },
-  { value: "cohort", label: "Cohort Analysis", path: "/analytics/cohort" },
+  { value: "volume", label: "Volume and Trend", path: "/analytics/volume" },
+  { value: "cohort", label: "Conversion and Cohort", path: "/analytics/cohort" },
+  { value: "locations", label: "Location", path: "/analytics/locations" },
+  { value: "lead-sources", label: "Lead Source", path: "/analytics/lead-sources" },
+  { value: "cost-margin", label: "Cost and Margin", path: "/analytics/cost-margin" },
+  { value: "staff", label: "Staff", path: "/analytics/staff" },
 ];
 
 function AnalyticsTitlePicker({ pathname }) {
@@ -119,7 +124,10 @@ function ProtectedRoute() {
       : isAnalyticsRoute
         ? <AnalyticsTitlePicker pathname={location.pathname} />
       : routeTitle || dynamicTitle || "Ready Set STEM";
-  const showBack = !primaryRoutes.has(location.pathname) && !isAnalyticsRoute;
+  const isAnalyticsOverview = location.pathname === "/analytics" || location.pathname === "/analytics/overview";
+  const showBack = isAnalyticsRoute
+    ? !isAnalyticsOverview
+    : !primaryRoutes.has(location.pathname);
 
   return (
     <AppShell title={pageTitle} showBack={showBack}>
