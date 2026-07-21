@@ -11,6 +11,7 @@ import {
   MapPin,
   Search,
   SlidersHorizontal,
+  UsersRound,
 } from "lucide-react";
 
 import {
@@ -314,6 +315,7 @@ function TourFilterControls({
   filters,
   leadSources,
   locations,
+  staff = [],
   onChange,
   onCostBasisChange,
   onSortToggle,
@@ -323,6 +325,7 @@ function TourFilterControls({
   showDate = true,
   showLeadSource = true,
   showSearch = true,
+  showStaff = false,
   showSort = false,
   showStatus = true,
   sortDirection = "asc",
@@ -356,6 +359,10 @@ function TourFilterControls({
   const leadSourceOptions = leadSources.map((source) => ({
     value: source.id,
     label: toTitleCaseWords(source.source_name),
+  }));
+  const staffOptions = staff.map((person) => ({
+    value: person.id,
+    label: toTitleCaseWords(person.name || person.full_name || person.email || "Staff"),
   }));
   const locationSummary = getSummary(
     filters.locations,
@@ -392,6 +399,12 @@ function TourFilterControls({
       locked: staffLocationOnly,
       note: staffLocationOnly ? staffLocationNote : "",
     },
+    ...(showStaff ? [{
+      value: "staff",
+      label: "Staff",
+      summary: getSummary(filters.staff || [], staffOptions, "All staff"),
+      icon: UsersRound,
+    }] : []),
     ...(showLeadSource ? [{
       value: "leadSources",
       label: "Lead source",
@@ -470,6 +483,7 @@ function TourFilterControls({
       onChange("locations", []);
     }
     onChange("leadSources", []);
+    onChange("staff", []);
     onChange("statuses", []);
     onChange("categories", []);
     onChange("search", "");
@@ -555,6 +569,14 @@ function TourFilterControls({
         options: leadSourceOptions,
         values: filters.leadSources,
         onValuesChange: (values) => onChange("leadSources", values),
+      });
+    }
+    if (name === "staff") {
+      return renderMobileMultiOptions({
+        label: "Staff",
+        options: staffOptions,
+        values: filters.staff || [],
+        onValuesChange: (values) => onChange("staff", values),
       });
     }
     if (name === "statuses") {
@@ -761,6 +783,21 @@ function TourFilterControls({
           onToggle={() => toggleFilter("leadSources")}
           options={leadSourceOptions}
           values={filters.leadSources}
+        />
+      )}
+
+      {showStaff && (
+        <MultiFilter
+          fallback="All staff"
+          icon={UsersRound}
+          isMobileActive={mobileActiveFilter === "staff"}
+          isOpen={openFilter === "staff"}
+          label="Staff"
+          name="staff"
+          onChange={(values) => onChange("staff", values)}
+          onToggle={() => toggleFilter("staff")}
+          options={staffOptions}
+          values={filters.staff || []}
         />
       )}
 

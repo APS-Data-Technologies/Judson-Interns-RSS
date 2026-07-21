@@ -127,6 +127,7 @@ def apply_filters(queryset, filters):
     location_ids = parse_csv(filters.get("location") or filters.get("locations"))
     lead_source_ids = parse_csv(filters.get("lead_source") or filters.get("leadSources"))
     statuses = parse_csv(filters.get("status") or filters.get("statuses"))
+    staff_ids = parse_csv(filters.get("staff") or filters.get("assigned_staff") or filters.get("assignedStaff"))
     search = filters.get("search")
 
     if location_ids:
@@ -135,6 +136,8 @@ def apply_filters(queryset, filters):
         queryset = queryset.filter(lead_source_id__in=lead_source_ids)
     if statuses:
         queryset = queryset.filter(current_status__in=statuses)
+    if staff_ids:
+        queryset = queryset.filter(assigned_staff_id__in=staff_ids)
     if search:
         queryset = queryset.filter(family__family_name__icontains=search)
     return queryset
@@ -214,6 +217,77 @@ def volume_event_timestamp(tour, status):
 def volume_event_date(tour, status):
     timestamp = volume_event_timestamp(tour, status)
     return timestamp.date() if timestamp else None
+
+
+PROGRESS_BUCKETS = (
+    ("0–7 days", 0, 7),
+    ("8–14 days", 8, 14),
+    ("15–30 days", 15, 30),
+    ("31–60 days", 31, 60),
+    ("60+ days", 61, None),
+)
+SHORT_PROGRESS_BUCKETS = (
+    ("0–2 days", 0, 2),
+    ("3–5 days", 3, 5),
+    ("6–10 days", 6, 10),
+    ("11–20 days", 11, 20),
+    ("21+ days", 21, None),
+)
+
+
+def build_time_to_progress(tours, previous_tours=None, buckets=PROGRESS_BUCKETS):
+    transitions = (
+        ("booked_to_toured", "Booked → Toured", "scheduled", "toured"),
+        ("booked_to_no_show", "Booked → No Show", "scheduled", "no_show"),
+        ("toured_to_enrolled", "Toured → Enrolled", "toured", "enrolled"),
+        ("toured_to_churned", "Toured → Churned", "toured", "churned"),
+        ("booked_to_enrolled", "Booked → Enrolled", "tour_date", "enrolled"),
+    )
+    result = []
+    for key, label, source_status, destination_status in transitions:
+        counts = [0 for _ in buckets]
+        elapsed_values = []
+        eligible = len(tours) if source_status in {"scheduled", "tour_date"} else sum(1 for tour in tours if reached_status(tour, TourStatus.TOURED))
+        for tour in tours:
+            if source_status == "scheduled":
+                source = timezone.localtime(tour.created_at)
+            elif source_status == "tour_date":
+                source = timezone.localtime(tour.scheduled_tour_date)
+            else:
+                source = volume_event_timestamp(tour, source_status)
+            destination = volume_event_timestamp(tour, destination_status)
+            if not source or not destination or destination < source:
+                continue
+            elapsed_days = (destination.date() - source.date()).days
+            elapsed_values.append(elapsed_days)
+            for index, (_, minimum, maximum) in enumerate(buckets):
+                if elapsed_days >= minimum and (maximum is None or elapsed_days <= maximum):
+                    counts[index] += 1
+                    break
+        total = sum(counts)
+        result.append({
+            "key": key,
+            "label": label,
+            "total": total,
+            "eligible": eligible,
+            "pending": max(eligible - total, 0),
+            "averageDays": round(sum(elapsed_values) / len(elapsed_values), 1) if elapsed_values else None,
+            "buckets": [
+                {
+                    "label": bucket[0],
+                    "count": counts[index],
+                    "percent": round((counts[index] / total) * 100, 1) if total else 0,
+                }
+                for index, bucket in enumerate(buckets)
+            ],
+        })
+    if previous_tours is not None:
+        previous = {item["key"]: item for item in build_time_to_progress(previous_tours, buckets=buckets)}
+        for item in result:
+            previous_item = previous.get(item["key"], {})
+            item["previousAverageDays"] = previous_item.get("averageDays")
+            item["averageDelta"] = round(item["averageDays"] - item["previousAverageDays"], 1) if item["averageDays"] is not None and item["previousAverageDays"] is not None else None
+    return result
 
 
 def count_period_volume(tours, start, end):
@@ -394,48 +468,32 @@ def build_trend_data(tours, start, end):
         start = min(dates)
         end = max(dates)
 
-    bucket_count = (end - start).days + 1
-    if bucket_count > 45:
-        step = 7
-    else:
-        step = 1
-
-    buckets = []
+    rows = []
     bucket_start = start
     while bucket_start <= end:
-        bucket_end = min(bucket_start + timedelta(days=step - 1), end)
-        buckets.append((bucket_start, bucket_end))
-        bucket_start = bucket_end + timedelta(days=1)
-
-    rows = []
-    for bucket_start, bucket_end in buckets:
-        booked = 0
-        toured = 0
-        enrolled = 0
-        for tour in tours:
-            if bucket_start <= tour.scheduled_tour_date.date() <= bucket_end:
-                booked += 1
-            toured_date = metric_date(tour, "toured")
-            if toured_date and bucket_start <= toured_date <= bucket_end:
-                toured += 1
-            enrolled_date = metric_date(tour, "enrolled")
-            if enrolled_date and bucket_start <= enrolled_date <= bucket_end:
-                enrolled += 1
-
-        if step == 1:
-            label = bucket_start.strftime("%b %-d")
-        else:
-            label = f"{bucket_start:%b %-d} - {bucket_end:%b %-d}"
+        cohort = [tour for tour in tours if tour.scheduled_tour_date.date() == bucket_start]
+        counts = count_cohort_progress(cohort)
+        rates = build_rates(counts)
+        average_days = average_days_to_enroll(cohort)
+        average_days_count = sum(1 for tour in cohort if first_event_date(tour, {TourStatus.ENROLLED}))
         rows.append(
             {
                 "date": bucket_start.isoformat(),
-                "label": label,
-                "booked": booked,
-                "toured": toured,
-                "enrolled": enrolled,
-                "conversionRate": percent(enrolled, toured),
+                "label": bucket_start.strftime("%b %-d"),
+                "booked": counts["scheduled"],
+                "toured": counts["toured"],
+                "noShow": counts["no_show"],
+                "enrolled": counts["enrolled"],
+                "churned": counts["churned"],
+                "touredRate": rates["toured"],
+                "noShowRate": rates["noShow"],
+                "closeRate": rates["close"],
+                "conversionRate": rates["conversion"],
+                "averageDaysToEnroll": average_days,
+                "averageDaysCount": average_days_count,
             }
         )
+        bucket_start += timedelta(days=1)
     return rows
 
 
@@ -494,6 +552,26 @@ def build_ranking(tours, group, metric, cost_basis):
     return rows
 
 
+def build_volume_performance_ranking(tours, group, start, end):
+    grouped = defaultdict(list)
+    for tour in tours:
+        grouped[group_label(tour, group)].append(tour)
+
+    rows = []
+    for name, group_tours in grouped.items():
+        counts = count_period_volume(group_tours, start, end)
+        rows.append({
+            "name": name,
+            "all": sum(counts.values()),
+            "booked": counts["scheduled"],
+            "toured": counts["toured"],
+            "noShow": counts["no_show"],
+            "enrolled": counts["enrolled"],
+            "churned": counts["churned"],
+        })
+    return rows
+
+
 def sort_ranking(rows, metric, sort_direction):
     reverse = sort_direction != "least"
     if metric == "average_days":
@@ -512,12 +590,27 @@ def cohort_analytics(user, query_params):
     date_from = parse_date(query_params.get("date_from") or query_params.get("dateFrom"))
     date_to = parse_date(query_params.get("date_to") or query_params.get("dateTo"))
     period = build_period(date_from, date_to)
+    progress_buckets = SHORT_PROGRESS_BUCKETS if date_from and date_to and ((date_to - date_from).days + 1) < 20 else PROGRESS_BUCKETS
     metric = normalize_metric(query_params.get("metric") or query_params.get("ranking_metric") or "conversion")
     ranking_sort = query_params.get("ranking_sort") or query_params.get("rankingSort") or "best"
     cost_basis = query_params.get("cost_basis") or query_params.get("costBasis")
     cost_basis = parse_cost_basis(cost_basis)
 
-    queryset = apply_filters(base_queryset(user), query_params)
+    scoped_queryset = base_queryset(user)
+    staff_option_queryset = scoped_queryset
+    option_location_ids = parse_csv(query_params.get("location") or query_params.get("locations"))
+    if option_location_ids:
+        staff_option_queryset = staff_option_queryset.filter(location_id__in=option_location_ids)
+    staff_options = {}
+    for tour in staff_option_queryset.exclude(assigned_staff__isnull=True):
+        staff = tour.assigned_staff
+        staff_options[staff.pk] = {
+            "id": staff.pk,
+            "name": titleize(staff.get_full_name() or staff.email),
+            "locationId": tour.location_id,
+        }
+
+    queryset = apply_filters(scoped_queryset, query_params)
     all_tours = list(queryset.order_by("scheduled_tour_date", "family__family_name"))
     selected_queryset = filter_by_scheduled_period(
         queryset,
@@ -571,9 +664,25 @@ def cohort_analytics(user, query_params):
             ranking_sort,
         ),
     }
+    all_time_rankings = {
+        "locations": sort_ranking(build_ranking(all_tours, "location", metric, cost_basis), metric, ranking_sort),
+        "leadSources": sort_ranking(build_ranking(all_tours, "lead_source", metric, cost_basis), metric, ranking_sort),
+        "staff": sort_ranking(build_ranking(all_tours, "staff", metric, cost_basis), metric, ranking_sort),
+    }
+    volume_performance_rankings = {
+        "locations": build_volume_performance_ranking(all_tours, "location", period["date_from"], period["date_to"]),
+        "leadSources": build_volume_performance_ranking(all_tours, "lead_source", period["date_from"], period["date_to"]),
+        "staff": build_volume_performance_ranking(all_tours, "staff", period["date_from"], period["date_to"]),
+    }
+    all_time_volume_performance_rankings = {
+        "locations": build_volume_performance_ranking(all_tours, "location", None, None),
+        "leadSources": build_volume_performance_ranking(all_tours, "lead_source", None, None),
+        "staff": build_volume_performance_ranking(all_tours, "staff", None, None),
+    }
 
     return {
         "period": period,
+        "staffOptions": sorted(staff_options.values(), key=lambda item: item["name"]),
         "counts": counts,
         "volumeCounts": volume_counts,
         "previousVolumeCounts": previous_volume_counts,
@@ -584,7 +693,9 @@ def cohort_analytics(user, query_params):
         "rateDeltas": {key: rate_delta(rates[key], previous_rates[key]) for key in rates},
         "averageDaysToEnroll": average_days,
         "pendingCounts": pending_counts(current_tours, average_days),
+        "timeToProgress": build_time_to_progress(current_tours, previous_tours, progress_buckets),
         "trendData": build_trend_data(current_tours, period["date_from"], period["date_to"]),
+        "allTimeTrendData": build_trend_data(all_tours, None, None),
         "volumeTrendData": build_volume_trend_data(all_tours, period["date_from"], period["date_to"]),
         "previousVolumeTrendData": build_volume_trend_data(
             all_tours,
@@ -595,6 +706,9 @@ def cohort_analytics(user, query_params):
         "volumeCalendarData": build_volume_calendar_data(all_tours, period["date_from"], period["date_to"]),
         "allTimeVolumeCalendarData": build_volume_calendar_data(all_tours, None, None),
         "rankings": rankings,
+        "allTimeRankings": all_time_rankings,
+        "volumePerformanceRankings": volume_performance_rankings,
+        "allTimeVolumePerformanceRankings": all_time_volume_performance_rankings,
     }
 
 

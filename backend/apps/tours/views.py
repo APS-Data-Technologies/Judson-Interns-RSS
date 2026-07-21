@@ -63,6 +63,7 @@ class TourViewSet(
         locations = self._param_list("location")
         lead_sources = self._param_list("lead_source")
         statuses = self._param_list("status")
+        staff_ids = self._param_list("staff") or self._param_list("assigned_staff")
         search = self.request.query_params.get("search")
         date_value = self.request.query_params.get("date")
         date_from = self.request.query_params.get("date_from")
@@ -74,6 +75,8 @@ class TourViewSet(
             queryset = queryset.filter(lead_source_id__in=lead_sources)
         if statuses:
             queryset = queryset.filter(current_status__in=statuses)
+        if staff_ids:
+            queryset = queryset.filter(assigned_staff_id__in=staff_ids)
         if search:
             queryset = queryset.filter(family__family_name__icontains=search)
         if date_value:
