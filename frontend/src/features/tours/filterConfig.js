@@ -136,6 +136,7 @@ export function createDefaultTourFilters(user, overrides = {}) {
     year: currentYearValue(),
     locations: user?.role === "staff" && user.location ? [String(user.location)] : [],
     leadSources: [],
+    staff: [],
     statuses: [],
     categories: [],
     search: "",
