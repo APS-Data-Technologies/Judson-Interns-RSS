@@ -81,6 +81,21 @@
   width: clamp(1rem, 2.6vmin, 1.2rem);
 }
 
+.analytics-title-picker__loading {
+  animation: analytics-title-loading-spin 700ms linear infinite;
+  border: 2px solid color-mix(in srgb, var(--brand-blue) 25%, transparent);
+  border-radius: 999px;
+  border-top-color: var(--brand-blue);
+  flex: 0 0 auto;
+  height: clamp(0.85rem, 2.2vmin, 1rem);
+  margin-left: 0.15rem;
+  width: clamp(0.85rem, 2.2vmin, 1rem);
+}
+
+@keyframes analytics-title-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
 .analytics-title-picker__menu {
   background: #ffffff;
   border: 1px solid var(--color-border);

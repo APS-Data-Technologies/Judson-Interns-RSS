@@ -545,6 +545,7 @@ def build_ranking(tours, group, metric, cost_basis):
                 "noShow": counts["no_show"],
                 "enrolled": counts["enrolled"],
                 "churned": counts["churned"],
+                "averageDaysToEnroll": counts["average_days"],
                 "numerator": counts["enrolled"],
                 "denominator": counts["toured"] if metric != "enrollments" else counts["scheduled"],
             }

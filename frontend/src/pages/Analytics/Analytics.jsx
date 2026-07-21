@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom";
 import {
   ChevronLeft,
   ArrowDownUp,
@@ -22,6 +22,7 @@ import {
 import TourFilterControls from "../../components/filters/TourFilterControls";
 import useAuth from "../../features/auth/useAuth";
 import { getCohortAnalytics } from "../../features/analytics/analyticsApi";
+import { toTitleCaseWords } from "../../utils/displayText";
 import {
   createDefaultTourFilters,
   getDateRange,
@@ -1396,6 +1397,306 @@ function VolumeAnalyticsWorkspace({ analytics, periodComparison }) {
   );
 }
 
+const locationVolumeOptions = [
+  { value: "all", label: "All Events", color: "#673de6" },
+  { value: "booked", label: "Booked", color: "#2f6df6" },
+  { value: "toured", label: "Toured", color: "#d4a017" },
+  { value: "noShow", label: "No Show", color: "#ff8a1f" },
+  { value: "enrolled", label: "Enrolled", color: "#18a05e" },
+  { value: "churned", label: "Churned", color: "#e3344f" },
+];
+const locationPerformanceOptions = [
+  { value: "enrollments", label: "Enrollments", color: "#2563eb" },
+  { value: "toured", label: "Toured Rate", color: "#d4a017" },
+  { value: "conversion", label: "Conversion Rate", color: "#18a05e" },
+  { value: "averageDays", label: "Avg. Days to Enroll", color: "#673de6" },
+  { value: "close", label: "Close Rate", color: "#0f9f9a" },
+  { value: "noShow", label: "No Show Rate", color: "#ff8a1f" },
+];
+
+function getHeatColor(hexColor, value, maximum) {
+  const intensity = maximum ? Math.max(0, Math.min(1, value / maximum)) : 0;
+  const colorWeight = 0.25 + intensity * 0.75;
+  const channels = [1, 3, 5].map((index) => Number.parseInt(hexColor.slice(index, index + 2), 16));
+  return `rgb(${channels.map((channel) => Math.round(255 - (255 - channel) * colorWeight)).join(", ")})`;
+}
+
+function getLocationPerformance(item, metric) {
+  if (metric === "enrollments") return { value: item.enrolled, detail: `${item.enrolled} enrolled families` };
+  if (metric === "toured") return { value: getPercent(item.toured, item.booked), detail: `${item.toured} toured / ${item.booked} booked` };
+  if (metric === "noShow") return { value: getPercent(item.noShow, item.booked), detail: `${item.noShow} no show / ${item.booked} booked` };
+  if (metric === "close") return { value: getPercent(item.enrolled + item.churned, item.toured), detail: `${item.enrolled + item.churned} closed / ${item.toured} toured` };
+  if (metric === "averageDays") return { value: item.averageDaysToEnroll ?? null, detail: `${item.enrolled} enrolled` };
+  return { value: getPercent(item.enrolled, item.toured), detail: `${item.enrolled} enrolled / ${item.toured} toured` };
+}
+
+function LocationChartPicker({ label, onChange, options, value }) {
+  const pickerRef = useRef(null);
+  const selectedOption = options.find((option) => option.value === value) || options[0];
+
+  useEffect(() => {
+    const closeOutside = (event) => {
+      if (!pickerRef.current?.contains(event.target)) {
+        pickerRef.current?.removeAttribute("open");
+      }
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, []);
+
+  return (
+    <label className="analytics-location-picker">
+      <span>{label}</span>
+      <details ref={pickerRef}>
+        <summary><i style={{ background: selectedOption.color }} /><b>{selectedOption.label}</b><ChevronDown aria-hidden="true" /></summary>
+        <div>{options.map((option) => <button className={option.value === value ? "is-selected" : ""} key={option.value} onClick={(event) => { onChange(option.value); event.currentTarget.closest("details")?.removeAttribute("open"); }} type="button"><i style={{ background: option.color }} /><span>{option.label}</span>{option.value === value && <Check aria-hidden="true" />}</button>)}</div>
+      </details>
+    </label>
+  );
+}
+
+const entityTrendPerformanceOptions = locationPerformanceOptions.filter((option) => option.value !== "enrollments");
+const entityTrendTimelineOptions = trendModeOptions.map((option) => ({ ...option, color: "#673de6" }));
+
+function groupPerformanceTrendRows(rows, timeline) {
+  if (timeline === "daily") return rows;
+  const buckets = new Map();
+  rows.forEach((row) => {
+    const date = new Date(`${row.date}T12:00:00`);
+    const bucketDate = new Date(date);
+    if (timeline === "weekly") bucketDate.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+    else bucketDate.setDate(1);
+    const key = toDateInputValue(bucketDate);
+    const current = buckets.get(key) || { date: key, booked: 0, toured: 0, noShow: 0, enrolled: 0, churned: 0, averageDaysCount: 0, averageDaysTotal: 0 };
+    ["booked", "toured", "noShow", "enrolled", "churned"].forEach((field) => { current[field] += Number(row[field] || 0); });
+    current.averageDaysCount += Number(row.averageDaysCount || 0);
+    current.averageDaysTotal += Number(row.averageDaysToEnroll || 0) * Number(row.averageDaysCount || 0);
+    buckets.set(key, current);
+  });
+  return Array.from(buckets.values()).map((row) => ({
+    ...row,
+    label: timeline === "weekly" ? `Week of ${new Date(`${row.date}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : new Date(`${row.date}T12:00:00`).toLocaleDateString(undefined, { month: "short", year: "numeric" }),
+    touredRate: getPercent(row.toured, row.booked),
+    noShowRate: getPercent(row.noShow, row.booked),
+    closeRate: getPercent(row.enrolled + row.churned, row.toured),
+    conversionRate: getPercent(row.enrolled, row.toured),
+    averageDaysToEnroll: row.averageDaysCount ? Math.round((row.averageDaysTotal / row.averageDaysCount) * 10) / 10 : null,
+  })).sort((first, second) => first.date.localeCompare(second.date));
+}
+
+function EntityLineChart({ isDurationMixed = false, rows, series, standardMaxOverride = null }) {
+  const width = 720;
+  const height = 230;
+  const padding = { left: 42, right: isDurationMixed ? 44 : 18, top: 18, bottom: 34 };
+  const plotWidth = width - padding.left - padding.right;
+  const plotHeight = height - padding.top - padding.bottom;
+  const durationMax = Math.max(...series.filter((item) => item.isDuration).flatMap((item) => item.values.map((value) => Number(value || 0))), 1);
+  const standardMax = standardMaxOverride || Math.max(...series.filter((item) => !item.isDuration).flatMap((item) => item.values.map((value) => Number(value || 0))), 1);
+  const xFor = (index) => padding.left + (rows.length <= 1 ? plotWidth / 2 : (index / (rows.length - 1)) * plotWidth);
+  const yFor = (value, isDuration) => padding.top + plotHeight - (Number(value || 0) / (isDuration ? durationMax : standardMax)) * plotHeight;
+  return (
+    <div className="analytics-entity-trend-chart">
+      <svg aria-label="Trend chart" role="img" viewBox={`0 0 ${width} ${height}`}>
+        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => <g key={ratio}><line x1={padding.left} x2={width - padding.right} y1={padding.top + plotHeight * ratio} y2={padding.top + plotHeight * ratio} /><text x={padding.left - 7} y={padding.top + plotHeight * ratio + 3}>{Math.round(standardMax * (1 - ratio))}</text>{isDurationMixed && <text className="is-right" x={width - padding.right + 7} y={padding.top + plotHeight * ratio + 3}>{Math.round(durationMax * (1 - ratio))}d</text>}</g>)}
+        {series.map((item) => {
+          const points = item.values.map((value, index) => `${xFor(index)},${yFor(value, item.isDuration)}`).join(" ");
+          return <g key={item.name}><polyline className="analytics-entity-trend-chart__line" points={points} style={{ stroke: item.color }} />{item.values.map((value, index) => <circle cx={xFor(index)} cy={yFor(value, item.isDuration)} fill={item.color} key={`${item.name}-${rows[index]?.date}`} r="3"><title>{item.name} · {rows[index]?.label || rows[index]?.date}: {value ?? "--"}{item.isDuration ? " days" : ""}</title></circle>)}</g>;
+        })}
+        {rows.map((row, index) => (index === 0 || index === rows.length - 1 || index % Math.max(1, Math.ceil(rows.length / 5)) === 0) && <text className="analytics-entity-trend-chart__x-label" key={row.date} textAnchor={index === 0 ? "start" : index === rows.length - 1 ? "end" : "middle"} x={xFor(index)} y={height - 10}>{row.label || row.date}</text>)}
+      </svg>
+    </div>
+  );
+}
+
+// Kept as an isolated chart primitive for future analytics reuse; it is not rendered on entity pages.
+// eslint-disable-next-line no-unused-vars
+function EntityTrendPanel({ data, entityLabel, isSingleEntity, kind }) {
+  const isVolume = kind === "volume";
+  const options = isVolume ? locationVolumeOptions.filter((option) => option.value !== "all") : entityTrendPerformanceOptions;
+  const [metric, setMetric] = useState(isVolume ? "booked" : "conversion");
+  const [timeline, setTimeline] = useState("daily");
+  const [windowOffset, setWindowOffset] = useState(0);
+  const metricOption = options.find((option) => option.value === metric) || options[0];
+  const fieldByMetric = { booked: "booked", toured: "toured", noShow: "noShow", enrolled: "enrolled", churned: "churned", conversion: "conversionRate", close: "closeRate", averageDays: "averageDaysToEnroll" };
+  const preparedEntities = data.map((entity) => ({
+    ...entity,
+    rows: isVolume
+      ? timeline === "weekly" ? groupVolumeByWeek(entity.volume || []) : timeline === "monthly" ? groupVolumeByMonth(entity.volume || []) : entity.volume || []
+      : groupPerformanceTrendRows(entity.performance || [], timeline),
+  }));
+  const baseRows = preparedEntities[0]?.rows || [];
+  const windowSize = timeline === "daily" ? 14 : 12;
+  const windowEnd = Math.max(0, baseRows.length - windowOffset);
+  const windowStart = Math.max(0, windowEnd - windowSize);
+  const visibleRows = baseRows.slice(windowStart, windowEnd);
+  const activeOptions = isSingleEntity ? options : [metricOption];
+  const series = isSingleEntity
+    ? activeOptions.map((option) => ({
+      color: option.color,
+      isDuration: option.value === "averageDays",
+      name: option.label,
+      values: (preparedEntities[0]?.rows || []).slice(windowStart, windowEnd).map((row) => row[fieldByMetric[option.value]]),
+    }))
+    : preparedEntities.map((entity, index) => ({
+      color: getHeatColor(metricOption.color, preparedEntities.length - index, preparedEntities.length),
+      isDuration: metric === "averageDays",
+      name: entity.name,
+      values: entity.rows.slice(windowStart, windowEnd).map((row) => row[fieldByMetric[metric]]),
+    }));
+  const rangeLabel = visibleRows.length ? `${visibleRows[0].label || visibleRows[0].date} – ${visibleRows.at(-1).label || visibleRows.at(-1).date}` : "No dates available";
+  return (
+    <section className="analytics-entity-trend-panel">
+      <header><div><h2>{isVolume ? "Volume Trends" : "Rate and Enrollment-Time Trends"}</h2><p>{isVolume ? "Event dates" : "Scheduled-tour cohorts"} · {isSingleEntity ? `All ${isVolume ? "statuses" : "metrics"}` : `One line per ${entityLabel.toLowerCase()}`}</p></div><div>{!isSingleEntity && <LocationChartPicker label={isVolume ? "Status" : "Metric"} onChange={(value) => { setMetric(value); setWindowOffset(0); }} options={options} value={metric} />}<LocationChartPicker label="Timeline" onChange={(value) => { setTimeline(value); setWindowOffset(0); }} options={entityTrendTimelineOptions} value={timeline} /></div></header>
+      <div className="analytics-entity-trend-panel__navigator"><button disabled={windowStart <= 0} onClick={() => setWindowOffset((offset) => Math.min(baseRows.length, offset + windowSize))} type="button"><ChevronLeft aria-hidden="true" />Older</button><strong>{rangeLabel}</strong><button disabled={windowOffset <= 0} onClick={() => setWindowOffset((offset) => Math.max(0, offset - windowSize))} type="button">Newer<ChevronRight aria-hidden="true" /></button></div>
+      <div className="analytics-entity-trend-panel__legend">{series.map((item) => <span key={item.name}><i style={{ background: item.color }} />{item.name}</span>)}</div>
+      {visibleRows.length ? <EntityLineChart isDurationMixed={!isVolume && isSingleEntity} rows={visibleRows} series={series} standardMaxOverride={isVolume ? null : 100} /> : <p className="analytics-entity-trend-panel__empty">No trend data for this period.</p>}
+    </section>
+  );
+}
+
+function EntityAnalyticsWorkspace({ analytics, dimension, filters, leadSources, locations, user }) {
+  const [volumeStatus, setVolumeStatus] = useState("all");
+  const [performanceMetric, setPerformanceMetric] = useState("conversion");
+  const [selectedVolumeEntity, setSelectedVolumeEntity] = useState(null);
+  const volumeVisualizationRef = useRef(null);
+  const selectedLocationIds = (filters.locations || []).map(String);
+  const selectedStaffIds = (filters.staff || []).map(String);
+  const selectedStaff = analytics.staffOptions.find((staff) => selectedStaffIds.includes(String(staff.id)));
+  const selectedLocation = locations.find((location) => (
+    selectedLocationIds.includes(String(location.id)) ||
+    (selectedStaffIds.length === 1 && String(location.id) === String(selectedStaff?.locationId))
+  ));
+  const dimensionConfig = dimension === "leadSources"
+    ? {
+      entityLabel: "Lead Source",
+      entitiesLabel: "Lead Sources",
+      selectedIds: (filters.leadSources || []).map(String),
+      selectedName: leadSources.find((source) => (filters.leadSources || []).map(String).includes(String(source.id)))?.source_name,
+    }
+    : dimension === "staff"
+      ? {
+        entityLabel: "Staff",
+        entitiesLabel: "Staff",
+        selectedIds: selectedStaffIds,
+        selectedName: selectedStaff?.name,
+      }
+      : {
+        entityLabel: "Location",
+        entitiesLabel: "Locations",
+        selectedIds: selectedLocationIds,
+        selectedName: selectedLocation?.location_name || user?.location_name,
+      };
+  const isSingleEntity = dimension === "locations"
+    ? user?.role === "staff" || selectedLocationIds.length === 1 || selectedStaffIds.length === 1
+    : dimensionConfig.selectedIds.length === 1;
+  const singleEntityName = toTitleCaseWords(dimensionConfig.selectedName || `Selected ${dimensionConfig.entityLabel}`);
+  const volumeOption = locationVolumeOptions.find((option) => option.value === (isSingleEntity ? "all" : volumeStatus));
+  const performanceOption = locationPerformanceOptions.find((option) => option.value === performanceMetric);
+  const rawVolumeItems = isSingleEntity
+    ? analytics.volumeMetrics.map((metric) => {
+      const option = locationVolumeOptions.find((item) => item.value === (metric.status === "scheduled" ? "booked" : metric.status === "no_show" ? "noShow" : metric.status));
+      return { baseColor: option?.color || volumeOption.color, name: metric.label, value: Number(metric.value || 0) };
+    })
+    : (analytics.volumePerformanceRankings[dimension] || []).map((item) => ({
+      name: item.name,
+      value: Number(item[volumeStatus] || 0),
+    })).sort((first, second) => second.value - first.value);
+  const volumeTotal = rawVolumeItems.reduce((total, item) => total + item.value, 0);
+  const largestVolume = Math.max(...rawVolumeItems.map((item) => item.value), 1);
+  const volumeItems = rawVolumeItems.map((item) => ({
+    ...item,
+    color: getHeatColor(item.baseColor || volumeOption.color, item.value, largestVolume),
+  }));
+  const donutCircumference = 2 * Math.PI * 44;
+  const donutSegments = volumeItems.reduce((segments, item) => {
+    const length = volumeTotal ? (item.value / volumeTotal) * donutCircumference : 0;
+    const visibleLength = Math.max(length - Math.min(2.2, length * 0.2), 0);
+    const offset = segments.reduce((total, segment) => total + segment.length, 0);
+    return [...segments, { ...item, length, offset, visibleLength }];
+  }, []);
+  const selectedVolumeItem = volumeItems.find((item) => item.name === selectedVolumeEntity) || null;
+  const rawPerformanceItems = (analytics.rankings[dimension] || []).map((item) => ({
+    ...getLocationPerformance(item, performanceMetric),
+    name: item.name,
+  })).filter((item) => item.value !== null).sort((first, second) => performanceMetric === "averageDays" ? first.value - second.value : second.value - first.value);
+  const performanceMax = ["averageDays", "enrollments"].includes(performanceMetric)
+    ? Math.max(...rawPerformanceItems.map((item) => item.value), 1)
+    : 100;
+  const performanceItems = rawPerformanceItems.map((item) => ({
+    ...item,
+    color: getHeatColor(performanceOption.color, item.value, performanceMax),
+  }));
+  const singleEntityRanking = analytics.rankings[dimension]?.[0] || null;
+  const singleEntityPerformanceItems = singleEntityRanking
+    ? locationPerformanceOptions.map((option) => ({
+      ...getLocationPerformance(singleEntityRanking, option.value),
+      color: option.color,
+      label: option.label,
+      metric: option.value,
+    }))
+    : [];
+  const overallPerformanceValue = performanceMetric === "enrollments"
+    ? analytics.metrics.find((metric) => metric.status === "enrolled")?.value ?? 0
+    : performanceMetric === "averageDays"
+      ? analytics.averageDaysToEnroll
+      : performanceMetric === "noShow"
+        ? analytics.rates.no_show
+        : analytics.rates[performanceMetric];
+  const formattedOverallPerformance = overallPerformanceValue === null
+    ? "--"
+    : performanceMetric === "averageDays"
+      ? `${overallPerformanceValue} days`
+      : performanceMetric === "enrollments"
+        ? Number(overallPerformanceValue).toLocaleString()
+        : `${overallPerformanceValue}%`;
+
+  const toggleVolumeLocation = (name) => {
+    setSelectedVolumeEntity((current) => current === name ? null : name);
+  };
+
+  useEffect(() => {
+    const resetSelectionOutside = (event) => {
+      if (!volumeVisualizationRef.current?.contains(event.target)) {
+        setSelectedVolumeEntity(null);
+      }
+    };
+    document.addEventListener("pointerdown", resetSelectionOutside);
+    return () => document.removeEventListener("pointerdown", resetSelectionOutside);
+  }, []);
+
+  return (
+    <section className="analytics-workspace analytics-location-comparison" aria-label={`${dimensionConfig.entityLabel} volume and performance comparison`}>
+      <div className="analytics-location-comparison__grid">
+        <section className="analytics-location-comparison__panel" aria-labelledby="location-volume-share-title">
+          <header><div><h2 id="location-volume-share-title">{isSingleEntity ? `Status Mix · ${singleEntityName}` : `Volume Share by ${dimensionConfig.entityLabel}`}</h2><p>{isSingleEntity ? `Share of all status events for this ${dimensionConfig.entityLabel.toLowerCase()}` : "Share of selected-period events"}</p></div>{!isSingleEntity && <LocationChartPicker label="Status" onChange={(value) => { setVolumeStatus(value); setSelectedVolumeEntity(null); }} options={locationVolumeOptions} value={volumeStatus} />}</header>
+          <div className="analytics-location-donut-layout">
+            <div className={`analytics-location-donut${selectedVolumeItem ? " has-selection" : ""}`} ref={volumeVisualizationRef}>
+              <svg aria-label={`${volumeOption.label}: ${volumeTotal} total events`} role="img" viewBox="0 0 100 100">
+                <circle className="analytics-location-donut__track" cx="50" cy="50" r="44" />
+                {donutSegments.map((item) => item.length > 0 && <circle aria-label={`${item.name}: ${item.value} events, ${((item.value / volumeTotal) * 100).toFixed(1)} percent`} className={`analytics-location-donut__segment${selectedVolumeEntity === item.name ? " is-selected" : ""}${selectedVolumeItem && selectedVolumeEntity !== item.name ? " is-muted" : ""}`} cx="50" cy="50" key={item.name} onClick={() => toggleVolumeLocation(item.name)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") toggleVolumeLocation(item.name); }} r="44" role="button" stroke={item.color} strokeDasharray={`${item.visibleLength} ${donutCircumference - item.visibleLength}`} strokeDashoffset={-item.offset} tabIndex="0"><title>{item.name}: {item.value} ({((item.value / volumeTotal) * 100).toFixed(1)}%)</title></circle>)}
+              </svg>
+              <div><strong>{(selectedVolumeItem?.value ?? volumeTotal).toLocaleString()}</strong><span>{selectedVolumeItem?.name || volumeOption.label}</span>{selectedVolumeItem && <em>{((selectedVolumeItem.value / volumeTotal) * 100).toFixed(1)}%</em>}</div>
+            </div>
+            <ol className="analytics-location-donut__legend">{volumeItems.map((item) => <li key={item.name}><i style={{ background: item.color }} /><strong>{item.name}</strong><span>{item.value.toLocaleString()}</span><em>{volumeTotal ? `${((item.value / volumeTotal) * 100).toFixed(1)}%` : "0%"}</em></li>)}</ol>
+          </div>
+          <footer>{isSingleEntity || volumeStatus === "all" ? "All Events sums status events; it is not a unique-family count." : `${volumeOption.label} share across ${dimensionConfig.entitiesLabel.toLowerCase()}.`}</footer>
+        </section>
+
+        <section className={`analytics-location-comparison__panel analytics-location-comparison__panel--performance${isSingleEntity ? " analytics-location-comparison__panel--single" : ""}`} aria-labelledby="location-performance-title">
+          <header><div><h2 id="location-performance-title">{isSingleEntity ? `${dimensionConfig.entityLabel} Performance · ${singleEntityName}` : `Performance by ${dimensionConfig.entityLabel}`}</h2><p>{isSingleEntity ? `All selected-period ${dimensionConfig.entityLabel.toLowerCase()} metrics` : `Independent ${dimensionConfig.entityLabel.toLowerCase()} results—not shares of a total`}</p></div>{!isSingleEntity && <LocationChartPicker label="Metric" onChange={setPerformanceMetric} options={locationPerformanceOptions} value={performanceMetric} />}</header>
+          {!isSingleEntity && <div className="analytics-location-performance__overall" style={{ "--overall-color": performanceOption.color }}><span>Overall {performanceOption.label}</span><strong>{formattedOverallPerformance}</strong></div>}
+          {isSingleEntity ? (
+            <div className="analytics-location-metric-list">{singleEntityPerformanceItems.length ? singleEntityPerformanceItems.map((item) => <article key={item.metric} style={{ "--metric-color": item.color }}><i /><div><strong>{item.label}</strong><span>{item.detail}</span></div><b>{item.value === null ? "--" : item.metric === "averageDays" ? `${item.value} days` : item.metric === "enrollments" ? Number(item.value).toLocaleString() : `${item.value}%`}</b></article>) : <p>No {dimensionConfig.entityLabel.toLowerCase()} data for this period.</p>}</div>
+          ) : (
+            <div className="analytics-location-bars">{performanceItems.length ? performanceItems.map((item, index) => <article key={item.name}><b>{index + 1}</b><div><span><strong>{item.name}</strong><em>{item.detail}</em></span><div><i style={{ background: item.color, width: `${Math.max((item.value / performanceMax) * 100, item.value ? 2 : 0)}%` }} /></div></div><strong>{performanceMetric === "averageDays" ? `${item.value} days` : performanceMetric === "enrollments" ? item.value.toLocaleString() : `${item.value}%`}</strong></article>) : <p>No location data for this period.</p>}</div>
+          )}
+          <footer>{isSingleEntity ? "Rates use the scheduled-tour cohort · Volume uses event dates" : <>{performanceOption.label}{performanceMetric === "averageDays" ? " · Lower is faster" : " · Scheduled-tour cohort"}</>}</footer>
+        </section>
+      </div>
+    </section>
+  );
+}
+
 function formatRate(value) {
   return value === null ? "--" : `${value}%`;
 }
@@ -1915,6 +2216,7 @@ function RankingList({ items, metric, metricLabel, sortLabel, title }) {
 
 function Analytics({ view = "overview" }) {
   const { user } = useAuth();
+  const { setAnalyticsLoading } = useOutletContext();
   const [filters, setFilters] = useState(() => createDefaultTourFilters(user));
   const [locations, setLocations] = useState([]);
   const [leadSources, setLeadSources] = useState([]);
@@ -1926,6 +2228,14 @@ function Analytics({ view = "overview" }) {
   const [rankingScope, setRankingScope] = useState("selected");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setAnalyticsLoading(isLoading);
+  }, [isLoading, setAnalyticsLoading]);
+
+  useEffect(() => () => {
+    setAnalyticsLoading(false);
+  }, [setAnalyticsLoading]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -2126,8 +2436,6 @@ function Analytics({ view = "overview" }) {
       />
 
       {error && <p className="analytics-state analytics-state--error">{error}</p>}
-      {isLoading && <p aria-live="polite" className="analytics-state analytics-state--loading" role="status">Loading analytics...</p>}
-
       {view === "overview" ? (
         <section className="analytics-workspace analytics-workspace--overview" aria-label="Analytics overview">
           <div className="analytics-overview-header">
@@ -2221,6 +2529,8 @@ function Analytics({ view = "overview" }) {
         </section>
       ) : view === "volume" ? (
         <VolumeAnalyticsWorkspace analytics={analytics} key={periodComparison.selected} periodComparison={periodComparison} />
+      ) : ["locations", "leadSources", "staff"].includes(view) ? (
+        <EntityAnalyticsWorkspace analytics={analytics} dimension={view} filters={filters} leadSources={leadSources} locations={locations} user={user} />
       ) : (
         <section className="analytics-workspace" aria-label="Cohort analytics">
           <div className="analytics-period">
