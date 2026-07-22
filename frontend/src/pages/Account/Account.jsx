@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import {
   Building2,
   ChevronDown,
+  CircleDollarSign,
   KeyRound,
   LogOut,
   MapPin,
@@ -176,6 +177,12 @@ function Account() {
               <RadioTower aria-hidden="true" />
               <span>Manage lead sources</span>
             </Link>
+            {canManageUsers && (
+              <Link to="/admin/cost-basis">
+                <CircleDollarSign aria-hidden="true" />
+                <span>Manage cost/revenue</span>
+              </Link>
+            )}
           </nav>
         </SettingsPanel>
       )}

@@ -136,7 +136,7 @@
   color: #ffffff;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 520px), (orientation: portrait) and (max-width: 1180px) {
   .analytics-title-picker__prefix {
     display: none;
   }

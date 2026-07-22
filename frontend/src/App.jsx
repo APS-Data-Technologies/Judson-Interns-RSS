@@ -76,8 +76,13 @@ const router = createBrowserRouter([
       { path: "/analytics/volume", element: <Analytics view="volume" /> },
       { path: "/analytics/locations", element: <Analytics view="locations" /> },
       { path: "/analytics/lead-sources", element: <Analytics view="leadSources" /> },
-      { path: "/analytics/cost-margin", element: <AnalyticsPlaceholder title="Cost and Margin Analytics" /> },
-      { path: "/analytics/staff", element: <Analytics view="staff" /> },
+      {
+        element: <RoleRoute allowedRoles={["super_admin", "admin"]} />,
+        children: [
+          { path: "/analytics/cost-margin", element: <AnalyticsPlaceholder title="Cost and Margin Analytics" /> },
+          { path: "/analytics/staff", element: <Analytics view="staff" /> },
+        ],
+      },
       {
         path: "/settings",
         element: <Account />,
