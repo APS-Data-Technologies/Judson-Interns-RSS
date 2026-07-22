@@ -22,7 +22,6 @@ import {
 import TourFilterControls from "../../components/filters/TourFilterControls";
 import useAuth from "../../features/auth/useAuth";
 import { getCohortAnalytics } from "../../features/analytics/analyticsApi";
-import { toTitleCaseWords } from "../../utils/displayText";
 import {
   createDefaultTourFilters,
   getDateRange,
@@ -814,6 +813,11 @@ function adaptBackendCohortAnalytics(data, rankingMetric) {
       cost: safeNumber(data.financialSummary?.cost),
       margin: safeNumber(data.financialSummary?.margin),
     },
+    entityHealth: data.entityHealth || {
+      locations: data.locationHealth || [],
+      leadSources: [],
+      staff: [],
+    },
     staffOptions: data.staffOptions || [],
     trendData: (data.trendData || []).map(adaptBackendTrendRow),
     allTimeTrendData: (data.allTimeTrendData || data.trendData || []).map(adaptBackendTrendRow),
@@ -1286,7 +1290,7 @@ function VolumeTemporalRankings({ allTimeRows, rows }) {
   }, []);
 
   return (
-    <section className="analytics-temporal-rankings" aria-labelledby="temporal-rankings-title">
+    <section className={`analytics-temporal-rankings analytics-temporal-rankings--${metric.status}`} aria-labelledby="temporal-rankings-title">
       <div className="analytics-temporal-rankings__banner">
         <div className="analytics-temporal-rankings__title"><h2 id="temporal-rankings-title"><ArrowDownUp aria-hidden="true" /><span>Temporal Volume Rankings</span><span className="analytics-temporal-rankings__mobile-info"><InfoHint label={`${metric.label}\nRanked by event count\n${rankingScope === "all" ? "All time" : "Selected period"}`} /></span></h2><span>{metric.label} · Ranked by event count · {rankingScope === "all" ? "All time" : "Selected period"}</span></div>
         <div className="analytics-temporal-rankings__field"><details className="analytics-temporal-rankings__picker"><summary><span><small>Status:</small><b>{metric.label}</b></span></summary><div>{volumeChartMetrics.map((item) => <button className={metricStatus === item.status ? "is-selected" : ""} key={item.status} onClick={(event) => { setMetricStatus(item.status); event.currentTarget.closest("details")?.removeAttribute("open"); }} type="button"><span>{item.label}</span>{metricStatus === item.status && <Check aria-hidden="true" />}</button>)}</div></details></div>
@@ -1294,10 +1298,11 @@ function VolumeTemporalRankings({ allTimeRows, rows }) {
         <div className="analytics-temporal-rankings__toggle"><button aria-label="Highest volume" className={rankingDirection === "highest" ? "is-active" : ""} onClick={() => setRankingDirection("highest")} type="button"><TrendingUp aria-hidden="true" /><span>Highest volume</span></button><button aria-label="Lowest volume" className={rankingDirection === "lowest" ? "is-active" : ""} onClick={() => setRankingDirection("lowest")} type="button"><TrendingDown aria-hidden="true" /><span>Lowest volume</span></button></div>
       </div>
       <div className="analytics-temporal-rankings__grid">{groups.map((group) => {
+        const groupTotal = group.entries.reduce((total, entry) => total + Number(entry.value || 0), 0);
         const entries = [...group.entries].sort((first, second) => (rankingDirection === "lowest" ? first.value - second.value : second.value - first.value) || first.label.localeCompare(second.label));
         const topEntry = entries[0];
         const isExpanded = expandedGroup === group.key;
-        return <article className={isExpanded ? "is-expanded" : ""} key={group.key}><button aria-expanded={isExpanded} className="analytics-temporal-rankings__card-heading" onClick={() => setExpandedGroup((current) => current === group.key ? null : group.key)} type="button"><h3>{group.title}</h3>{topEntry && <strong><span>{topEntry.label}</span><em>{topEntry.value}</em></strong>}<ChevronDown aria-hidden="true" /></button><span>{rankingDirection === "highest" ? "Highest volume" : "Lowest volume"}</span><TemporalDistributionPlot dimension={group.key} entries={group.entries} status={metric.status} /><ol>{entries.map((entry, index) => <li className={index === 0 ? "is-top" : ""} key={entry.key}><b>{index + 1}</b><strong>{entry.label}</strong><em>{entry.value}</em></li>)}</ol></article>;
+        return <article className={isExpanded ? "is-expanded" : ""} key={group.key}><button aria-expanded={isExpanded} className="analytics-temporal-rankings__card-heading" onClick={() => setExpandedGroup((current) => current === group.key ? null : group.key)} type="button"><h3>{group.title}</h3>{topEntry && <strong><span>{topEntry.label}</span><em>{topEntry.value}</em></strong>}<ChevronDown aria-hidden="true" /></button><span>{rankingDirection === "highest" ? "Highest volume" : "Lowest volume"}</span><TemporalDistributionPlot dimension={group.key} entries={group.entries} status={metric.status} /><ol>{entries.map((entry, index) => <li className={index === 0 ? "is-top" : ""} key={entry.key}><b>{index + 1}</b><strong>{entry.label}</strong><em><span>{entry.value}</span><small>{groupTotal ? `${((entry.value / groupTotal) * 100).toFixed(1)}%` : "0%"}</small></em></li>)}</ol></article>;
       })}</div>
     </section>
   );
@@ -1309,16 +1314,20 @@ function VolumePerformanceRankings({ allTimeRankings, rankings }) {
   const [scope, setScope] = useState("selected");
   const selectedStatus = volumePerformanceStatusOptions.find((option) => option.value === status) || volumePerformanceStatusOptions[0];
   const activeRankings = scope === "all" ? allTimeRankings : rankings;
-  const prepareItems = (items) => [...(items || [])]
-    .map((item) => ({
+  const prepareItems = (items) => {
+    const prepared = [...(items || [])].map((item) => ({
       ...item,
       detail: status === "all" ? "Total status events" : `${Number(item[status] || 0).toLocaleString()} ${selectedStatus.label.toLowerCase()} event${Number(item[status] || 0) === 1 ? "" : "s"}`,
       metric: "enrollment",
       value: Number(item[status] || 0),
-    }))
-    .sort((first, second) => direction === "highest" ? second.value - first.value : first.value - second.value);
+    }));
+    const total = prepared.reduce((sum, item) => sum + item.value, 0);
+    return prepared
+      .map((item) => ({ ...item, share: total ? (item.value / total) * 100 : 0 }))
+      .sort((first, second) => direction === "highest" ? second.value - first.value : first.value - second.value);
+  };
   return (
-    <section className="analytics-volume-performance-rankings" aria-labelledby="volume-performance-rankings-title">
+    <section className={`analytics-volume-performance-rankings analytics-volume-performance-rankings--${status}`} aria-labelledby="volume-performance-rankings-title">
       <div className="analytics-temporal-rankings__banner" aria-label="Volume performance ranking controls">
         <div className="analytics-temporal-rankings__title"><h2 id="volume-performance-rankings-title"><ArrowDownUp aria-hidden="true" /><span>Volume Performance Rankings</span><span className="analytics-temporal-rankings__mobile-info"><InfoHint label={`${selectedStatus.label}\nRanked by event count\n${scope === "all" ? "All time" : "Selected period"}`} /></span></h2><span>{selectedStatus.label} · Ranked by event count · {scope === "all" ? "All time" : "Selected period"}</span></div>
         <div className="analytics-temporal-rankings__field"><details className="analytics-temporal-rankings__picker"><summary><span><small>Status:</small><b>{selectedStatus.label}</b></span></summary><div>{volumePerformanceStatusOptions.map((option) => <button className={status === option.value ? "is-selected" : ""} key={option.value} onClick={(event) => { setStatus(option.value); event.currentTarget.closest("details")?.removeAttribute("open"); }} type="button"><span>{option.label}</span>{status === option.value && <Check aria-hidden="true" />}</button>)}</div></details></div>
@@ -1415,6 +1424,7 @@ const locationPerformanceOptions = [
   { value: "averageDays", label: "Avg. Days to Enroll", color: "#673de6" },
   { value: "close", label: "Close Rate", color: "#0f9f9a" },
   { value: "noShow", label: "No Show Rate", color: "#ff8a1f" },
+  { value: "churn", label: "Churn Rate", color: "#e3344f" },
 ];
 
 function getHeatColor(hexColor, value, maximum) {
@@ -1430,6 +1440,7 @@ function getLocationPerformance(item, metric) {
   if (metric === "noShow") return { value: getPercent(item.noShow, item.booked), detail: `${item.noShow} no show / ${item.booked} booked` };
   if (metric === "close") return { value: getPercent(item.enrolled + item.churned, item.toured), detail: `${item.enrolled + item.churned} closed / ${item.toured} toured` };
   if (metric === "averageDays") return { value: item.averageDaysToEnroll ?? null, detail: `${item.enrolled} enrolled` };
+  if (metric === "churn") return { value: getPercent(item.churned, item.toured), detail: `${item.churned} churned / ${item.toured} toured` };
   return { value: getPercent(item.enrolled, item.toured), detail: `${item.enrolled} enrolled / ${item.toured} toured` };
 }
 
@@ -1557,6 +1568,162 @@ function EntityTrendPanel({ data, entityLabel, isSingleEntity, kind }) {
   );
 }
 
+function HealthSparkline({ color, displayValue = null, fixedMaximum = null, label, showValue = true, values = [] }) {
+  if (values.length < 2) return <span className="analytics-health__no-trend">Not enough data</span>;
+  const width = 92;
+  const height = 28;
+  const numericValues = values.map(Number);
+  const allZero = numericValues.every((value) => value === 0);
+  const isConstant = numericValues.every((value) => value === numericValues[0]);
+  const maximum = fixedMaximum || Math.max(...numericValues, 1);
+  const yFor = (value) => {
+    if (allZero) return height - 2;
+    if (isConstant && !fixedMaximum) return height / 2;
+    return height - (Number(value || 0) / maximum) * (height - 4) - 2;
+  };
+  const points = values.map((value, index) => (
+    `${(index / (values.length - 1)) * width},${yFor(value)}`
+  )).join(" ");
+  const lastValue = numericValues.at(-1);
+  return <span className={`analytics-health__sparkline-wrap${allZero ? " is-zero" : isConstant ? " is-constant" : ""}`} style={{ "--sparkline-color": color }}><svg aria-label={`${label} trend: ${values.join(", ")}`} className="analytics-health__sparkline" role="img" viewBox={`0 0 ${width} ${height}`}><polyline points={points} /><circle cx={width} cy={yFor(lastValue)} r="2.4" /></svg>{showValue && <em>{displayValue ?? lastValue}</em>}</span>;
+}
+
+const healthVolumeMetrics = [
+  { key: "booked", label: "Booked", color: "#2f6df6" },
+  { key: "toured", label: "Toured", color: "#fbbf24" },
+  { key: "noShow", label: "No Show", color: "#ff8a1f", inverse: true },
+  { key: "enrolled", label: "Enrolled", color: "#18a05e" },
+  { key: "churned", label: "Churned", color: "#e3344f", inverse: true },
+];
+const healthRateMetrics = [
+  { key: "touredRate", label: "Toured Rate", color: "#fbbf24" },
+  { key: "conversionRate", label: "Conversion Rate", color: "#18a05e" },
+  { key: "noShowRate", label: "No Show Rate", color: "#ff8a1f", inverse: true },
+  { key: "closeRate", label: "Close Rate", color: "#0f9f9a" },
+  { key: "averageDaysToEnroll", label: "Avg. Days to Enroll", color: "#8b5cf6", inverse: true, isDays: true },
+];
+
+function getHealthRates(row, previous = false) {
+  const prefix = previous ? "previous" : "";
+  const value = (name) => row[prefix ? `${prefix}${name[0].toUpperCase()}${name.slice(1)}` : name] || 0;
+  const booked = value("booked");
+  const toured = value("toured");
+  const enrolled = value("enrolled");
+  const churned = value("churned");
+  return {
+    touredRate: getPercent(toured, booked),
+    conversionRate: getPercent(enrolled, toured),
+    noShowRate: getPercent(value("noShow"), booked),
+    closeRate: getPercent(enrolled + churned, toured),
+    averageDaysToEnroll: previous ? row.previousAverageDaysToEnroll : row.averageDaysToEnroll,
+  };
+}
+
+function getLocationSummaries(row, mode) {
+  const positive = [];
+  const attention = [];
+  const offTrack = Number(row.pendingTourOutcome || 0) + Number(row.pendingEnrollmentOutcome || 0);
+  if (offTrack > 0) attention.push({ label: "Resolve off track", tone: "warning" });
+  if (!row.hasPreviousPeriod) return { positive, attention };
+  if (mode === "volume") {
+    const compare = (key, upLabel, downLabel, inverse = false) => {
+      const difference = row.volume[key] - row.previousVolume[key];
+      if (!difference) return;
+      const improvement = inverse ? difference < 0 : difference > 0;
+      (improvement ? positive : attention).push({ label: improvement ? (inverse ? downLabel : upLabel) : (inverse ? upLabel : downLabel), tone: improvement ? "success" : "danger" });
+    };
+    compare("booked", "Bookings up", "Bookings down");
+    compare("toured", "Tours up", "Tours down");
+    compare("noShow", "No shows rising", "No shows down", true);
+    compare("enrolled", "Enrollments up", "Enrollments down");
+    compare("churned", "Churn rising", "Churn down", true);
+  } else {
+    const current = getHealthRates(row);
+    const previous = getHealthRates(row, true);
+    const compare = (key, upLabel, downLabel, inverse = false) => {
+      if (current[key] === null || current[key] === undefined || previous[key] === null || previous[key] === undefined) return;
+      const difference = current[key] - previous[key];
+      if (!difference) return;
+      const improvement = inverse ? difference < 0 : difference > 0;
+      (improvement ? positive : attention).push({ label: improvement ? (inverse ? downLabel : upLabel) : (inverse ? upLabel : downLabel), tone: improvement ? "success" : "danger" });
+    };
+    compare("touredRate", "Toured rate up", "Toured rate down");
+    compare("conversionRate", "Conversion up", "Conversion down");
+    compare("noShowRate", "No-show rate rising", "No-show rate down", true);
+    compare("closeRate", "Close rate up", "Close rate down");
+    compare("averageDaysToEnroll", "Enrollment slower", "Enrollment faster", true);
+  }
+  return { positive, attention };
+}
+
+function getRelatedPerformance(row, dimension, mode) {
+  const metric = mode === "volume"
+    ? healthVolumeMetrics.find((item) => item.key === "enrolled")
+    : healthRateMetrics.find((item) => item.key === "conversionRate");
+  const groups = dimension === "locations"
+    ? [{ key: "lead_source", label: "Lead Source" }, { key: "staff", label: "Lead Staff" }]
+    : dimension === "leadSources"
+      ? [{ key: "location", label: "Location" }]
+      : [];
+  const getValue = (item) => {
+    if (mode === "volume") return Number(item.volume?.[metric.key] || 0);
+    if (metric.key === "averageDaysToEnroll") return item.averageDaysToEnroll;
+    if (["touredRate", "noShowRate"].includes(metric.key) && !item.booked) return null;
+    if (["conversionRate", "closeRate"].includes(metric.key) && !item.toured) return null;
+    return getHealthRates(item)[metric.key];
+  };
+  return groups.map((group) => {
+    const candidates = (row.relatedPerformance?.[group.key] || [])
+      .map((item) => ({ ...item, metricValue: getValue(item) }))
+      .filter((item) => item.metricValue !== null && item.metricValue !== undefined)
+      .sort((first, second) => first.metricValue - second.metricValue);
+    if (!candidates.length) return null;
+    if (candidates.length === 1) return { group: group.label, best: candidates[0], least: candidates[0] };
+    const lowestValue = candidates[0];
+    const highestValue = candidates.at(-1);
+    const best = metric.inverse ? lowestValue : highestValue;
+    const lowest = metric.inverse ? highestValue : lowestValue;
+    return { group: group.label, best, least: lowest };
+  }).filter(Boolean);
+}
+
+function EntityHealthTable({ dimension, entityLabel, rows }) {
+  const [mode, setMode] = useState("volume");
+  const metrics = mode === "volume" ? healthVolumeMetrics : healthRateMetrics;
+  const showRelatedPerformance = dimension !== "staff";
+  const comparison = (current, previous, metric, hasPrevious = true) => {
+    const isDays = metric.isDays;
+    const display = current === null || current === undefined ? "--" : `${current}${isDays ? "d" : mode === "rate" ? "%" : ""}`;
+    if (!hasPrevious) return <strong className="analytics-health__current">{display}</strong>;
+    const difference = current === null || current === undefined || previous === null || previous === undefined ? null : Math.round((current - previous) * 10) / 10;
+    const isFavorable = difference === 0 ? null : metric.inverse ? difference < 0 : difference > 0;
+    return <div className="analytics-health__comparison"><span><strong className="analytics-health__current">{display}</strong><small className="analytics-health__previous">({previous === null || previous === undefined ? "--" : `${previous}${isDays ? "d" : mode === "rate" ? "%" : ""}`})</small></span>{difference !== null && <small className={`analytics-health__difference ${isFavorable === null ? "is-neutral" : isFavorable ? "is-favorable" : "is-unfavorable"}`}>{difference > 0 ? "+" : ""}{difference}{isDays ? "d" : mode === "rate" ? " pts" : ""}</small>}</div>;
+  };
+  return (
+    <section className={`analytics-location-health has-best-timing${showRelatedPerformance ? " has-related-performance" : ""}`} aria-label={`${entityLabel} insights`}>
+      <div className="analytics-location-health__scroll">
+        <header><div><div className="analytics-location-health__title-row"><h2>{entityLabel} Insights</h2><div className="analytics-location-health__mode" role="group" aria-label={`${entityLabel} insights metric type`}><button className={mode === "volume" ? "is-active" : ""} onClick={() => setMode("volume")} type="button">Volume metrics</button><button className={mode === "rate" ? "is-active" : ""} onClick={() => setMode("rate")} type="button">Rate metrics</button></div></div><p>Current vs previous period</p></div></header>
+        <div className="analytics-location-health__table-wrap">
+          <table>
+          <thead><tr><th scope="col">{entityLabel}</th><th scope="col">Positives</th><th scope="col">Needs attention</th>{showRelatedPerformance && <th scope="col">Entity Performance</th>}<th scope="col">Peak Periods</th>{metrics.map((metric) => <th key={metric.key} scope="col">{metric.label}</th>)}<th scope="col">Off track tours</th><th scope="col">Trends</th></tr></thead>
+          <tbody>{rows.length ? rows.map((row) => {
+            const currentRates = getHealthRates(row);
+            const previousRates = getHealthRates(row, true);
+            const offTrack = Number(row.pendingTourOutcome || 0) + Number(row.pendingEnrollmentOutcome || 0);
+            const summaries = getLocationSummaries(row, mode);
+            const relatedPerformance = getRelatedPerformance(row, dimension, mode);
+            const bestTiming = row.bestTiming?.[mode] || {};
+            const trendRows = mode === "volume" ? row.volumeTrend || [] : row.rateTrend || [];
+            const renderSummaries = (items) => <div className="analytics-health__summaries">{items.length ? items.map((summary) => <span className={`analytics-health__attention is-${summary.tone}`} key={summary.label}>{summary.label}</span>) : <span className="analytics-health__none">None</span>}</div>;
+            return <tr key={row.name}><th scope="row"><strong>{row.name}</strong></th><td>{renderSummaries(summaries.positive)}</td><td>{renderSummaries(summaries.attention)}</td>{showRelatedPerformance && <td><div className="analytics-health__related">{relatedPerformance.length ? relatedPerformance.map((item) => <section key={item.group}><b>{item.group}</b><span><em className="is-best">{item.best.name}</em><em className="is-least">{item.least.name}</em></span></section>) : <span className="analytics-health__none">No qualifying data</span>}</div></td>}<td><div className="analytics-health__timing">{[["Quarter", "quarter"], ["Month", "month"], ["Week", "weekOfMonth"], ["Day", "dayOfWeek"]].map(([label, key]) => <span key={key}><b>{label}</b><em>{bestTiming[key]?.label || "--"}</em></span>)}</div></td>{metrics.map((metric) => { const current = mode === "volume" ? row.volume[metric.key] : currentRates[metric.key]; const previous = mode === "volume" ? row.previousVolume[metric.key] : previousRates[metric.key]; return <td key={metric.key}>{comparison(current, previous, metric, row.hasPreviousPeriod)}</td>; })}<td><strong className="analytics-health__current">{offTrack}</strong><small>{row.pendingTourOutcome || 0} awaiting tour outcome<br />{row.pendingEnrollmentOutcome || 0} awaiting enrollment outcome</small></td><td><div className="analytics-health__trends">{metrics.map((metric) => { const trendValues = trendRows.map((trendRow) => trendRow[metric.key]).filter((value) => value !== null && value !== undefined); return <span key={metric.key}><b style={{ color: metric.color }}>{metric.label}</b><HealthSparkline color={metric.color} fixedMaximum={mode === "rate" && !metric.isDays ? 100 : null} label={metric.label} showValue={false} values={trendValues} /></span>; })}</div></td></tr>;
+          }) : <tr><td className="analytics-location-health__empty" colSpan={showRelatedPerformance ? 12 : 11}>No {entityLabel.toLowerCase()} health data for this period.</td></tr>}</tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function EntityAnalyticsWorkspace({ analytics, dimension, filters, leadSources, locations, user }) {
   const [volumeStatus, setVolumeStatus] = useState("all");
   const [performanceMetric, setPerformanceMetric] = useState("conversion");
@@ -1592,7 +1759,6 @@ function EntityAnalyticsWorkspace({ analytics, dimension, filters, leadSources, 
   const isSingleEntity = dimension === "locations"
     ? user?.role === "staff" || selectedLocationIds.length === 1 || selectedStaffIds.length === 1
     : dimensionConfig.selectedIds.length === 1;
-  const singleEntityName = toTitleCaseWords(dimensionConfig.selectedName || `Selected ${dimensionConfig.entityLabel}`);
   const volumeOption = locationVolumeOptions.find((option) => option.value === (isSingleEntity ? "all" : volumeStatus));
   const performanceOption = locationPerformanceOptions.find((option) => option.value === performanceMetric);
   const rawVolumeItems = isSingleEntity
@@ -1644,6 +1810,11 @@ function EntityAnalyticsWorkspace({ analytics, dimension, filters, leadSources, 
       ? analytics.averageDaysToEnroll
       : performanceMetric === "noShow"
         ? analytics.rates.no_show
+        : performanceMetric === "churn"
+          ? getPercent(
+            analytics.metrics.find((metric) => metric.status === "churned")?.value || 0,
+            analytics.metrics.find((metric) => metric.status === "toured")?.value || 0,
+          )
         : analytics.rates[performanceMetric];
   const formattedOverallPerformance = overallPerformanceValue === null
     ? "--"
@@ -1671,31 +1842,32 @@ function EntityAnalyticsWorkspace({ analytics, dimension, filters, leadSources, 
     <section className="analytics-workspace analytics-location-comparison" aria-label={`${dimensionConfig.entityLabel} volume and performance comparison`}>
       <div className="analytics-location-comparison__grid">
         <section className="analytics-location-comparison__panel" aria-labelledby="location-volume-share-title">
-          <header><div><h2 id="location-volume-share-title">{isSingleEntity ? `Status Mix · ${singleEntityName}` : `Volume Share by ${dimensionConfig.entityLabel}`}</h2><p>{isSingleEntity ? `Share of all status events for this ${dimensionConfig.entityLabel.toLowerCase()}` : "Share of selected-period events"}</p></div>{!isSingleEntity && <LocationChartPicker label="Status" onChange={(value) => { setVolumeStatus(value); setSelectedVolumeEntity(null); }} options={locationVolumeOptions} value={volumeStatus} />}</header>
-          <div className="analytics-location-donut-layout">
-            <div className={`analytics-location-donut${selectedVolumeItem ? " has-selection" : ""}`} ref={volumeVisualizationRef}>
+          <header><div><h2 id="location-volume-share-title">Volume by {dimensionConfig.entityLabel}</h2></div>{!isSingleEntity && <LocationChartPicker label="Status" onChange={(value) => { setVolumeStatus(value); setSelectedVolumeEntity(null); }} options={locationVolumeOptions} value={volumeStatus} />}</header>
+          <div className="analytics-location-donut-layout" ref={volumeVisualizationRef}>
+            <div className={`analytics-location-donut${selectedVolumeItem ? " has-selection" : ""}`}>
               <svg aria-label={`${volumeOption.label}: ${volumeTotal} total events`} role="img" viewBox="0 0 100 100">
                 <circle className="analytics-location-donut__track" cx="50" cy="50" r="44" />
                 {donutSegments.map((item) => item.length > 0 && <circle aria-label={`${item.name}: ${item.value} events, ${((item.value / volumeTotal) * 100).toFixed(1)} percent`} className={`analytics-location-donut__segment${selectedVolumeEntity === item.name ? " is-selected" : ""}${selectedVolumeItem && selectedVolumeEntity !== item.name ? " is-muted" : ""}`} cx="50" cy="50" key={item.name} onClick={() => toggleVolumeLocation(item.name)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") toggleVolumeLocation(item.name); }} r="44" role="button" stroke={item.color} strokeDasharray={`${item.visibleLength} ${donutCircumference - item.visibleLength}`} strokeDashoffset={-item.offset} tabIndex="0"><title>{item.name}: {item.value} ({((item.value / volumeTotal) * 100).toFixed(1)}%)</title></circle>)}
               </svg>
               <div><strong>{(selectedVolumeItem?.value ?? volumeTotal).toLocaleString()}</strong><span>{selectedVolumeItem?.name || volumeOption.label}</span>{selectedVolumeItem && <em>{((selectedVolumeItem.value / volumeTotal) * 100).toFixed(1)}%</em>}</div>
             </div>
-            <ol className="analytics-location-donut__legend">{volumeItems.map((item) => <li key={item.name}><i style={{ background: item.color }} /><strong>{item.name}</strong><span>{item.value.toLocaleString()}</span><em>{volumeTotal ? `${((item.value / volumeTotal) * 100).toFixed(1)}%` : "0%"}</em></li>)}</ol>
+            <ol className="analytics-location-donut__legend">{volumeItems.map((item) => <li aria-label={`Select ${item.name}`} className={`${selectedVolumeEntity === item.name ? "is-selected" : ""}${selectedVolumeItem && selectedVolumeEntity !== item.name ? " is-muted" : ""}`} key={item.name} onClick={() => toggleVolumeLocation(item.name)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggleVolumeLocation(item.name); } }} role="button" tabIndex="0"><i style={{ background: item.color }} /><strong>{item.name}</strong><span>{item.value.toLocaleString()}</span><em>{volumeTotal ? `${((item.value / volumeTotal) * 100).toFixed(1)}%` : "0%"}</em></li>)}</ol>
           </div>
-          <footer>{isSingleEntity || volumeStatus === "all" ? "All Events sums status events; it is not a unique-family count." : `${volumeOption.label} share across ${dimensionConfig.entitiesLabel.toLowerCase()}.`}</footer>
         </section>
 
         <section className={`analytics-location-comparison__panel analytics-location-comparison__panel--performance${isSingleEntity ? " analytics-location-comparison__panel--single" : ""}`} aria-labelledby="location-performance-title">
-          <header><div><h2 id="location-performance-title">{isSingleEntity ? `${dimensionConfig.entityLabel} Performance · ${singleEntityName}` : `Performance by ${dimensionConfig.entityLabel}`}</h2><p>{isSingleEntity ? `All selected-period ${dimensionConfig.entityLabel.toLowerCase()} metrics` : `Independent ${dimensionConfig.entityLabel.toLowerCase()} results—not shares of a total`}</p></div>{!isSingleEntity && <LocationChartPicker label="Metric" onChange={setPerformanceMetric} options={locationPerformanceOptions} value={performanceMetric} />}</header>
-          {!isSingleEntity && <div className="analytics-location-performance__overall" style={{ "--overall-color": performanceOption.color }}><span>Overall {performanceOption.label}</span><strong>{formattedOverallPerformance}</strong></div>}
+          <header><div><h2 id="location-performance-title">Rate by {dimensionConfig.entityLabel}</h2></div>{!isSingleEntity && <LocationChartPicker label="Metric" onChange={setPerformanceMetric} options={locationPerformanceOptions} value={performanceMetric} />}</header>
           {isSingleEntity ? (
             <div className="analytics-location-metric-list">{singleEntityPerformanceItems.length ? singleEntityPerformanceItems.map((item) => <article key={item.metric} style={{ "--metric-color": item.color }}><i /><div><strong>{item.label}</strong><span>{item.detail}</span></div><b>{item.value === null ? "--" : item.metric === "averageDays" ? `${item.value} days` : item.metric === "enrollments" ? Number(item.value).toLocaleString() : `${item.value}%`}</b></article>) : <p>No {dimensionConfig.entityLabel.toLowerCase()} data for this period.</p>}</div>
           ) : (
-            <div className="analytics-location-bars">{performanceItems.length ? performanceItems.map((item, index) => <article key={item.name}><b>{index + 1}</b><div><span><strong>{item.name}</strong><em>{item.detail}</em></span><div><i style={{ background: item.color, width: `${Math.max((item.value / performanceMax) * 100, item.value ? 2 : 0)}%` }} /></div></div><strong>{performanceMetric === "averageDays" ? `${item.value} days` : performanceMetric === "enrollments" ? item.value.toLocaleString() : `${item.value}%`}</strong></article>) : <p>No location data for this period.</p>}</div>
+            <div className="analytics-location-rate-layout">
+              <div className="analytics-location-performance__overall" style={{ "--overall-color": performanceOption.color }}><span>Overall {performanceOption.label}</span><strong>{formattedOverallPerformance}</strong></div>
+              <div className="analytics-location-bars">{performanceItems.length ? performanceItems.map((item, index) => <article key={item.name}><b>{index + 1}</b><div><span><strong>{item.name}</strong><em>{item.detail}</em></span><div><i style={{ background: item.color, width: `${Math.max((item.value / performanceMax) * 100, item.value ? 2 : 0)}%` }} /></div></div><strong>{performanceMetric === "averageDays" ? `${item.value} days` : performanceMetric === "enrollments" ? item.value.toLocaleString() : `${item.value}%`}</strong></article>) : <p>No {dimensionConfig.entityLabel.toLowerCase()} data for this period.</p>}</div>
+            </div>
           )}
-          <footer>{isSingleEntity ? "Rates use the scheduled-tour cohort · Volume uses event dates" : <>{performanceOption.label}{performanceMetric === "averageDays" ? " · Lower is faster" : " · Scheduled-tour cohort"}</>}</footer>
         </section>
       </div>
+      <EntityHealthTable dimension={dimension} entityLabel={dimensionConfig.entityLabel} rows={analytics.entityHealth?.[dimension] || []} />
     </section>
   );
 }
@@ -2098,7 +2270,7 @@ function TemporalConversionRankings({ allTimeRows, rows }) {
     return () => document.removeEventListener("pointerdown", dismissDropdown);
   }, []);
   return (
-    <section className="analytics-temporal-rankings analytics-temporal-conversion-rankings" aria-labelledby="temporal-conversion-rankings-title">
+    <section className={`analytics-temporal-rankings analytics-temporal-conversion-rankings analytics-temporal-conversion-rankings--${metric.value}`} aria-labelledby="temporal-conversion-rankings-title">
       <div className="analytics-temporal-rankings__banner">
         <div className="analytics-temporal-rankings__title"><h2 id="temporal-conversion-rankings-title"><ArrowDownUp aria-hidden="true" /><span>Temporal Conversion Rankings</span><span className="analytics-temporal-rankings__mobile-info"><InfoHint label={`${metric.label}\nCohorts grouped by scheduled tour date\n${scope === "all" ? "All time" : "Selected period"}`} /></span></h2><span>{metric.label} · Cohorts by scheduled tour date · {scope === "all" ? "All time" : "Selected period"}</span></div>
         <div className="analytics-temporal-rankings__field"><details className="analytics-temporal-rankings__picker"><summary><span><small>Metric:</small><b>{metric.label}</b></span></summary><div>{temporalConversionMetricOptions.map((option) => <button className={metricValue === option.value ? "is-selected" : ""} key={option.value} onClick={(event) => { setMetricValue(option.value); event.currentTarget.closest("details")?.removeAttribute("open"); }} type="button"><span>{option.label}</span>{metricValue === option.value && <Check aria-hidden="true" />}</button>)}</div></details></div>
@@ -2109,7 +2281,7 @@ function TemporalConversionRankings({ allTimeRows, rows }) {
         const entries = [...group.entries].sort((first, second) => { if (first.value === null) return 1; if (second.value === null) return -1; return direction === "highest" ? second.value - first.value : first.value - second.value; });
         const topEntry = entries[0];
         const isExpanded = expandedGroup === group.key;
-        return <article className={isExpanded ? "is-expanded" : ""} key={group.key}><button aria-expanded={isExpanded} className="analytics-temporal-rankings__card-heading" onClick={() => setExpandedGroup((current) => current === group.key ? null : group.key)} type="button"><h3>{group.title}</h3>{topEntry && <strong><span>{topEntry.label}</span><em>{formatValue(topEntry.value)}</em></strong>}<ChevronDown aria-hidden="true" /></button><span>{direction === "highest" ? "Highest value" : "Lowest value"}</span><TemporalDistributionPlot dimension={group.key} entries={group.entries.map((entry) => ({ ...entry, value: entry.value || 0 }))} status={metric.value === "average_days" ? "enrolled" : metric.value} /><ol>{entries.map((entry, index) => <li className={index === 0 ? "is-top" : ""} key={entry.key}><b>{index + 1}</b><strong><span>{entry.label}</span><small>{entry.detail}</small></strong><em>{formatValue(entry.value)}</em></li>)}</ol></article>;
+        return <article className={isExpanded ? "is-expanded" : ""} key={group.key}><button aria-expanded={isExpanded} className="analytics-temporal-rankings__card-heading" onClick={() => setExpandedGroup((current) => current === group.key ? null : group.key)} type="button"><h3>{group.title}</h3>{topEntry && <strong><span>{topEntry.label}</span><em>{formatValue(topEntry.value)}</em></strong>}<ChevronDown aria-hidden="true" /></button><span>{direction === "highest" ? "Highest value" : "Lowest value"}</span><TemporalDistributionPlot dimension={group.key} entries={group.entries.map((entry) => ({ ...entry, value: entry.value || 0 }))} status={metric.value} /><ol>{entries.map((entry, index) => <li className={index === 0 ? "is-top" : ""} key={entry.key}><b>{index + 1}</b><strong><span>{entry.label}</span><small>{entry.detail}</small></strong><em>{formatValue(entry.value)}</em></li>)}</ol></article>;
       })}</div>
     </section>
   );
@@ -2206,7 +2378,8 @@ function RankingList({ items, metric, metricLabel, sortLabel, title }) {
               {metric !== "average_days" && <small>{item.detail}</small>}
             </div>
             <span className={`analytics-ranking__rate ${item.value === null ? "is-empty" : ""}`}>
-              {formatRankingValue(item.value, metric)}
+              <b>{formatRankingValue(item.value, metric)}</b>
+              {item.share !== undefined && <small>{item.share.toFixed(1)}%</small>}
             </span>
           </article>
         )) : (
@@ -2219,6 +2392,7 @@ function RankingList({ items, metric, metricLabel, sortLabel, title }) {
 
 function Analytics({ view = "overview" }) {
   const { user } = useAuth();
+  const canViewRestrictedAnalytics = ["admin", "super_admin"].includes(user?.role);
   const { setAnalyticsLoading } = useOutletContext();
   const [filters, setFilters] = useState(() => createDefaultTourFilters(user));
   const [locations, setLocations] = useState([]);
@@ -2365,6 +2539,7 @@ function Analytics({ view = "overview" }) {
         staff: buildLocalVolumePerformanceRanking(tours, { ...filters, date_range: "all", date_from: "", date_to: "" }, ["assigned_staff_name", "staff_name", "assigned_staff", "created_by_name"]),
     },
       financialSummary: { revenue: 0, cost: 0, margin: 0 },
+      entityHealth: { locations: [], leadSources: [], staff: [] },
       staffOptions: Array.from(new Map(tours.filter((tour) => tour.assigned_staff).map((tour) => [String(tour.assigned_staff), { id: tour.assigned_staff, name: tour.assigned_staff_name || tour.staff_name || "Staff" }])).values()),
       trendData: getCohortRateTrendData(tours, filters),
       allTimeTrendData: getCohortRateTrendData(tours, { ...filters, date_range: "all", date_from: "", date_to: "" }),
@@ -2524,10 +2699,10 @@ function Analytics({ view = "overview" }) {
               <InfoHint label={"• Ranked by Conversion Rate\n• Enrolled ÷ Toured\n• Date = scheduled tour date"} />
             </div>
             <div className="analytics-overview-links" aria-label="Performance insight summaries">
-              <OverviewFinancialCard summary={analytics.financialSummary} />
+              {canViewRestrictedAnalytics && <OverviewFinancialCard summary={analytics.financialSummary} />}
               <OverviewRankingCard icon={MapPin} items={sortedRankings.locations} metric={rankingMetric} path="/analytics/locations" title="Location Analytics" />
               <OverviewRankingCard icon={Megaphone} items={sortedRankings.leadSources} metric={rankingMetric} path="/analytics/lead-sources" title="Lead Source Analytics" />
-              <OverviewRankingCard icon={UsersRound} items={sortedRankings.staff} metric={rankingMetric} path="/analytics/staff" title="Staff Analytics" />
+              {canViewRestrictedAnalytics && <OverviewRankingCard icon={UsersRound} items={sortedRankings.staff} metric={rankingMetric} path="/analytics/staff" title="Staff Analytics" />}
             </div>
           </section>
         </section>
@@ -2631,9 +2806,9 @@ function Analytics({ view = "overview" }) {
 
           <ConversionTrends data={analytics.trendData} />
 
-          <TemporalConversionRankings allTimeRows={analytics.allTimeTrendData} rows={analytics.trendData} />
-
           <TimeToProgress data={analytics.timeToProgress} />
+
+          <TemporalConversionRankings allTimeRows={analytics.allTimeTrendData} rows={analytics.trendData} />
 
           <RankingSortControl
             metric={rankingMetric}
@@ -2644,7 +2819,7 @@ function Analytics({ view = "overview" }) {
             sort={rankingSort}
           />
 
-          <div className="analytics-ranking-grid" aria-label="Conversion rankings">
+          <div className={`analytics-ranking-grid analytics-cohort-performance-rankings analytics-cohort-performance-rankings--${rankingMetric}`} aria-label="Conversion rankings">
             <RankingList items={sortedRankings.locations} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Location" />
             <RankingList items={sortedRankings.leadSources} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Lead Source" />
             <RankingList items={sortedRankings.staff} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Staff" />

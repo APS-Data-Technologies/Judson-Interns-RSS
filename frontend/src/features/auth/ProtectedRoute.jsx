@@ -46,11 +46,15 @@ const analyticsViews = [
   { value: "cost-margin", label: "Cost and Margin", path: "/analytics/cost-margin" },
 ];
 
-function AnalyticsTitlePicker({ isLoading, pathname }) {
+function AnalyticsTitlePicker({ isLoading, pathname, userRole }) {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const canViewRestrictedAnalytics = ["admin", "super_admin"].includes(userRole);
+  const visibleAnalyticsViews = analyticsViews.filter((view) => (
+    canViewRestrictedAnalytics || !["staff", "cost-margin"].includes(view.value)
+  ));
   const activeView =
-    analyticsViews.find((view) => pathname === view.path) || analyticsViews[0];
+    visibleAnalyticsViews.find((view) => pathname === view.path) || visibleAnalyticsViews[0];
 
   function handleSelect(view) {
     setIsOpen(false);
@@ -88,7 +92,7 @@ function AnalyticsTitlePicker({ isLoading, pathname }) {
       )}
       {isOpen && (
         <span className="analytics-title-picker__menu" role="menu">
-          {analyticsViews.map((view) => (
+          {visibleAnalyticsViews.map((view) => (
             <button
               className={view.value === activeView.value ? "is-active" : ""}
               key={view.value}
@@ -135,7 +139,7 @@ function ProtectedRoute() {
     location.pathname === "/home"
       ? `Hello ${firstName}`
       : isAnalyticsRoute
-        ? <AnalyticsTitlePicker isLoading={isAnalyticsLoading} pathname={location.pathname} />
+        ? <AnalyticsTitlePicker isLoading={isAnalyticsLoading} pathname={location.pathname} userRole={user?.role} />
       : routeTitle || dynamicTitle || "Ready Set STEM";
   const isAnalyticsOverview = location.pathname === "/analytics" || location.pathname === "/analytics/overview";
   const showBack = isAnalyticsRoute
