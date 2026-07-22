@@ -95,7 +95,8 @@ DATABASES = {
         conn_max_age=60,
     )
 }
-DATABASES["default"].setdefault("OPTIONS", {})["connect_timeout"] = 10
+if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
+    DATABASES["default"].setdefault("OPTIONS", {})["connect_timeout"] = 10
 
 
 # Password validation

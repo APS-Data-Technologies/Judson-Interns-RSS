@@ -19,6 +19,8 @@ const routeTitles = {
   "/admin/locations/new": "Add Location",
   "/admin/lead-sources": "Manage Lead Sources",
   "/admin/lead-sources/new": "Add Lead Source",
+  "/admin/cost-basis": "Manage Cost Basis",
+  "/admin/cost-basis/new": "Add Cost/Revenue",
 };
 
 const primaryRoutes = new Set([
@@ -31,6 +33,7 @@ const primaryRoutes = new Set([
   "/admin/users",
   "/admin/locations",
   "/admin/lead-sources",
+  "/admin/cost-basis",
 ]);
 
 const analyticsViews = [
@@ -123,6 +126,8 @@ function ProtectedRoute() {
     ? null
     : location.pathname.match(/^\/tours\/[^/]+\/edit$/)
     ? "Edit Tour"
+    : location.pathname.match(/^\/admin\/cost-basis\/[^/]+\/edit$/)
+      ? "Edit Cost/Revenue"
     : location.pathname.match(/^\/tours\/[^/]+$/)
       ? "Tour Details"
       : null;

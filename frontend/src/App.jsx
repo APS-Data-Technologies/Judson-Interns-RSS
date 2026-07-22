@@ -11,6 +11,7 @@ import Pipeline from "./pages/Pipeline/Pipeline";
 import Analytics from "./pages/Analytics/Analytics";
 import AnalyticsPlaceholder from "./pages/Analytics/AnalyticsPlaceholder";
 import Admin from "./pages/Admin/Admin";
+import CostBasisAdmin from "./pages/Admin/CostBasisAdmin";
 import Account from "./pages/Account/Account";
 
 import ProtectedRoute from "./features/auth/ProtectedRoute";
@@ -127,6 +128,18 @@ const router = createBrowserRouter([
           {
             path: "/admin/lead-sources/:id/edit",
             element: <Admin />,
+          },
+          {
+            path: "/admin/cost-basis",
+            element: <CostBasisAdmin />,
+          },
+          {
+            path: "/admin/cost-basis/new",
+            element: <CostBasisAdmin />,
+          },
+          {
+            path: "/admin/cost-basis/:id/edit",
+            element: <CostBasisAdmin />,
           },
         ],
       },
