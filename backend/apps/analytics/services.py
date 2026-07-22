@@ -1,9 +1,11 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
 
+from django.db.models import Sum
 from django.utils import timezone
 
 from apps.accounts.permissions import filter_queryset_by_location
+from apps.reports.models import CostBasis
 from apps.tours.models import Tour, TourStatus
 
 
@@ -141,6 +143,32 @@ def apply_filters(queryset, filters):
     if search:
         queryset = queryset.filter(family__family_name__icontains=search)
     return queryset
+
+
+def build_financial_summary(user, query_params, start, end):
+    queryset = filter_queryset_by_location(
+        CostBasis.objects.filter(is_active=True),
+        user,
+    )
+    location_ids = parse_csv(query_params.get("location") or query_params.get("locations"))
+    if location_ids:
+        queryset = queryset.filter(location_id__in=location_ids)
+    if start:
+        queryset = queryset.filter(reporting_month__gte=start.replace(day=1))
+    if end:
+        queryset = queryset.filter(reporting_month__lte=end.replace(day=1))
+
+    totals = {
+        row["cost_type"]: row["total"] or 0
+        for row in queryset.values("cost_type").annotate(total=Sum("cost_amount"))
+    }
+    revenue = totals.get(CostBasis.CostType.REVENUE, 0)
+    cost = totals.get(CostBasis.CostType.EXPENDITURE, 0)
+    return {
+        "revenue": revenue,
+        "cost": cost,
+        "margin": revenue - cost,
+    }
 
 
 def filter_by_scheduled_period(queryset, start, end):
@@ -683,6 +711,12 @@ def cohort_analytics(user, query_params):
 
     return {
         "period": period,
+        "financialSummary": build_financial_summary(
+            user,
+            query_params,
+            period["date_from"],
+            period["date_to"],
+        ),
         "staffOptions": sorted(staff_options.values(), key=lambda item: item["name"]),
         "counts": counts,
         "volumeCounts": volume_counts,

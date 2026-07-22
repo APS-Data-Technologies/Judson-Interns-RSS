@@ -809,6 +809,11 @@ function adaptBackendCohortAnalytics(data, rankingMetric) {
       leadSources: data.allTimeVolumePerformanceRankings?.leadSources || data.allTimeVolumePerformanceRankings?.lead_sources || [],
       staff: data.allTimeVolumePerformanceRankings?.staff || [],
     },
+    financialSummary: {
+      revenue: safeNumber(data.financialSummary?.revenue),
+      cost: safeNumber(data.financialSummary?.cost),
+      margin: safeNumber(data.financialSummary?.margin),
+    },
     staffOptions: data.staffOptions || [],
     trendData: (data.trendData || []).map(adaptBackendTrendRow),
     allTimeTrendData: (data.allTimeTrendData || data.trendData || []).map(adaptBackendTrendRow),
@@ -1012,25 +1017,23 @@ function OverviewRankingCard({ icon: Icon, items, metric, path, title }) {
   );
 }
 
-function OverviewFinancialCard({ items }) {
+function OverviewFinancialCard({ summary }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const totals = items.reduce((summary, item) => ({
-    revenue: summary.revenue + Number(item.revenue || 0),
-    cost: summary.cost + Number(item.cost || 0),
-  }), { revenue: 0, cost: 0 });
-  const margin = totals.revenue - totals.cost;
-  const marginRate = totals.revenue ? Math.round((margin / totals.revenue) * 100) : null;
+  const revenue = safeNumber(summary?.revenue);
+  const cost = safeNumber(summary?.cost);
+  const margin = safeNumber(summary?.margin, revenue - cost);
+  const marginRate = revenue ? Math.round((margin / revenue) * 100) : null;
 
   return (
     <article className={`analytics-preview-card analytics-preview-card--financial${isExpanded ? " analytics-preview-card--expanded" : ""}`}>
       <h3><button aria-expanded={isExpanded} onClick={() => setIsExpanded((current) => !current)} type="button"><CircleDollarSign aria-hidden="true" /><span>Cost and Margin Analytics</span>{isExpanded ? <ChevronUp className="analytics-preview-card__toggle" aria-hidden="true" /> : <ChevronDown className="analytics-preview-card__toggle" aria-hidden="true" />}</button></h3>
       <div className="analytics-preview-card__winner">
-        <div><small>Contribution margin</small><strong>{totals.revenue ? `$${Math.round(margin).toLocaleString()}` : "--"}</strong></div>
+        <div><small>Contribution margin</small><strong>{revenue || cost ? `$${Math.round(margin).toLocaleString()}` : "--"}</strong></div>
         <b>{marginRate === null ? "--" : `${marginRate}%`}</b>
       </div>
       <div className="analytics-preview-card__financial-rows">
-        <div><span>Revenue</span><strong>{totals.revenue ? `$${Math.round(totals.revenue).toLocaleString()}` : "--"}</strong></div>
-        <div><span>Cost</span><strong>{totals.cost ? `$${Math.round(totals.cost).toLocaleString()}` : "--"}</strong></div>
+        <div><span>Revenue</span><strong>{revenue ? `$${Math.round(revenue).toLocaleString()}` : "--"}</strong></div>
+        <div><span>Cost</span><strong>{cost ? `$${Math.round(cost).toLocaleString()}` : "--"}</strong></div>
       </div>
       <Link to="/analytics/cost-margin">Explore more</Link>
     </article>
@@ -2356,11 +2359,12 @@ function Analytics({ view = "overview" }) {
         leadSources: buildLocalVolumePerformanceRanking(tours, filters, ["lead_source_name", "lead_source"]),
         staff: buildLocalVolumePerformanceRanking(tours, filters, ["assigned_staff_name", "staff_name", "assigned_staff", "created_by_name"]),
       },
-      allTimeVolumePerformanceRankings: {
+    allTimeVolumePerformanceRankings: {
         locations: buildLocalVolumePerformanceRanking(tours, { ...filters, date_range: "all", date_from: "", date_to: "" }, ["location_name", "location"]),
         leadSources: buildLocalVolumePerformanceRanking(tours, { ...filters, date_range: "all", date_from: "", date_to: "" }, ["lead_source_name", "lead_source"]),
         staff: buildLocalVolumePerformanceRanking(tours, { ...filters, date_range: "all", date_from: "", date_to: "" }, ["assigned_staff_name", "staff_name", "assigned_staff", "created_by_name"]),
-      },
+    },
+      financialSummary: { revenue: 0, cost: 0, margin: 0 },
       staffOptions: Array.from(new Map(tours.filter((tour) => tour.assigned_staff).map((tour) => [String(tour.assigned_staff), { id: tour.assigned_staff, name: tour.assigned_staff_name || tour.staff_name || "Staff" }])).values()),
       trendData: getCohortRateTrendData(tours, filters),
       allTimeTrendData: getCohortRateTrendData(tours, { ...filters, date_range: "all", date_from: "", date_to: "" }),
@@ -2520,7 +2524,7 @@ function Analytics({ view = "overview" }) {
               <InfoHint label={"• Ranked by Conversion Rate\n• Enrolled ÷ Toured\n• Date = scheduled tour date"} />
             </div>
             <div className="analytics-overview-links" aria-label="Performance insight summaries">
-              <OverviewFinancialCard items={analytics.rankings.locations} />
+              <OverviewFinancialCard summary={analytics.financialSummary} />
               <OverviewRankingCard icon={MapPin} items={sortedRankings.locations} metric={rankingMetric} path="/analytics/locations" title="Location Analytics" />
               <OverviewRankingCard icon={Megaphone} items={sortedRankings.leadSources} metric={rankingMetric} path="/analytics/lead-sources" title="Lead Source Analytics" />
               <OverviewRankingCard icon={UsersRound} items={sortedRankings.staff} metric={rankingMetric} path="/analytics/staff" title="Staff Analytics" />
