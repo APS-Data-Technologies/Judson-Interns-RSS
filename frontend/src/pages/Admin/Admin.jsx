@@ -681,6 +681,7 @@ function Admin() {
         {canManageUsers && <NavLink to="/admin/users">Users</NavLink>}
         <NavLink to="/admin/locations">Locations</NavLink>
         <NavLink to="/admin/lead-sources">Lead Sources</NavLink>
+        {canManageUsers && <NavLink to="/admin/cost-basis">Cost Basis</NavLink>}
       </nav>
     );
   }

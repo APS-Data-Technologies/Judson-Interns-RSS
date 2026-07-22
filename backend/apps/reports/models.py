@@ -2,12 +2,17 @@ from django.db import models
 
 
 class CostBasis(models.Model):
+    class CostType(models.TextChoices):
+        EXPENDITURE = "Expenditure", "Expenditure"
+        REVENUE = "Revenue", "Revenue"
+
     external_id = models.CharField(max_length=40, unique=True, null=True, blank=True)
     location = models.ForeignKey("sites.Location", on_delete=models.PROTECT, related_name="cost_basis_entries")
     reporting_month = models.DateField()
-    cost_type = models.CharField(max_length=100)
+    cost_type = models.CharField(max_length=100, choices=CostType.choices)
     cost_amount = models.DecimalField(max_digits=12, decimal_places=2)
     notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
