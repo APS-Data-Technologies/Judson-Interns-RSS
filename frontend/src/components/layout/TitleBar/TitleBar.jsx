@@ -14,6 +14,7 @@ function TitleBar({ onBack, showBack = false, title }) {
         <span className="title-bar__back-spacer" aria-hidden="true" />
       )}
       <TitleElement className="title-bar__title">{title}</TitleElement>
+      <span className="title-bar__actions" id="analytics-title-actions" />
     </section>
   );
 }

@@ -8,14 +8,17 @@ import {
   ChevronDown,
   CircleHelp,
   GripVertical,
+  LoaderCircle,
   MapPin,
   MessageCircle,
   Plus,
+  Search,
   UsersRound,
   X,
 } from "lucide-react";
 
 import useAuth from "../../features/auth/useAuth";
+import { globalSearch } from "../../features/search/globalSearchApi";
 import { listTours } from "../../features/tours/tourApi";
 import "./ChatAssistant.css";
 
@@ -23,6 +26,53 @@ const roleLabels = {
   staff: "Location assistant",
   admin: "Operations assistant",
   super_admin: "Leadership assistant",
+};
+
+const searchDestinations = [
+  { group: "Pages", title: "Home", keywords: "dashboard start", path: "/home", roles: ["staff", "admin", "super_admin"] },
+  { group: "Pages", title: "Tours", keywords: "families schedule", path: "/tours", roles: ["staff", "admin", "super_admin"] },
+  { group: "Pages", title: "Pipeline", keywords: "stages follow up", path: "/pipeline", roles: ["staff", "admin", "super_admin"] },
+  { group: "Pages", title: "Analytics", keywords: "reports insights", path: "/analytics/overview", roles: ["staff", "admin", "super_admin"] },
+  { group: "Pages", title: "Settings", keywords: "account profile", path: "/settings", roles: ["staff", "admin", "super_admin"] },
+  { group: "Pages", title: "Admin", keywords: "management", path: "/admin", roles: ["admin", "super_admin"] },
+  { group: "Sections", title: "Volume and Trend", keywords: "booked toured enrolled volume", path: "/analytics/volume", roles: ["staff", "admin", "super_admin"], parent: "Analytics" },
+  { group: "Sections", title: "Conversion and Cohort", keywords: "conversion rate cohort", path: "/analytics/cohort", roles: ["staff", "admin", "super_admin"], parent: "Analytics" },
+  { group: "Sections", title: "Location Insights", keywords: "location performance", path: "/analytics/locations", roles: ["staff", "admin", "super_admin"], parent: "Analytics" },
+  { group: "Sections", title: "Lead Source Insights", keywords: "marketing source", path: "/analytics/lead-sources", roles: ["staff", "admin", "super_admin"], parent: "Analytics" },
+  { group: "Sections", title: "Staff Insights", keywords: "employee performance", path: "/analytics/staff", roles: ["admin", "super_admin"], parent: "Analytics" },
+  { group: "Sections", title: "Costs & Margin", keywords: "revenue financial cost efficiency", path: "/analytics/cost-margin", roles: ["admin", "super_admin"], parent: "Analytics" },
+  { group: "Sections", title: "Manage Users", keywords: "roles accounts", path: "/admin/users", roles: ["admin", "super_admin"], parent: "Admin" },
+  { group: "Sections", title: "Manage Locations", keywords: "sites", path: "/admin/locations", roles: ["admin", "super_admin"], parent: "Admin" },
+  { group: "Sections", title: "Manage Lead Sources", keywords: "marketing sources", path: "/admin/lead-sources", roles: ["admin", "super_admin"], parent: "Admin" },
+  { group: "Statuses", title: "Booked", keywords: "status scheduled upcoming", path: "/pipeline?status=scheduled", roles: ["staff", "admin", "super_admin"], parent: "Pipeline" },
+  { group: "Statuses", title: "Booked", keywords: "status scheduled upcoming", path: "/tours?status=scheduled", roles: ["staff", "admin", "super_admin"], parent: "Tours" },
+  { group: "Statuses", title: "Booked", keywords: "status scheduled upcoming", path: "/analytics/volume?focus=scheduled", roles: ["staff", "admin", "super_admin"], parent: "Analytics › Volume and Trend" },
+  { group: "Statuses", title: "Toured", keywords: "status completed tour", path: "/pipeline?status=toured", roles: ["staff", "admin", "super_admin"], parent: "Pipeline" },
+  { group: "Statuses", title: "Toured", keywords: "status completed tour", path: "/tours?status=toured", roles: ["staff", "admin", "super_admin"], parent: "Tours" },
+  { group: "Statuses", title: "Toured", keywords: "status completed tour", path: "/analytics/volume?focus=toured", roles: ["staff", "admin", "super_admin"], parent: "Analytics › Volume and Trend" },
+  { group: "Statuses", title: "No Show", keywords: "status no-show noshow missed", path: "/pipeline?status=no_show", roles: ["staff", "admin", "super_admin"], parent: "Pipeline" },
+  { group: "Statuses", title: "No Show", keywords: "status no-show noshow missed", path: "/tours?status=no_show", roles: ["staff", "admin", "super_admin"], parent: "Tours" },
+  { group: "Statuses", title: "No Show", keywords: "status no-show noshow missed", path: "/analytics/volume?focus=no_show", roles: ["staff", "admin", "super_admin"], parent: "Analytics › Volume and Trend" },
+  { group: "Statuses", title: "Enrolled", keywords: "status enrollment converted", path: "/pipeline?status=enrolled", roles: ["staff", "admin", "super_admin"], parent: "Pipeline" },
+  { group: "Statuses", title: "Enrolled", keywords: "status enrollment converted", path: "/tours?status=enrolled", roles: ["staff", "admin", "super_admin"], parent: "Tours" },
+  { group: "Statuses", title: "Enrolled", keywords: "status enrollment converted", path: "/analytics/volume?focus=enrolled", roles: ["staff", "admin", "super_admin"], parent: "Analytics › Volume and Trend" },
+  { group: "Statuses", title: "Churned", keywords: "status churn lost", path: "/pipeline?status=churned", roles: ["staff", "admin", "super_admin"], parent: "Pipeline" },
+  { group: "Statuses", title: "Churned", keywords: "status churn lost", path: "/tours?status=churned", roles: ["staff", "admin", "super_admin"], parent: "Tours" },
+  { group: "Statuses", title: "Churned", keywords: "status churn lost", path: "/analytics/volume?focus=churned", roles: ["staff", "admin", "super_admin"], parent: "Analytics › Volume and Trend" },
+  { group: "Statuses", title: "Rescheduled", keywords: "status reschedule moved", path: "/tours?status=rescheduled", roles: ["staff", "admin", "super_admin"], parent: "Tours" },
+  { group: "Statuses", title: "Cancelled", keywords: "status canceled cancellation", path: "/tours?status=cancelled", roles: ["staff", "admin", "super_admin"], parent: "Tours" },
+  { group: "Statuses", title: "Off Track", keywords: "status overdue follow-up awaiting outcome", path: "/pipeline?category=off_track", roles: ["staff", "admin", "super_admin"], parent: "Pipeline" },
+  { group: "Statuses", title: "On Track", keywords: "status healthy current", path: "/pipeline?category=on_track", roles: ["staff", "admin", "super_admin"], parent: "Pipeline" },
+  { group: "Actions", title: "Create a new tour", keywords: "add book schedule", path: "/tours/new", roles: ["staff", "admin", "super_admin"] },
+  { group: "Actions", title: "Review off-track tours", keywords: "follow up overdue outcome", path: "/pipeline", roles: ["staff", "admin", "super_admin"] },
+];
+
+const backendGroupLabels = {
+  families: "Families",
+  tours: "Tours",
+  locations: "Locations",
+  leadSources: "Lead Sources",
+  staff: "Staff",
 };
 
 function localDate() {
@@ -61,12 +111,16 @@ function ChatAssistant() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState(() => [initialMessage(user)]);
   const [isWorking, setIsWorking] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState({});
+  const [isSearching, setIsSearching] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const assistantRef = useRef(null);
   const dragRef = useRef(null);
   const didDragRef = useRef(false);
   const feedRef = useRef(null);
   const inputRef = useRef(null);
+  const searchInputRef = useRef(null);
   const isAdmin = ["admin", "super_admin"].includes(user.role);
   const isSuperAdmin = user.role === "super_admin";
 
@@ -112,9 +166,31 @@ function ChatAssistant() {
 
   useEffect(() => {
     if (isOpen) {
-      inputRef.current?.focus();
+      searchInputRef.current?.focus();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2) {
+      return undefined;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        setSearchResults(await globalSearch(query, controller.signal));
+      } catch (error) {
+        if (error.name !== "CanceledError" && error.code !== "ERR_CANCELED") setSearchResults({});
+      } finally {
+        if (!controller.signal.aborted) setIsSearching(false);
+      }
+    }, 140);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [searchQuery]);
 
   useEffect(() => {
     feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "smooth" });
@@ -195,6 +271,21 @@ function ChatAssistant() {
     ...(isSuperAdmin ? [{ label: "Manage users", icon: UsersRound }] : []),
     { label: "What can you do?", icon: CircleHelp },
   ];
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const staticGroups = searchDestinations
+    .filter((item) => item.roles.includes(user.role))
+    .filter((item) => normalizedSearch.length >= 2 && `${item.title} ${item.keywords} ${item.parent || ""}`.toLowerCase().includes(normalizedSearch))
+    .reduce((groups, item) => ({ ...groups, [item.group]: [...(groups[item.group] || []), item] }), {});
+  const resultGroups = [
+    ...Object.entries(staticGroups).map(([label, items]) => ({ label, items: items.slice(0, label === "Statuses" ? 20 : 5) })),
+    ...Object.entries(backendGroupLabels).map(([key, label]) => ({ label, items: searchResults[key] || [] })),
+  ].filter((group) => group.items.length);
+
+  function openSearchResult(result) {
+    navigate(result.path);
+    setSearchQuery("");
+    setIsOpen(false);
+  }
 
   return (
     <aside className={`chat-assistant ${isOpen ? "chat-assistant--open" : ""}`} aria-label="RSS Assistant" ref={assistantRef} style={{ transform: `translate3d(${position.x}px, ${position.y}px, 0)` }}>
@@ -213,6 +304,29 @@ function ChatAssistant() {
               <button className="chat-assistant__close" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => setIsOpen(false)} aria-label="Close assistant"><X size={20} /></button>
             </div>
           </header>
+
+          <section className="chat-assistant__global-search" aria-label="Global Search">
+            <label htmlFor="chat-assistant-search"><Search aria-hidden="true" /><span className="sr-only">Global Search</span></label>
+            <input
+              autoComplete="off"
+              id="chat-assistant-search"
+              onChange={(event) => {
+                const value = event.target.value;
+                setSearchQuery(value);
+                if (value.trim().length < 2) {
+                  setSearchResults({});
+                  setIsSearching(false);
+                }
+              }}
+              placeholder="Search pages, sections, families…"
+              ref={searchInputRef}
+              value={searchQuery}
+            />
+            {isSearching && <LoaderCircle aria-label="Searching" className="chat-assistant__search-spinner" />}
+            {normalizedSearch.length >= 2 && <div className="chat-assistant__search-results">
+              {resultGroups.length ? resultGroups.map((group) => <section key={group.label}><h3>{group.label}</h3>{group.items.map((result) => <button key={`${group.label}-${result.id || result.path}-${result.title}`} onClick={() => openSearchResult(result)} type="button"><span><strong>{result.title}</strong><small>{result.parent ? `${result.parent} › ${result.title}` : result.subtitle || group.label.slice(0, -1)}</small></span><ArrowUp aria-hidden="true" /></button>)}</section>) : !isSearching && <p>No matching destinations or records.</p>}
+            </div>}
+          </section>
 
           <div className="chat-assistant__feed" ref={feedRef}>
             {messages.map((item) => (

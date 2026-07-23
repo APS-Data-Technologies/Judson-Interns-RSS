@@ -247,7 +247,7 @@
   color: var(--rss-green);
 }
 
-@media (min-aspect-ratio: 11/10) {
+@media (hover: hover) and (pointer: fine) and (min-width: 1181px) {
   .account-actions {
     left: calc(clamp(10rem, 15vw, 15rem) + 24px);
     margin: 0 auto;
