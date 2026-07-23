@@ -43,7 +43,7 @@ const analyticsViews = [
   { value: "locations", label: "Location", path: "/analytics/locations" },
   { value: "lead-sources", label: "Lead Source", path: "/analytics/lead-sources" },
   { value: "staff", label: "Staff", path: "/analytics/staff" },
-  { value: "cost-margin", label: "Cost and Margin", path: "/analytics/cost-margin" },
+  { value: "cost-margin", label: "Costs & Margin", path: "/analytics/cost-margin" },
 ];
 
 function AnalyticsTitlePicker({ isLoading, pathname, userRole }) {
