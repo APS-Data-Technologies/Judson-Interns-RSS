@@ -813,6 +813,7 @@ function adaptBackendCohortAnalytics(data, rankingMetric) {
       cost: safeNumber(data.financialSummary?.cost),
       margin: safeNumber(data.financialSummary?.margin),
     },
+    executiveBriefs: data.executiveBriefs || {},
     entityHealth: data.entityHealth || {
       locations: data.locationHealth || [],
       leadSources: [],
@@ -1030,7 +1031,7 @@ function OverviewFinancialCard({ summary }) {
 
   return (
     <article className={`analytics-preview-card analytics-preview-card--financial${isExpanded ? " analytics-preview-card--expanded" : ""}`}>
-      <h3><button aria-expanded={isExpanded} onClick={() => setIsExpanded((current) => !current)} type="button"><CircleDollarSign aria-hidden="true" /><span>Cost and Margin Analytics</span>{isExpanded ? <ChevronUp className="analytics-preview-card__toggle" aria-hidden="true" /> : <ChevronDown className="analytics-preview-card__toggle" aria-hidden="true" />}</button></h3>
+      <h3><button aria-expanded={isExpanded} onClick={() => setIsExpanded((current) => !current)} type="button"><CircleDollarSign aria-hidden="true" /><span>Costs &amp; Margin</span>{isExpanded ? <ChevronUp className="analytics-preview-card__toggle" aria-hidden="true" /> : <ChevronDown className="analytics-preview-card__toggle" aria-hidden="true" />}</button></h3>
       <div className="analytics-preview-card__winner">
         <div><small>Contribution margin</small><strong>{revenue || cost ? `$${Math.round(margin).toLocaleString()}` : "--"}</strong></div>
         <b>{marginRate === null ? "--" : `${marginRate}%`}</b>
@@ -2390,6 +2391,17 @@ function RankingList({ items, metric, metricLabel, sortLabel, title }) {
   );
 }
 
+function AnalyticsExecutiveSummary({ brief }) {
+  if (!brief?.keyFigures?.length) return null;
+  return (
+    <section className="executive-brief" aria-labelledby="analytics-executive-summary-title">
+      <header><h2 id="analytics-executive-summary-title">Executive Summary</h2><p>Generated from the selected filters and comparison period.</p></header>
+      <div className="executive-brief__figures">{brief.keyFigures.map((figure) => <div key={figure.label}><small>{figure.label}</small><strong>{figure.value}</strong></div>)}</div>
+      {brief.sections?.length > 0 && <div className="executive-brief__sections">{brief.sections.map((section) => <section className={`executive-brief__section executive-brief__section--${section.key}`} key={section.key}><h3>{section.title}</h3><ul>{section.items.map((item) => <li key={item}>{item}</li>)}</ul></section>)}</div>}
+    </section>
+  );
+}
+
 function Analytics({ view = "overview" }) {
   const { user } = useAuth();
   const canViewRestrictedAnalytics = ["admin", "super_admin"].includes(user?.role);
@@ -2615,6 +2627,7 @@ function Analytics({ view = "overview" }) {
       />
 
       {error && <p className="analytics-state analytics-state--error">{error}</p>}
+      {view !== "overview" && <AnalyticsExecutiveSummary brief={analytics.executiveBriefs?.[view]} />}
       {view === "overview" ? (
         <section className="analytics-workspace analytics-workspace--overview" aria-label="Analytics overview">
           <div className="analytics-overview-header">

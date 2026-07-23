@@ -6,6 +6,9 @@ from django.test import TestCase
 from apps.accounts.models import User
 from apps.analytics.services import (
     build_financial_summary,
+    build_financial_trend,
+    build_cost_efficiency_trend,
+    build_location_financial_performance,
     cohort_analytics,
     compress_rate_trend,
     compress_volume_trend,
@@ -110,6 +113,52 @@ class FinancialSummaryTests(TestCase):
         self.assertEqual(summary["cost"], Decimal("6000.00"))
         self.assertEqual(summary["margin"], Decimal("16000.00"))
 
+    def test_financial_trend_returns_monthly_totals_and_margin_rate(self):
+        trend = build_financial_trend(
+            self.super_admin,
+            {"location": str(self.location_one.id)},
+            date(2026, 1, 15),
+            date(2026, 2, 15),
+        )
+
+        self.assertEqual([row["month"] for row in trend], ["2026-01", "2026-02"])
+        self.assertEqual(trend[0]["revenue"], Decimal("25000.00"))
+        self.assertEqual(trend[0]["cost"], Decimal("7000.00"))
+        self.assertEqual(trend[0]["margin"], Decimal("18000.00"))
+        self.assertEqual(trend[0]["marginRate"], Decimal("72.00"))
+
+    def test_cost_efficiency_trend_uses_event_date_counts(self):
+        financial_trend = build_financial_trend(
+            self.super_admin,
+            {"location": str(self.location_one.id)},
+            date(2026, 1, 1),
+            date(2026, 2, 28),
+        )
+        efficiency = build_cost_efficiency_trend([], financial_trend)
+
+        self.assertEqual(len(efficiency), 2)
+        self.assertEqual(efficiency[0]["booked"], 0)
+        self.assertIsNone(efficiency[0]["costPerBooked"])
+        self.assertIsNone(efficiency[0]["costPerToured"])
+        self.assertIsNone(efficiency[0]["costPerEnrollment"])
+
+    def test_location_financial_performance_splits_financial_totals(self):
+        rows = build_location_financial_performance(
+            self.super_admin,
+            {},
+            date(2026, 1, 1),
+            date(2026, 1, 31),
+            [],
+        )
+
+        self.assertEqual(len(rows), 2)
+        downtown = next(row for row in rows if row["locationName"] == "Downtown")
+        self.assertEqual(downtown["revenue"], Decimal("25000.00"))
+        self.assertEqual(downtown["cost"], Decimal("7000.00"))
+        self.assertEqual(downtown["margin"], Decimal("18000.00"))
+        self.assertEqual(downtown["marginRate"], Decimal("72.00"))
+        self.assertIsNone(downtown["costPerEnrollment"])
+
     def test_staff_is_restricted_to_assigned_location(self):
         summary = build_financial_summary(self.staff, {}, None, None)
 
@@ -153,6 +202,10 @@ class FinancialSummaryTests(TestCase):
         self.assertEqual(analytics["volumePerformanceRankings"]["staff"], [])
         self.assertEqual(analytics["allTimeVolumePerformanceRankings"]["staff"], [])
         self.assertEqual(analytics["entityHealth"]["staff"], [])
+        self.assertEqual(analytics["executiveBrief"], {"keyFigures": [], "sections": []})
+        self.assertEqual(analytics["executiveBriefs"]["staff"], {"keyFigures": [], "sections": []})
+        self.assertEqual(len(analytics["executiveBriefs"]["volume"]["keyFigures"]), 5)
+        self.assertEqual(len(analytics["executiveBriefs"]["cohort"]["keyFigures"]), 5)
 
     def test_admin_analytics_payload_includes_cost_basis_summary(self):
         analytics = cohort_analytics(self.admin, {})
@@ -160,6 +213,18 @@ class FinancialSummaryTests(TestCase):
         self.assertEqual(analytics["financialSummary"]["revenue"], Decimal("73000.00"))
         self.assertEqual(analytics["financialSummary"]["cost"], Decimal("21000.00"))
         self.assertEqual(analytics["financialSummary"]["margin"], Decimal("52000.00"))
+        self.assertEqual(len(analytics["executiveBriefs"]["staff"]["keyFigures"]), 5)
+
+    def test_admin_executive_brief_uses_explicit_comparison_period(self):
+        analytics = cohort_analytics(self.admin, {
+            "date_from": "2026-02-01",
+            "date_to": "2026-02-28",
+            "comparison_date_from": "2026-01-01",
+            "comparison_date_to": "2026-01-31",
+        })
+
+        self.assertEqual(len(analytics["executiveBrief"]["keyFigures"]), 5)
+        self.assertTrue(analytics["executiveBrief"]["sections"])
 
     def test_volume_trend_compresses_full_period_without_losing_totals(self):
         rows = [

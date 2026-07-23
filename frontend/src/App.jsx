@@ -9,7 +9,7 @@ import NewTour from "./pages/Tours/NewTour";
 import TourPlaceholder from "./pages/Tours/TourPlaceholder";
 import Pipeline from "./pages/Pipeline/Pipeline";
 import Analytics from "./pages/Analytics/Analytics";
-import AnalyticsPlaceholder from "./pages/Analytics/AnalyticsPlaceholder";
+import CostsMarginAnalytics from "./pages/Analytics/CostsMarginAnalytics";
 import Admin from "./pages/Admin/Admin";
 import CostBasisAdmin from "./pages/Admin/CostBasisAdmin";
 import Account from "./pages/Account/Account";
@@ -79,7 +79,7 @@ const router = createBrowserRouter([
       {
         element: <RoleRoute allowedRoles={["super_admin", "admin"]} />,
         children: [
-          { path: "/analytics/cost-margin", element: <AnalyticsPlaceholder title="Cost and Margin Analytics" /> },
+          { path: "/analytics/cost-margin", element: <CostsMarginAnalytics /> },
           { path: "/analytics/staff", element: <Analytics view="staff" /> },
         ],
       },
