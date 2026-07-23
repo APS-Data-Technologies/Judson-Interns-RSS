@@ -4,6 +4,7 @@ import { useOutletContext } from "react-router-dom";
 
 import { getCohortAnalytics } from "../../features/analytics/analyticsApi";
 import { getLocations } from "../../features/tours/tourApi";
+import { AnalyticsExport, useAnalyticsDrillThrough } from "./AnalyticsActions";
 import "./Analytics.css";
 
 function monthValue(date) {
@@ -589,6 +590,18 @@ function CostsMarginAnalytics() {
       previousValue: previousCount ? Number(previous.cost) / previousCount : null,
     };
   });
+  const exportFilters = useMemo(() => ({
+    ...monthRange(startMonth, endMonth),
+    comparison_date_from: monthRange(compareStart, compareEnd).date_from,
+    comparison_date_to: monthRange(compareStart, compareEnd).date_to,
+    ...(location ? { location } : {}),
+  }), [compareEnd, compareStart, endMonth, location, startMonth]);
+  const { drillThrough, onClickCapture } = useAnalyticsDrillThrough({
+    filters: exportFilters,
+    page: "cost-margin",
+    period: `${formatMonth(startMonth)} – ${formatMonth(endMonth)}`,
+    rows: [...trend, ...locationPerformance],
+  });
 
   function updateStart(value) {
     if (!value) return;
@@ -613,7 +626,8 @@ function CostsMarginAnalytics() {
   }
 
   return (
-    <section className="analytics-page costs-margin-page" aria-label="Costs & Margin analytics">
+    <section className="analytics-page costs-margin-page" aria-label="Costs & Margin analytics" onClickCapture={onClickCapture}>
+      <AnalyticsExport filters={exportFilters} page="cost-margin" />
       <CostsMarginFilters compareEnd={compareEnd} compareIsCustom={compareIsCustom} compareStart={compareStart} endMonth={endMonth} latestCompletedMonth={latestCompletedMonth} location={location} locations={locations} onCompareEndChange={updateCompareEnd} onCompareReset={() => setCompareIsCustom(false)} onCompareStartChange={updateCompareStart} onEndChange={updateEnd} onLocationChange={setLocation} onStartChange={updateStart} selectedMonthCount={selectedMonthCount} startMonth={startMonth} />
 
       {error && <p className="analytics-state analytics-state--error">{error}</p>}
@@ -640,6 +654,7 @@ function CostsMarginAnalytics() {
         </section>
         <LocationPerformance comparisonRows={comparisonLocationPerformance} rows={locationPerformance} />
       </section>
+      {drillThrough}
     </section>
   );
 }

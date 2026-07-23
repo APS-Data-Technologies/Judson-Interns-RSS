@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useOutletContext } from "react-router-dom";
+import { Link, useLocation, useOutletContext, useSearchParams } from "react-router-dom";
 import {
   ChevronLeft,
   ArrowDownUp,
@@ -28,6 +28,7 @@ import {
   joinFilterValues,
 } from "../../features/tours/filterConfig";
 import { getLeadSources, getLocations, getTourEvents, listTours } from "../../features/tours/tourApi";
+import { AnalyticsExport, useAnalyticsDrillThrough } from "./AnalyticsActions";
 import "./Analytics.css";
 
 const analyticsStatuses = [
@@ -1272,8 +1273,10 @@ function TemporalDistributionPlot({ dimension, entries, status }) {
   return <div className={`analytics-temporal-plot analytics-temporal-plot--${status}`} aria-label="Volume distribution">{orderedEntries.map((entry) => <div className="analytics-temporal-plot__item" key={entry.key} title={`${entry.label}: ${entry.value}`}><span className="analytics-temporal-plot__track"><i style={{ height: `${Math.max((entry.value / maxValue) * 100, entry.value ? 8 : 2)}%` }} /></span><span className="analytics-temporal-plot__label">{entry.label}</span></div>)}</div>;
 }
 
-function VolumeTemporalRankings({ allTimeRows, rows }) {
-  const [metricStatus, setMetricStatus] = useState("scheduled");
+function VolumeTemporalRankings({ allTimeRows, focusStatus, rows }) {
+  const [metricStatus, setMetricStatus] = useState(() => (
+    volumeChartMetrics.some((metric) => metric.status === focusStatus) ? focusStatus : "scheduled"
+  ));
   const [rankingDirection, setRankingDirection] = useState("highest");
   const [rankingScope, setRankingScope] = useState("selected");
   const [expandedGroup, setExpandedGroup] = useState(null);
@@ -1347,10 +1350,14 @@ function VolumePerformanceRankings({ allTimeRankings, rankings }) {
   );
 }
 
-function VolumeAnalyticsWorkspace({ analytics, periodComparison }) {
+function VolumeAnalyticsWorkspace({ analytics, focusStatus, periodComparison }) {
   const [eventTrendMode, setEventTrendMode] = useState("daily");
   const [trendWindowOffset, setTrendWindowOffset] = useState(0);
-  const [selectedTrendStatuses, setSelectedTrendStatuses] = useState(() => selectableVolumeTrendMetrics.map((metric) => metric.status));
+  const [selectedTrendStatuses, setSelectedTrendStatuses] = useState(() => (
+    selectableVolumeTrendMetrics.some((metric) => metric.status === focusStatus)
+      ? [focusStatus]
+      : selectableVolumeTrendMetrics.map((metric) => metric.status)
+  ));
   const dailyTrendRows = analytics.volumeCalendarData.map((row) => ({
     ...row,
     label: new Date(`${row.date}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
@@ -1402,7 +1409,7 @@ function VolumeAnalyticsWorkspace({ analytics, periodComparison }) {
         </div>
       </section>
 
-      <VolumeTemporalRankings allTimeRows={analytics.allTimeVolumeCalendarData} rows={analytics.volumeCalendarData} />
+      <VolumeTemporalRankings allTimeRows={analytics.allTimeVolumeCalendarData} focusStatus={focusStatus} rows={analytics.volumeCalendarData} />
 
       <VolumePerformanceRankings allTimeRankings={analytics.allTimeVolumePerformanceRankings} rankings={analytics.volumePerformanceRankings} />
 
@@ -2402,11 +2409,17 @@ function AnalyticsExecutiveSummary({ brief }) {
   );
 }
 
-function Analytics({ view = "overview" }) {
+function AnalyticsWorkspace({ view = "overview" }) {
   const { user } = useAuth();
   const canViewRestrictedAnalytics = ["admin", "super_admin"].includes(user?.role);
   const { setAnalyticsLoading } = useOutletContext();
-  const [filters, setFilters] = useState(() => createDefaultTourFilters(user));
+  const [searchParams] = useSearchParams();
+  const [filters, setFilters] = useState(() => ({
+    ...createDefaultTourFilters(user),
+    ...(searchParams.get("location") ? { locations: [searchParams.get("location")] } : {}),
+    ...(searchParams.get("leadSource") ? { leadSources: [searchParams.get("leadSource")] } : {}),
+    ...(searchParams.get("staff") ? { staff: [searchParams.get("staff")] } : {}),
+  }));
   const [locations, setLocations] = useState([]);
   const [leadSources, setLeadSources] = useState([]);
   const [tours, setTours] = useState([]);
@@ -2602,6 +2615,22 @@ function Analytics({ view = "overview" }) {
 
   const rankingSortLabel = rankingSort === "worst" ? "Least performing" : "Best performing";
   const rankingMetricLabel = rankingMetricOptions.find((option) => option.value === rankingMetric)?.label || "Conversion rate";
+  const exportFilters = useMemo(
+    () => buildAnalyticsParams(filters, rankingMetric, rankingSort),
+    [filters, rankingMetric, rankingSort],
+  );
+  const drillRows = useMemo(() => {
+    if (view === "volume") return analytics.volumeTrendData || [];
+    if (view === "cohort") return analytics.trendData || [];
+    if (["locations", "leadSources", "staff"].includes(view)) return analytics.entityHealth?.[view] || [];
+    return analytics.volumeMetrics || [];
+  }, [analytics, view]);
+  const { drillThrough, onClickCapture } = useAnalyticsDrillThrough({
+    filters: exportFilters,
+    page: view,
+    period: periodComparison.selected,
+    rows: drillRows,
+  });
 
   function updateFilter(name, value) {
     setFilters((currentFilters) => ({
@@ -2612,7 +2641,8 @@ function Analytics({ view = "overview" }) {
   }
 
   return (
-    <section className="analytics-page" aria-label="Analytics">
+    <section className="analytics-page" aria-label="Analytics" onClickCapture={onClickCapture}>
+      <AnalyticsExport filters={exportFilters} page={view} />
       <TourFilterControls
         filters={filters}
         leadSources={leadSources}
@@ -2720,7 +2750,7 @@ function Analytics({ view = "overview" }) {
           </section>
         </section>
       ) : view === "volume" ? (
-        <VolumeAnalyticsWorkspace analytics={analytics} key={periodComparison.selected} periodComparison={periodComparison} />
+        <VolumeAnalyticsWorkspace analytics={analytics} focusStatus={searchParams.get("focus")} key={periodComparison.selected} periodComparison={periodComparison} />
       ) : ["locations", "leadSources", "staff"].includes(view) ? (
         <EntityAnalyticsWorkspace analytics={analytics} dimension={view} filters={filters} leadSources={leadSources} locations={locations} user={user} />
       ) : (
@@ -2839,8 +2869,14 @@ function Analytics({ view = "overview" }) {
           </div>
         </section>
       )}
+      {drillThrough}
     </section>
   );
+}
+
+function Analytics({ view = "overview" }) {
+  const location = useLocation();
+  return <AnalyticsWorkspace key={`${view}:${location.search}`} view={view} />;
 }
 
 export default Analytics;

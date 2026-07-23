@@ -445,7 +445,7 @@
   }
 }
 
-@media (min-aspect-ratio: 11/10) {
+@media (hover: hover) and (pointer: fine) and (min-width: 1181px) {
   .home-fixed-action {
     left: calc(256px + var(--page-pad-x));
   }
@@ -464,7 +464,7 @@
   }
 }
 
-@media (max-aspect-ratio: 11/10) {
+@media (hover: none), (pointer: coarse), (max-width: 1180px) {
   .home-page {
     gap: var(--space-2);
     padding-bottom: 150px;

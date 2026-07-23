@@ -1,9 +1,12 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from django.test import TestCase
+from django.utils import timezone
 
 from apps.accounts.models import User
+from apps.analytics.exports import allowed_pages, export_analytics
+from apps.analytics.search import global_search
 from apps.analytics.services import (
     build_financial_summary,
     build_financial_trend,
@@ -14,7 +17,9 @@ from apps.analytics.services import (
     compress_volume_trend,
 )
 from apps.reports.models import CostBasis
+from apps.leads.models import Family, LeadSource
 from apps.sites.models import Location
+from apps.tours.models import Tour
 
 
 class FinancialSummaryTests(TestCase):
@@ -225,6 +230,70 @@ class FinancialSummaryTests(TestCase):
 
         self.assertEqual(len(analytics["executiveBrief"]["keyFigures"]), 5)
         self.assertTrue(analytics["executiveBrief"]["sections"])
+
+    def test_excel_export_is_generated_for_authorized_pages(self):
+        content, content_type, filename = export_analytics(self.admin, {
+            "coverage": "all",
+            "dataScope": "current",
+            "filters": {"date_from": "2026-01-01", "date_to": "2026-02-28"},
+            "format": "xlsx",
+            "page": "volume",
+        })
+
+        self.assertTrue(content.startswith(b"PK"))
+        self.assertIn("spreadsheetml", content_type)
+        self.assertEqual(filename, "analytics-data.xlsx")
+
+    def test_pdf_export_is_generated_and_staff_pages_remain_restricted(self):
+        content, content_type, filename = export_analytics(self.staff, {
+            "coverage": "all",
+            "filters": {},
+            "format": "pdf",
+            "page": "staff",
+        })
+
+        self.assertTrue(content.startswith(b"%PDF"))
+        self.assertEqual(content_type, "application/pdf")
+        self.assertEqual(filename, "analytics-report.pdf")
+        self.assertNotIn("staff", allowed_pages(self.staff))
+        self.assertNotIn("cost-margin", allowed_pages(self.staff))
+
+        admin_content, _, _ = export_analytics(self.admin, {
+            "coverage": "current",
+            "filters": {"date_from": "2026-01-01", "date_to": "2026-02-28"},
+            "format": "pdf",
+            "page": "cost-margin",
+        })
+        self.assertTrue(admin_content.startswith(b"%PDF"))
+
+    def test_global_search_scopes_records_and_staff_results_by_role(self):
+        source = LeadSource.objects.create(source_name="Community Search")
+        local_family = Family.objects.create(family_name="Smith Local")
+        other_family = Family.objects.create(family_name="Smith Remote")
+        Tour.objects.create(
+            family=local_family,
+            location=self.location_one,
+            lead_source=source,
+            assigned_staff=self.staff,
+            scheduled_tour_date=timezone.make_aware(datetime(2026, 2, 3, 10, 0)),
+        )
+        Tour.objects.create(
+            family=other_family,
+            location=self.location_two,
+            lead_source=source,
+            assigned_staff=self.other_staff,
+            scheduled_tour_date=timezone.make_aware(datetime(2026, 2, 4, 10, 0)),
+        )
+
+        staff_results = global_search(self.staff, "Smith")
+        admin_results = global_search(self.admin, "Smith")
+
+        self.assertEqual([row["title"] for row in staff_results["families"]], ["Smith Local"])
+        self.assertEqual(staff_results["staff"], [])
+        self.assertCountEqual(
+            [row["title"] for row in admin_results["families"]],
+            ["Smith Local", "Smith Remote"],
+        )
 
     def test_volume_trend_compresses_full_period_without_losing_totals(self):
         rows = [

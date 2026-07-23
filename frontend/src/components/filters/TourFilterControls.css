@@ -422,7 +422,7 @@
   width: calc(100% - var(--space-6));
 }
 
-@media (max-aspect-ratio: 11/10) {
+@media (hover: none), (pointer: coarse), (max-width: 1180px) {
   .tour-filters {
     background: #ffffff;
     border-radius: var(--radius-md);

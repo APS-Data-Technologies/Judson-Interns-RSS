@@ -31,8 +31,8 @@
   scroll-padding-top: 120px;
 }
 
-/* Same responsive philosophy as login page: portrait-like screens */
-@media (max-aspect-ratio: 11/10) {
+/* Compact composition is stable on touch devices through orientation changes. */
+@media (hover: none), (pointer: coarse), (max-width: 1180px) {
   .app-shell {
     display: grid;
     grid-template-rows: auto auto 1fr;
@@ -81,8 +81,8 @@
   }
 }
 
-/* Landscape-like screens */
-@media (min-aspect-ratio: 11/10) {
+/* Full composition is reserved for sufficiently wide, precise-pointer devices. */
+@media (hover: hover) and (pointer: fine) and (min-width: 1181px) {
   .app-shell {
     display: grid;
     grid-template-columns: 256px minmax(0, 1fr);

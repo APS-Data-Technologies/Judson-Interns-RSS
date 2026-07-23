@@ -21,6 +21,7 @@ const routeTitles = {
   "/admin/lead-sources/new": "Add Lead Source",
   "/admin/cost-basis": "Manage Cost Basis",
   "/admin/cost-basis/new": "Add Cost/Revenue",
+  "/admin/analytics-engine": "Analytics Engine",
 };
 
 const primaryRoutes = new Set([
@@ -34,6 +35,7 @@ const primaryRoutes = new Set([
   "/admin/locations",
   "/admin/lead-sources",
   "/admin/cost-basis",
+  "/admin/analytics-engine",
 ]);
 
 const analyticsViews = [

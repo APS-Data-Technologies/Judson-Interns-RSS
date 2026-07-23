@@ -47,6 +47,13 @@
   text-align: center;
 }
 
+.title-bar__actions {
+  align-items: center;
+  display: flex;
+  position: absolute;
+  right: clamp(0.75rem, 2vw, 1.25rem);
+}
+
 .analytics-title-picker {
   align-items: center;
   display: inline-flex;
@@ -136,7 +143,7 @@
   color: #ffffff;
 }
 
-@media (max-width: 520px), (orientation: portrait) and (max-width: 1180px) {
+@media (hover: none), (pointer: coarse), (max-width: 1180px) {
   .analytics-title-picker__prefix {
     display: none;
   }

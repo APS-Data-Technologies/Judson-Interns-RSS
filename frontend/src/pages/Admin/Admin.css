@@ -237,7 +237,7 @@
   color: var(--color-success);
 }
 
-@media (max-aspect-ratio: 11/10) {
+@media (hover: none), (pointer: coarse), (max-width: 1180px) {
   .admin-page {
     gap: var(--space-3);
   }

@@ -31,7 +31,7 @@
   filter: drop-shadow(0 0.3rem 0.65rem rgba(0, 0, 0, 0.18));
 }
 
-@media (max-aspect-ratio: 11/10) {
+@media (hover: none), (pointer: coarse), (max-width: 1180px) {
   .top-banner {
     min-height: clamp(6rem, 15vmin, 7.4rem);
     border-radius: var(--radius-md);
@@ -54,7 +54,7 @@
   }
 }
 
-@media (min-aspect-ratio: 11/10) {
+@media (hover: hover) and (pointer: fine) and (min-width: 1181px) {
   .top-banner {
     border-radius: 0;
     box-shadow: none;

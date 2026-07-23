@@ -66,16 +66,18 @@ function getTourForm(tour) {
   };
 }
 
+const compactLayoutQuery = "(hover: none), (pointer: coarse), (max-width: 1180px)";
+
 function useIsPortrait() {
   const [isPortrait, setIsPortrait] = useState(() =>
     typeof window === "undefined"
       ? false
-      : window.matchMedia("(max-aspect-ratio: 11/10)").matches,
+      : window.matchMedia(compactLayoutQuery).matches,
   );
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
-    const mediaQuery = window.matchMedia("(max-aspect-ratio: 11/10)");
+    const mediaQuery = window.matchMedia(compactLayoutQuery);
 
     function handleChange() {
       setIsPortrait(mediaQuery.matches);
@@ -376,7 +378,7 @@ function TourDetailPane({
   );
 }
 
-function Tours() {
+function ToursWorkspace() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -600,6 +602,11 @@ function Tours() {
       </div>
     </section>
   );
+}
+
+function Tours() {
+  const location = useLocation();
+  return <ToursWorkspace key={location.search} />;
 }
 
 export default Tours;
