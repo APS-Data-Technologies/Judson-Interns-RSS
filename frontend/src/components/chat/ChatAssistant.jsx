@@ -350,7 +350,7 @@ function ChatAssistant() {
           </form>
         </section>
       )}
-      <button className="chat-assistant__launcher" type="button" onClick={toggleAssistant} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} aria-expanded={isOpen} aria-controls="chat-assistant-message">
+      <button className="chat-assistant__launcher" type="button" onClick={toggleAssistant} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} aria-label={isOpen ? "Minimize RSS Assistant" : "Open RSS Assistant"} aria-expanded={isOpen} aria-controls="chat-assistant-message">
         {isOpen ? <ChevronDown size={22} aria-hidden="true" /> : <MessageCircle size={23} aria-hidden="true" />}
         <span>{isOpen ? "Minimize" : "Ask RSS"}</span>
         {!isOpen && <i aria-hidden="true" />}

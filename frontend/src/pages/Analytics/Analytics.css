@@ -215,7 +215,7 @@
 .executive-brief__section ul { display: grid; gap: 0.35rem; margin: 0; padding-left: 1rem; }
 .executive-brief__section li { color: var(--color-text-secondary); font-size: 0.68rem; font-weight: 750; line-height: 1.35; }
 
-@media (hover: none), (pointer: coarse), (max-width: 1180px) {
+@media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
   .costs-margin-filters { display: grid; }
   .costs-margin-filters__master {
     align-items: center;
@@ -2254,7 +2254,7 @@
   }
 }
 
-@media (hover: none), (pointer: coarse), (max-width: 1180px) {
+@media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
   .analytics-workspace {
     gap: var(--space-2);
     padding: var(--space-3);
@@ -2326,7 +2326,7 @@
 }
 
 /* Two-mode responsive system: portrait tablets use the same composition as mobile. */
-@media (hover: none), (pointer: coarse), (max-width: 1180px) {
+@media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
   .analytics-location-comparison__panel { gap: 0.75rem; min-height: 0; padding: 0.7rem; }
   .analytics-location-comparison__panel > header { align-items: stretch; display: grid; }
   .analytics-location-comparison__panel > header label { width: 100%; }
@@ -2936,7 +2936,7 @@
 }
 
 /* Entity comparison layouts: laptop/landscape or mobile/portrait only. */
-@media (hover: hover) and (pointer: fine) and (orientation: landscape) and (min-width: 769px) and (max-width: 1180px) {
+@media (orientation: landscape) and (min-width: 768px) and (max-width: 1180px) {
   .analytics-location-comparison__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .analytics-location-comparison__panel { min-height: 23rem; }
   .analytics-location-donut-layout { gap: 0.7rem; grid-template-columns: minmax(8.5rem, 0.8fr) minmax(0, 1.2fr); }
@@ -2946,7 +2946,7 @@
   .analytics-location-donut__legend { max-height: 14rem; }
 }
 
-@media (hover: none), (pointer: coarse), (max-width: 1180px) {
+@media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
   .analytics-location-comparison__grid { grid-template-columns: 1fr; }
   .analytics-location-comparison__panel { gap: 0.75rem; min-height: 0; padding: 0.7rem; }
   .analytics-location-comparison__panel > header { align-items: stretch; display: grid; }
@@ -3101,7 +3101,7 @@
   display: none;
 }
 
-@media (hover: none), (pointer: coarse), (max-width: 1180px) {
+@media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
   .analytics-export-trigger {
     min-height: 2.2rem;
     padding: 0.5rem;
