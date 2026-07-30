@@ -27,7 +27,7 @@ environ.Env.read_env(PROJECT_ROOT / ".env")
 SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool("DEBUG")
+DEBUG = env.bool("DEBUG", default=False)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
@@ -90,7 +90,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     "default": dj_database_url.parse(
-        env("DATABASE_URL"),
+        env("DATABASE_URL", default="sqlite:///dummy.db"),
         conn_health_checks=True,
         conn_max_age=60,
     )
