@@ -117,9 +117,10 @@ function FinancialCard({ current, favorableDirection, kind = "currency", label, 
     : percentageChange === null
       ? `${formatCurrency(Math.abs(difference))} · —`
       : `${formatCurrency(Math.abs(difference))} · ${Math.abs(percentageChange).toFixed(1)}%`;
+  const financialMetric = label === "Revenue" ? "revenue" : label === "Costs" ? "cost" : "margin";
 
   return (
-    <article className="financial-summary-card">
+    <article className="financial-summary-card" data-drill-current={value} data-drill-difference={kind === "percent" ? `${difference >= 0 ? "+" : ""}${difference.toFixed(1)} pts` : `${difference >= 0 ? "+" : "−"}${formatCurrency(Math.abs(difference))}`} data-drill-difference-percent={percentageChange === null ? "" : `${percentageChange >= 0 ? "+" : ""}${percentageChange.toFixed(1)}%`} data-drill-financial={financialMetric} data-drill-previous={previousValue} data-drill-title={label}>
       <span>{label}</span>
       <strong>{value}</strong>
       <div className={favorable === null ? "is-neutral" : favorable ? "is-favorable" : "is-unfavorable"}>
@@ -136,9 +137,10 @@ function EfficiencyCard({ count, countLabel, label, previousCount, previousValue
   const percentageChange = difference !== null && previousValue !== 0 ? (difference / Math.abs(previousValue)) * 100 : null;
   const favorable = difference === null || difference === 0 ? null : difference < 0;
   const Icon = difference === null || difference === 0 ? Minus : difference > 0 ? ArrowUp : ArrowDown;
+  const denominator = label.includes("Booked") ? "scheduled" : label.includes("Completed") ? "toured" : "enrolled";
 
   return (
-    <article className="cost-efficiency-card">
+    <article className="cost-efficiency-card" data-drill-current={value === null ? "—" : formatCurrency(value)} data-drill-difference={difference === null ? "" : `${difference >= 0 ? "+" : "−"}${formatCurrency(Math.abs(difference))}`} data-drill-difference-percent={percentageChange === null ? "" : `${percentageChange >= 0 ? "+" : ""}${percentageChange.toFixed(1)}%`} data-drill-mode="event" data-drill-previous={previousValue === null ? "—" : formatCurrency(previousValue)} data-drill-status={denominator} data-drill-title={label}>
       <span>{label}</span>
       <strong>{value === null ? "—" : formatCurrency(value)}</strong>
       <small>{count.toLocaleString()} {countLabel}</small>
@@ -185,7 +187,7 @@ function compactCurrency(value) {
   return `${sign}$${absolute.toFixed(0)}`;
 }
 
-function FinancialTrendChart({ rows }) {
+function FinancialTrendChart({ onDrillThrough, rows }) {
   const [selectedValue, setSelectedValue] = useState(null);
   if (!rows.length) return <p className="financial-trend-empty">No financial data is available for this period.</p>;
   const width = 900;
@@ -235,6 +237,12 @@ function FinancialTrendChart({ rows }) {
     <section className="financial-trend-card" aria-labelledby="financial-dollar-trend">
       <div className="financial-trend-heading">
         <h3 id="financial-dollar-trend">Monthly Financial Trend</h3>
+        <button className="analytics-chart-drill-trigger" onClick={() => onDrillThrough({
+          currentValue: formatCurrency(rows.reduce((total, row) => total + Number(row.margin || 0), 0)),
+          drillParams: { drill_financial: "margin", drill_kpi: "Monthly Financial Trend" },
+          title: "Monthly Financial Trend",
+          viewContext: { Section: "Financial performance", "Chart / card": "Monthly Financial Trend" },
+        })} type="button">Drill through</button>
         <div className="financial-trend-legend">{trendSeries.map((series) => <span key={series.key}><i style={{ background: series.color }} />{series.label}</span>)}<span><i className="financial-margin-rate-key" />Margin %</span></div>
       </div>
       <div className="financial-chart-scroll">
@@ -292,7 +300,7 @@ function efficiencyLineSegments(rows, key, left, width, height, maximum) {
   return segments;
 }
 
-function CostEfficiencyTrendChart({ rows }) {
+function CostEfficiencyTrendChart({ onDrillThrough, rows }) {
   const [selectedMonth, setSelectedMonth] = useState(null);
   if (!rows.length) return null;
   const width = 900;
@@ -317,7 +325,12 @@ function CostEfficiencyTrendChart({ rows }) {
 
   return (
     <section className="financial-trend-card cost-efficiency-trend" aria-labelledby="cost-efficiency-trend-title">
-      <div className="financial-trend-heading"><h3 id="cost-efficiency-trend-title">Monthly Cost Efficiency Trend</h3><div className="financial-trend-legend">{efficiencyTrendSeries.map((series) => <span key={series.key}><i style={{ background: series.color }} />{series.label}</span>)}</div></div>
+      <div className="financial-trend-heading"><h3 id="cost-efficiency-trend-title">Monthly Cost Efficiency Trend</h3><button className="analytics-chart-drill-trigger" onClick={() => onDrillThrough({
+        currentValue: `${rows.length} month${rows.length === 1 ? "" : "s"}`,
+        drillParams: { drill_kpi: "Monthly Cost Efficiency Trend", drill_mode: "event", drill_statuses: "scheduled,toured,enrolled" },
+        title: "Monthly Cost Efficiency Trend",
+        viewContext: { Section: "Cost Efficiency", "Chart / card": "Monthly Cost Efficiency Trend" },
+      })} type="button">Drill through</button><div className="financial-trend-legend">{efficiencyTrendSeries.map((series) => <span key={series.key}><i style={{ background: series.color }} />{series.label}</span>)}</div></div>
       <div className="financial-chart-scroll">
         <svg aria-label="Monthly cost per booked tour, completed tour, and enrollment" className="financial-line-chart" role="img" viewBox={`0 -14 ${width + 20} ${height + 54}`}>
           {ticks.map((tick) => <g key={tick.y}><line className="financial-chart-gridline" x1={plotLeft} x2={plotRight} y1={tick.y} y2={tick.y} /><text className="financial-chart-axis-label" textAnchor="end" x={plotLeft - 9} y={tick.y + 4}>{compactCurrency(tick.value)}</text></g>)}
@@ -386,7 +399,8 @@ function LocationMetricStack({ comparison, metrics, row }) {
     const comparisonValue = comparison ? metric.getValue ? metric.getValue(comparison) : comparison[metric.key] : null;
     const unavailable = value === null || value === undefined;
     const displayValue = unavailable ? "—" : metric.kind === "currency" ? formatCurrency(Number(value)) : metric.kind === "percent" ? `${Number(value).toFixed(1)}%` : Number(value).toLocaleString();
-    return <div className={metric.key === "totalActivity" ? "is-total" : ""} key={metric.key}><span>{metric.label}</span><strong>{displayValue}</strong>{!unavailable && <MetricDelta comparison={comparisonValue === null || comparisonValue === undefined ? null : Number(comparisonValue)} current={Number(value)} favorableDirection={metric.favorableDirection} kind={metric.kind} />}</div>;
+    const status = metric.key === "booked" || metric.key === "costPerBooked" ? "scheduled" : metric.key === "toured" || metric.key === "costPerToured" ? "toured" : "enrolled";
+    return <div className={metric.key === "totalActivity" ? "is-total" : ""} data-drill-current={displayValue} data-drill-dimension="location" data-drill-dimension-value={row.locationName} data-drill-mode="event" data-drill-previous={comparisonValue === null || comparisonValue === undefined ? "" : metric.kind === "currency" ? formatCurrency(Number(comparisonValue)) : Number(comparisonValue).toLocaleString()} data-drill-status={metric.key === "totalActivity" ? undefined : status} data-drill-statuses={metric.key === "totalActivity" ? "scheduled,toured,enrolled" : undefined} data-drill-title={`${metric.label} · ${row.locationName}`} key={metric.key}><span>{metric.label}</span><strong>{displayValue}</strong>{!unavailable && <MetricDelta comparison={comparisonValue === null || comparisonValue === undefined ? null : Number(comparisonValue)} current={Number(value)} favorableDirection={metric.favorableDirection} kind={metric.kind} />}</div>;
   })}</div>;
 }
 
@@ -419,7 +433,7 @@ function selectedMetrics(metrics, selection) {
   return metrics.filter((metric) => metric.key === selection);
 }
 
-function LocationPerformance({ comparisonRows, rows }) {
+function LocationPerformance({ comparisonRows, onDrillThrough, rows }) {
   const [sortKey, setSortKey] = useState("margin");
   const [sortDirection, setSortDirection] = useState("desc");
   const [volumeMetric, setVolumeMetric] = useState("all");
@@ -473,25 +487,52 @@ function LocationPerformance({ comparisonRows, rows }) {
     setVolumeMetric(nextMetric);
     setEfficiencyMetric(matchingEfficiency[nextMetric]);
   }
+  const financialDrillAttributes = (row, metric, label, current, previous) => ({
+    "data-drill-current": current,
+    "data-drill-dimension": "location",
+    "data-drill-dimension-value": row.locationName,
+    "data-drill-financial": metric,
+    "data-drill-previous": previous,
+    "data-drill-title": `${label} · ${row.locationName}`,
+  });
+  const conversionDrillAttributes = (row, previous) => ({
+    "data-drill-current": row.conversionRate === null ? "—" : `${row.conversionRate.toFixed(1)}%`,
+    "data-drill-denominator": "toured",
+    "data-drill-dimension": "location",
+    "data-drill-dimension-value": row.locationName,
+    "data-drill-mode": "cohort",
+    "data-drill-numerator": "enrolled",
+    "data-drill-previous": previous?.conversionRate === null || !previous ? "" : `${Number(previous.conversionRate).toFixed(1)}%`,
+    "data-drill-title": `Conversion Rate · ${row.locationName}`,
+  });
 
   if (!rows.length) return <section className="location-performance-section"><div className="cost-efficiency-section__heading"><h3>Location Performance</h3><p>No location financial data is available for this period.</p></div></section>;
 
   return (
     <section className="location-performance-section" aria-labelledby="location-performance-title">
-      <div className="cost-efficiency-section__heading"><h3 id="location-performance-title">Location Performance</h3><p>Financial contribution and enrollment efficiency by location.</p></div>
+      <div className="cost-efficiency-section__heading"><div><h3 id="location-performance-title">Location Performance</h3><p>Financial contribution and enrollment efficiency by location.</p></div><button className="analytics-chart-drill-trigger" onClick={() => onDrillThrough({
+        currentValue: rows.reduce((total, row) => total + Number(row.booked || 0) + Number(row.toured || 0) + Number(row.enrolled || 0), 0).toLocaleString(),
+        drillParams: {
+          drill_kpi: "Location Performance · Tour activity",
+          drill_mode: "event",
+          drill_statuses: "scheduled,toured,enrolled",
+        },
+        title: "Location Performance · Tour activity",
+        viewContext: { Section: "Location Performance", "Chart / card": "Location performance table and cards" },
+      })} type="button">Drill through</button></div>
       <div className="location-performance-table-wrap">
-        <table className="location-performance-table">
+        <table aria-label="Location performance table" className="location-performance-table">
           <thead><tr><th><LocationSortButton active={sortKey === "locationName"} direction={sortDirection} field="locationName" label="Location" onSort={changeSort} /></th><th><LocationSortButton active={sortKey === "revenue"} direction={sortDirection} field="revenue" label="Revenue" onSort={changeSort} /></th><th><LocationSortButton active={sortKey === "cost"} direction={sortDirection} field="cost" label="Costs" onSort={changeSort} /></th><th><LocationSortButton active={sortKey === "margin"} direction={sortDirection} field="margin" label="Contribution Margin / Share" onSort={changeSort} /></th><th><LocationSortButton active={sortKey === "marginRate"} direction={sortDirection} field="marginRate" label="Margin %" onSort={changeSort} /></th><th><LocationSortButton active={sortKey === "conversionRate"} direction={sortDirection} field="conversionRate" label="Conversion Rate" onSort={changeSort} /></th><th><LocationMetricDropdown label="Volume View" onChange={changeVolumeMetric} options={locationVolumeOptions} value={volumeMetric} /></th><th><LocationMetricDropdown label="Efficiency View" onChange={setEfficiencyMetric} options={locationEfficiencyOptions} value={efficiencyMetric} /></th></tr></thead>
           <tbody>{sortedRows.map((row) => {
             const comparison = row.comparison;
-            return <tr key={row.locationId}><th><strong>{row.locationName}</strong></th><td>{formatCurrency(row.revenue)}<MetricDelta comparison={comparison ? Number(comparison.revenue) : null} current={row.revenue} /></td><td>{formatCurrency(row.cost)}<MetricDelta comparison={comparison ? Number(comparison.cost) : null} current={row.cost} favorableDirection="down" /></td><td><strong>{formatCurrency(row.margin)}</strong><MetricDelta comparison={comparison ? Number(comparison.margin) : null} current={row.margin} /><span className="location-margin-share">Share: {row.share === null ? "—" : `${row.share.toFixed(1)}%`}{row.share !== null && <MetricDelta comparison={row.comparisonShare} current={row.share} kind="percent" />}</span></td><td>{row.marginRate === null ? "—" : `${row.marginRate.toFixed(1)}%`}{row.marginRate !== null && <MetricDelta comparison={comparison?.marginRate === null || !comparison ? null : Number(comparison.marginRate)} current={row.marginRate} kind="percent" />}</td><td>{row.conversionRate === null ? "—" : `${row.conversionRate.toFixed(1)}%`}{row.conversionRate !== null && <MetricDelta comparison={comparison?.conversionRate === null || !comparison ? null : Number(comparison.conversionRate)} current={row.conversionRate} kind="percent" />}</td><td><LocationMetricStack comparison={comparison} metrics={selectedMetrics(locationVolumeMetrics, volumeMetric)} row={row} /></td><td><LocationMetricStack comparison={comparison} metrics={selectedMetrics(locationEfficiencyMetrics, efficiencyMetric)} row={row} /></td></tr>;
+            return <tr key={row.locationId}><th><strong>{row.locationName}</strong></th><td {...financialDrillAttributes(row, "revenue", "Revenue", formatCurrency(row.revenue), comparison ? formatCurrency(Number(comparison.revenue)) : "")}>{formatCurrency(row.revenue)}<MetricDelta comparison={comparison ? Number(comparison.revenue) : null} current={row.revenue} /></td><td {...financialDrillAttributes(row, "cost", "Costs", formatCurrency(row.cost), comparison ? formatCurrency(Number(comparison.cost)) : "")}>{formatCurrency(row.cost)}<MetricDelta comparison={comparison ? Number(comparison.cost) : null} current={row.cost} favorableDirection="down" /></td><td {...financialDrillAttributes(row, "margin", "Contribution Margin", formatCurrency(row.margin), comparison ? formatCurrency(Number(comparison.margin)) : "")}><strong>{formatCurrency(row.margin)}</strong><MetricDelta comparison={comparison ? Number(comparison.margin) : null} current={row.margin} /><span className="location-margin-share">Share: {row.share === null ? "—" : `${row.share.toFixed(1)}%`}{row.share !== null && <MetricDelta comparison={row.comparisonShare} current={row.share} kind="percent" />}</span></td><td {...financialDrillAttributes(row, "margin", "Margin %", row.marginRate === null ? "—" : `${row.marginRate.toFixed(1)}%`, comparison?.marginRate === null || !comparison ? "" : `${Number(comparison.marginRate).toFixed(1)}%`)}>{row.marginRate === null ? "—" : `${row.marginRate.toFixed(1)}%`}{row.marginRate !== null && <MetricDelta comparison={comparison?.marginRate === null || !comparison ? null : Number(comparison.marginRate)} current={row.marginRate} kind="percent" />}</td><td {...conversionDrillAttributes(row, comparison)}>{row.conversionRate === null ? "—" : `${row.conversionRate.toFixed(1)}%`}{row.conversionRate !== null && <MetricDelta comparison={comparison?.conversionRate === null || !comparison ? null : Number(comparison.conversionRate)} current={row.conversionRate} kind="percent" />}</td><td><LocationMetricStack comparison={comparison} metrics={selectedMetrics(locationVolumeMetrics, volumeMetric)} row={row} /></td><td><LocationMetricStack comparison={comparison} metrics={selectedMetrics(locationEfficiencyMetrics, efficiencyMetric)} row={row} /></td></tr>;
           })}</tbody>
         </table>
       </div>
       <div className="location-performance-mobile-controls"><LocationMetricDropdown label="Volume View" onChange={changeVolumeMetric} options={locationVolumeOptions} value={volumeMetric} /><LocationMetricDropdown label="Efficiency View" onChange={setEfficiencyMetric} options={locationEfficiencyOptions} value={efficiencyMetric} /></div>
-      <div className="location-performance-cards">{sortedRows.map((row) => {
+      <div aria-label="Location performance cards" className="location-performance-cards">{sortedRows.map((row) => {
         const comparison = row.comparison;
-        return <article key={row.locationId}><header><strong>{row.locationName}</strong></header><dl><div><dt>Revenue</dt><dd>{formatCurrency(row.revenue)}<MetricDelta comparison={comparison ? Number(comparison.revenue) : null} current={row.revenue} /></dd></div><div><dt>Costs</dt><dd>{formatCurrency(row.cost)}<MetricDelta comparison={comparison ? Number(comparison.cost) : null} current={row.cost} favorableDirection="down" /></dd></div><div><dt>Contribution Margin / Share</dt><dd>{formatCurrency(row.margin)}<MetricDelta comparison={comparison ? Number(comparison.margin) : null} current={row.margin} /><span className="location-margin-share">Share: {row.share === null ? "—" : `${row.share.toFixed(1)}%`}{row.share !== null && <MetricDelta comparison={row.comparisonShare} current={row.share} kind="percent" />}</span></dd></div><div><dt>Margin %</dt><dd>{row.marginRate === null ? "—" : `${row.marginRate.toFixed(1)}%`}{row.marginRate !== null && <MetricDelta comparison={comparison?.marginRate === null || !comparison ? null : Number(comparison.marginRate)} current={row.marginRate} kind="percent" />}</dd></div><div><dt>Conversion Rate</dt><dd>{row.conversionRate === null ? "—" : `${row.conversionRate.toFixed(1)}%`}{row.conversionRate !== null && <MetricDelta comparison={comparison?.conversionRate === null || !comparison ? null : Number(comparison.conversionRate)} current={row.conversionRate} kind="percent" />}</dd></div><div><dt>Volume · {locationVolumeOptions.find((option) => option.value === volumeMetric)?.label}</dt><dd><LocationMetricStack comparison={comparison} metrics={selectedMetrics(locationVolumeMetrics, volumeMetric)} row={row} /></dd></div><div><dt>Cost Efficiency · {locationEfficiencyOptions.find((option) => option.value === efficiencyMetric)?.label}</dt><dd><LocationMetricStack comparison={comparison} metrics={selectedMetrics(locationEfficiencyMetrics, efficiencyMetric)} row={row} /></dd></div></dl></article>;
+        return <article key={row.locationId}><header><strong>{row.locationName}</strong></header><dl><div {...financialDrillAttributes(row, "revenue", "Revenue", formatCurrency(row.revenue), comparison ? formatCurrency(Number(comparison.revenue)) : "")}><dt>Revenue</dt><dd>{formatCurrency(row.revenue)}<MetricDelta comparison={comparison ? Number(comparison.revenue) : null} current={row.revenue} /></dd></div><div {...financialDrillAttributes(row, "cost", "Costs", formatCurrency(row.cost), comparison ? formatCurrency(Number(comparison.cost)) : "")}><dt>Costs</dt><dd>{formatCurrency(row.cost)}<MetricDelta comparison={comparison ? Number(comparison.cost) : null} current={row.cost} favorableDirection="down" /></dd></div><div {...financialDrillAttributes(row, "margin", "Contribution Margin", formatCurrency(row.margin), comparison ? formatCurrency(Number(comparison.margin)) : "")}><dt>Contribution Margin / Share</dt><dd>{formatCurrency(row.margin)}<MetricDelta comparison={comparison ? Number(comparison.margin) : null} current={row.margin} /><span className="location-margin-share">Share: {row.share === null ? "—" : `${row.share.toFixed(1)}%`}{row.share !== null && <MetricDelta comparison={row.comparisonShare} current={row.share} kind="percent" />}</span></dd></div><div {...financialDrillAttributes(row, "margin", "Margin %", row.marginRate === null ? "—" : `${row.marginRate.toFixed(1)}%`, comparison?.marginRate === null || !comparison ? "" : `${Number(comparison.marginRate).toFixed(1)}%`)}><dt>Margin %</dt><dd>{row.marginRate === null ? "—" : `${row.marginRate.toFixed(1)}%`}{row.marginRate !== null && <MetricDelta comparison={comparison?.marginRate === null || !comparison ? null : Number(comparison.marginRate)} current={row.marginRate} kind="percent" />}</dd></div><div {...conversionDrillAttributes(row, comparison)}><dt>Conversion Rate</dt><dd>{row.conversionRate === null ? "—" : `${row.conversionRate.toFixed(1)}%`}{row.conversionRate !== null && <MetricDelta comparison={comparison?.conversionRate === null || !comparison ? null : Number(comparison.conversionRate)} current={row.conversionRate} kind="percent" />}</dd></div><div><dt>Volume · {locationVolumeOptions.find((option) => option.value === volumeMetric)?.label}</dt><dd><LocationMetricStack comparison={comparison} metrics={selectedMetrics(locationVolumeMetrics, volumeMetric)} row={row} /></dd></div><div><dt>Cost Efficiency · {locationEfficiencyOptions.find((option) => option.value === efficiencyMetric)?.label}</dt><dd><LocationMetricStack comparison={comparison} metrics={selectedMetrics(locationEfficiencyMetrics, efficiencyMetric)} row={row} /></dd></div></dl></article>;
       })}</div>
     </section>
   );
@@ -596,10 +637,16 @@ function CostsMarginAnalytics() {
     comparison_date_to: monthRange(compareStart, compareEnd).date_to,
     ...(location ? { location } : {}),
   }), [compareEnd, compareStart, endMonth, location, startMonth]);
-  const { drillThrough, onClickCapture } = useAnalyticsDrillThrough({
+  const { drillThrough, onClickCapture, openDrillThrough } = useAnalyticsDrillThrough({
+    filterContext: {
+      Location: locations.find((item) => String(item.id) === String(location))?.location_name || "All locations",
+    },
     filters: exportFilters,
     page: "cost-margin",
-    period: `${formatMonth(startMonth)} – ${formatMonth(endMonth)}`,
+    period: {
+      selected: `${formatMonth(startMonth)} – ${formatMonth(endMonth)}`,
+      previous: `${formatMonth(compareStart)} – ${formatMonth(compareEnd)}`,
+    },
     rows: [...trend, ...locationPerformance],
   });
 
@@ -633,7 +680,7 @@ function CostsMarginAnalytics() {
       {error && <p className="analytics-state analytics-state--error">{error}</p>}
       <ExecutiveDecisionBrief brief={executiveBrief} />
 
-      <section className="analytics-workspace costs-margin-workspace">
+      <section aria-label="Costs and margin analysis" className="analytics-workspace costs-margin-workspace">
         <header className="costs-margin-period">
           <div><strong>{formatMonth(startMonth)} – {formatMonth(endMonth)}</strong><span>vs {formatMonth(compareStart)} – {formatMonth(compareEnd)}</span></div>
           <p>Financial data is reported for completed months.</p>
@@ -644,15 +691,15 @@ function CostsMarginAnalytics() {
           <FinancialCard current={Number(current.margin)} favorableDirection="up" label="Contribution Margin" previous={Number(previous.margin)} />
           <FinancialCard current={currentMarginRate} favorableDirection="up" kind="percent" label="Contribution Margin %" previous={previousMarginRate} />
         </div>
-        <FinancialTrendChart rows={trend} />
+        <FinancialTrendChart onDrillThrough={openDrillThrough} rows={trend} />
         <section className="cost-efficiency-section" aria-labelledby="cost-efficiency-title">
           <div className="cost-efficiency-section__heading"><div><h3 id="cost-efficiency-title">Cost Efficiency</h3><p>Recorded costs divided by funnel activity during each completed-month period.</p></div></div>
           <div className="cost-efficiency-grid">
             {efficiencyMetrics.map((metric) => <EfficiencyCard count={metric.count} countLabel={metric.countLabel} key={metric.key} label={metric.label} previousCount={metric.previousCount} previousValue={metric.previousValue} value={metric.value} />)}
           </div>
-          <CostEfficiencyTrendChart rows={efficiencyTrend} />
+          <CostEfficiencyTrendChart onDrillThrough={openDrillThrough} rows={efficiencyTrend} />
         </section>
-        <LocationPerformance comparisonRows={comparisonLocationPerformance} rows={locationPerformance} />
+        <LocationPerformance comparisonRows={comparisonLocationPerformance} onDrillThrough={openDrillThrough} rows={locationPerformance} />
       </section>
       {drillThrough}
     </section>

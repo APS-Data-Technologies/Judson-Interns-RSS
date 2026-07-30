@@ -25,6 +25,36 @@ export async function getAnalyticsDrillThrough(params = {}) {
   return response.data;
 }
 
+export async function exportAnalyticsDrillThrough(params = {}) {
+  const response = await api.get("/analytics/drill-through/", {
+    params: { ...params, export: "xlsx" },
+    responseType: "blob",
+  });
+  const disposition = response.headers["content-disposition"] || "";
+  const safeFilenamePart = (value) => String(value || "")
+    .split("")
+    .map((character) => character.charCodeAt(0) < 32 ? "-" : character)
+    .join("")
+    .replace(/[<>:"/\\|?*]+/g, "-")
+    .replace(/^[ .-]+|[ .-]+$/g, "");
+  const generatedName = [
+    params.drill_page,
+    params.drill_section,
+    params.drill_visualization,
+    params.drill_kpi,
+  ].map(safeFilenamePart).filter(Boolean).join(" - ").slice(0, 180).replace(/[ .-]+$/g, "");
+  const filename = disposition.match(/filename="([^"]+)"/)?.[1]
+    || `${generatedName || "Analytics Drill-Through"}.xlsx`;
+  const url = URL.createObjectURL(response.data);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 export async function exportVisualAnalyticsPdf(element, filename = "analytics-report.pdf") {
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
     import("html2canvas-pro"),

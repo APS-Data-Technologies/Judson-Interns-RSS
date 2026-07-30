@@ -144,6 +144,7 @@
 .cost-efficiency-section { display: grid; gap: var(--space-3); }
 .cost-efficiency-section__heading h3 { color: var(--brand-navy-dark); font-family: var(--font-family-heading); font-size: 1rem; margin: 0; }
 .cost-efficiency-section__heading p { color: var(--color-text-secondary); font-size: 0.72rem; font-weight: 750; margin: 0.25rem 0 0; }
+.cost-efficiency-section__heading { align-items: center; display: flex; gap: 0.75rem; justify-content: space-between; }
 .cost-efficiency-grid { display: grid; gap: var(--space-3); grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .cost-efficiency-card { border: 1px solid var(--color-border); border-radius: var(--radius-md); display: grid; gap: 0.45rem; padding: var(--space-4); }
 .cost-efficiency-card > span { color: var(--color-text-secondary); font-size: 0.74rem; font-weight: 900; }
@@ -471,6 +472,9 @@
 
 .analytics-preview-card__ranking,
 .analytics-preview-card__financial-rows { align-content: start; display: grid; }
+.analytics-preview-card__winner[data-drill-title],
+.analytics-preview-card__ranking > div[data-drill-title],
+.analytics-preview-card__financial-rows > div[data-drill-title] { cursor: pointer; }
 .analytics-preview-card__ranking > div,
 .analytics-preview-card__financial-rows > div {
   align-items: center;
@@ -715,6 +719,9 @@
 .analytics-location-comparison__panel > header h2 { color: var(--brand-navy-dark); font-family: var(--font-family-heading); font-size: clamp(1rem, 1.35vw, 1.25rem); margin: 0; }
 .analytics-location-comparison__panel > header p { color: var(--color-text-secondary); font-size: 0.7rem; font-weight: 750; margin: 0.18rem 0 0; }
 .analytics-location-comparison__panel > header label { color: var(--color-text-secondary); display: grid; flex: 0 0 min(9.5rem, 42%); font-size: 0.6rem; font-weight: 900; gap: 0.2rem; text-transform: uppercase; }
+.analytics-location-comparison__header-actions { align-items: end; display: flex; gap: 0.5rem; }
+.analytics-chart-drill-trigger { background: var(--brand-blue); border: 0; border-radius: var(--radius-sm); color: #fff; cursor: pointer; font: inherit; font-size: 0.68rem; font-weight: 900; min-height: 2.45rem; padding: 0.55rem 0.7rem; white-space: nowrap; }
+.analytics-chart-drill-trigger:hover { background: var(--brand-blue-dark); }
 .analytics-location-picker { position: relative; }
 .analytics-location-picker details { position: relative; }
 .analytics-location-picker summary { align-items: center; background: var(--color-surface-soft); border: 1px solid var(--color-border); border-radius: 0.45rem; color: var(--brand-navy-dark); cursor: pointer; display: grid; font-size: 0.72rem; gap: 0.42rem; grid-template-columns: 0.55rem minmax(0, 1fr) 0.85rem; list-style: none; min-height: 2.05rem; padding: 0.45rem 0.5rem; text-transform: none; }
@@ -972,6 +979,8 @@
 .analytics-volume-trend__split > section { border: 1px solid var(--color-border); border-radius: 0.55rem; display: grid; gap: 0.35rem; padding: 0.65rem; }
 .analytics-volume-trend__booked h3,
 .analytics-volume-trend__split h3 { color: var(--brand-navy-dark); font-size: 0.8rem; margin: 0; text-align: center; }
+.analytics-volume-trend__chart-heading { align-items: center; display: flex; justify-content: space-between; min-height: 2rem; }
+.analytics-volume-trend__chart-heading h3 { flex: 1; }
 .analytics-volume-trend__split { display: grid; gap: 0.7rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .analytics-volume-trend__split .analytics-volume-trend-chart svg { min-width: 32rem; }
 .analytics-volume-trend__booked .analytics-volume-trend-chart svg { min-width: 38rem; }
@@ -2330,6 +2339,7 @@
   .analytics-location-comparison__panel { gap: 0.75rem; min-height: 0; padding: 0.7rem; }
   .analytics-location-comparison__panel > header { align-items: stretch; display: grid; }
   .analytics-location-comparison__panel > header label { width: 100%; }
+  .analytics-location-comparison__header-actions { align-items: stretch; display: grid; }
   .analytics-location-donut-layout { grid-template-columns: 1fr; }
   .analytics-location-donut { max-width: 11.5rem; }
   .analytics-location-donut__legend { max-height: 11rem; }
@@ -3037,6 +3047,8 @@
 .analytics-export-dialog header small { color: var(--rss-gold); font-size: 0.65rem; font-weight: 950; letter-spacing: 0.08em; text-transform: uppercase; }
 .analytics-drill-drawer h2,
 .analytics-export-dialog h2 { font-family: var(--font-family-heading); font-size: 1.35rem; margin: 0.15rem 0 0; }
+.analytics-drill-drawer > header,
+.analytics-drill-drawer > header h2 { color: var(--rss-gold); }
 .analytics-export-dialog > header h2 { color: var(--rss-gold); }
 .analytics-drill-drawer header button,
 .analytics-export-dialog header button { background: transparent; border: 0; color: inherit; cursor: pointer; display: grid; padding: 0.35rem; place-items: center; }
@@ -3049,12 +3061,15 @@
 .analytics-drill-drawer__body h3 { color: var(--brand-navy-dark); font-size: 0.85rem; margin: 0 0 0.7rem; }
 .analytics-drill-drawer__value { background: var(--color-surface-soft); display: grid; gap: 0.2rem; }
 .analytics-drill-drawer__value span { color: var(--color-text-secondary); font-size: 0.7rem; font-weight: 800; }
-.analytics-drill-drawer__value strong { color: var(--brand-navy-dark); font-family: var(--font-family-heading); font-size: 1.25rem; }
+.analytics-drill-drawer__value dl { border-top: 1px solid var(--color-border); gap: 0.55rem; margin-top: 0.45rem; padding-top: 0.65rem; }
+.analytics-drill-drawer__value dd { font-family: var(--font-family-heading); font-size: 1rem; }
 .analytics-drill-drawer dl { display: grid; gap: 0.45rem; margin: 0; }
 .analytics-drill-drawer dl div { display: grid; gap: 0.5rem; grid-template-columns: 8rem minmax(0, 1fr); }
 .analytics-drill-drawer dt { color: var(--color-text-secondary); font-size: 0.68rem; font-weight: 800; text-transform: capitalize; }
 .analytics-drill-drawer dd { color: var(--brand-navy-dark); font-size: 0.72rem; font-weight: 800; margin: 0; overflow-wrap: anywhere; }
 .analytics-drill-drawer__table { max-height: 20rem; overflow: auto; }
+.analytics-drill-drawer__explanation { background: var(--action-blue-soft); border-left: 3px solid var(--brand-blue); border-radius: 0.4rem; color: var(--brand-navy-dark); font-size: 0.7rem; line-height: 1.5; margin: 0 0 0.75rem; padding: 0.65rem 0.75rem; }
+.analytics-drill-drawer__explanation strong { color: var(--brand-blue-dark); }
 .analytics-drill-drawer table { border-collapse: collapse; font-size: 0.68rem; width: 100%; }
 .analytics-drill-drawer th { background: var(--color-surface-soft); color: var(--brand-navy-dark); position: sticky; text-align: left; text-transform: capitalize; top: 0; }
 .analytics-drill-drawer th,
