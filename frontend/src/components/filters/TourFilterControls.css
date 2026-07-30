@@ -422,6 +422,52 @@
   width: calc(100% - var(--space-6));
 }
 
+/* Landscape/laptop density. Portrait/mobile retains the touch-first rules below. */
+@media (min-width: 1181px), (min-width: 768px) and (max-width: 1180px) and (orientation: landscape) {
+  .tour-filters {
+    gap: clamp(0.5rem, 0.7vw, 0.75rem);
+  }
+
+  .tour-filters__sort,
+  .tour-filter__summary,
+  .tour-filter--search,
+  .tour-filter--cost,
+  .tour-filter-assigned-location {
+    min-height: clamp(48px, 4.6vw, 53px);
+    padding-inline: clamp(0.52rem, 0.72vw, 0.7rem);
+  }
+
+  .tour-filters__sort {
+    gap: clamp(0.4rem, 0.55vw, 0.58rem);
+  }
+
+  .tour-filters__sort svg,
+  .tour-filter svg:not(.tour-filter__chevron),
+  .tour-filter-assigned-location svg {
+    height: clamp(19px, 1.8vw, 21px);
+    width: clamp(19px, 1.8vw, 21px);
+  }
+
+  .tour-filter__chevron {
+    height: 17px;
+    width: 17px;
+  }
+
+  .tour-filters__sort small,
+  .tour-filter small,
+  .tour-filter-assigned-location span {
+    font-size: clamp(0.61rem, 0.66vw, 0.68rem);
+  }
+
+  .tour-filters__sort strong,
+  .tour-filter strong,
+  .tour-filter select,
+  .tour-filter input,
+  .tour-filter-assigned-location strong {
+    font-size: clamp(0.76rem, 0.82vw, 0.84rem);
+  }
+}
+
 @media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
   .tour-filters {
     background: #ffffff;

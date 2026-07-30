@@ -1064,7 +1064,7 @@ function OverviewRankingCard({ icon: Icon, items, metric, path, title }) {
         <>
           <div className="analytics-preview-card__winner" {...rankingAttributes(first)}>
             <span>1</span>
-            <div><small>Top performer</small><strong>{first.name}</strong></div>
+            <div><small>Top performer{isLowSampleRanking(first, metric) ? " · Low sample" : ""}</small><strong>{first.name}</strong></div>
             <b>{formatRankingValue(first.value, metric)}</b>
           </div>
           <div className="analytics-preview-card__ranking">
@@ -2165,6 +2165,12 @@ function formatAverageDays(value) {
   return `${value} day${value === 1 ? "" : "s"}`;
 }
 
+function isLowSampleRanking(item, metric) {
+  if (!item || ["average_days", "enrollment", "enrollments", "margin"].includes(metric)) return false;
+  const denominator = metric === "toured" ? item.booked : item.toured;
+  return Number(denominator || 0) > 0 && Number(denominator) < 5;
+}
+
 function InfoHint({ label }) {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ left: 8, top: 8 });
@@ -2774,6 +2780,7 @@ function RankingList({ drillMetric, drillMode, drillScope, drillStatus, drillSta
             <div>
               <strong>{item.name}</strong>
               {metric !== "average_days" && <small>{item.detail}</small>}
+              {isLowSampleRanking(item, metric) && <small className="analytics-ranking__sample-warning">Low sample - interpret cautiously</small>}
             </div>
             <span className={`analytics-ranking__rate ${item.value === null ? "is-empty" : ""}`}>
               <b>{formatRankingValue(item.value, metric)}</b>

@@ -200,6 +200,62 @@
   width: 24px;
 }
 
+@media (min-width: 1181px), (min-width: 768px) and (max-width: 1180px) and (orientation: landscape) {
+  .account-page {
+    gap: clamp(0.7rem, 0.9vw, 0.95rem);
+  }
+
+  .account-profile {
+    gap: clamp(0.75rem, 1vw, 1rem);
+    padding: clamp(0.85rem, 1.2vw, 1.15rem);
+  }
+
+  .account-profile__avatar {
+    font-size: clamp(1.35rem, 1.8vw, 1.65rem);
+    height: clamp(54px, 5vw, 60px);
+    width: clamp(54px, 5vw, 60px);
+  }
+
+  .account-profile h1 {
+    font-size: clamp(1.25rem, 1.65vw, 1.55rem);
+  }
+
+  .account-profile p {
+    font-size: clamp(0.84rem, 0.95vw, 0.95rem);
+  }
+
+  .account-location {
+    padding: clamp(0.7rem, 0.9vw, 0.9rem);
+  }
+
+  .settings-panel__trigger {
+    min-height: clamp(60px, 6vw, 66px);
+    padding-inline: clamp(0.8rem, 1.25vw, 1.2rem);
+  }
+
+  .settings-panel__trigger strong {
+    font-size: clamp(1rem, 1.3vw, 1.2rem);
+  }
+
+  .settings-panel__icon {
+    height: clamp(40px, 4vw, 44px);
+    width: clamp(40px, 4vw, 44px);
+  }
+
+  .settings-panel__icon svg {
+    height: 22px;
+    width: 22px;
+  }
+
+  .settings-panel__body {
+    padding: clamp(0.85rem, 1.2vw, 1.15rem);
+  }
+
+  .settings-admin-links a {
+    min-height: clamp(50px, 5vw, 54px);
+  }
+}
+
 .account-actions {
   bottom: 18px;
   left: 18px;

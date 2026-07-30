@@ -127,6 +127,10 @@
 
   .app-shell__content {
     border-radius: 0;
+    padding:
+      clamp(0.42rem, 0.62vw, 0.62rem)
+      var(--page-pad-x)
+      clamp(0.72rem, 0.9vw, 0.95rem);
   }
 
   .top-banner {

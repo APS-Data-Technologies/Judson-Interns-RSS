@@ -64,7 +64,9 @@ def cohort_analytics(user, query_params):
     cost_basis = parse_cost_basis(cost_basis)
 
     scoped_queryset = base_queryset(user)
-    staff_option_queryset = scoped_queryset
+    staff_option_queryset = apply_filters(scoped_queryset, {
+        "exclude_test_data": query_params.get("exclude_test_data"),
+    })
     option_location_ids = parse_csv(query_params.get("location") or query_params.get("locations"))
     if option_location_ids:
         staff_option_queryset = staff_option_queryset.filter(location_id__in=option_location_ids)

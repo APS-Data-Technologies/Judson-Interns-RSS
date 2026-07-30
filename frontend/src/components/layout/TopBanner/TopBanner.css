@@ -59,10 +59,12 @@
   .top-banner {
     border-radius: 0;
     box-shadow: none;
+    min-height: clamp(4.15rem, 5.2vmin, 5.1rem);
+    padding-inline: clamp(0.75rem, 1.4vw, 1rem);
   }
 
   .top-banner__logo {
-    width: min(44vw, 29rem);
-    height: clamp(4rem, 8vmin, 6rem);
+    width: min(38vw, 24rem);
+    height: clamp(3rem, 4.4vmin, 4rem);
   }
 }

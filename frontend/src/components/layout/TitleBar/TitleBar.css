@@ -182,3 +182,24 @@
     right: 0.4rem;
   }
 }
+
+@media (min-width: 1181px), (min-width: 768px) and (max-width: 1180px) and (orientation: landscape) {
+  .title-bar {
+    min-height: clamp(2.8rem, 3.4vmin, 3.25rem);
+    padding: clamp(0.42rem, 0.7vmin, 0.58rem);
+  }
+
+  .title-bar__back {
+    height: clamp(2.4rem, 2.8vmin, 2.55rem);
+    left: clamp(0.65rem, 1.25vw, 1rem);
+    width: clamp(2.4rem, 2.8vmin, 2.55rem);
+  }
+
+  .title-bar__title {
+    font-size: clamp(1.18rem, 1.55vw, 1.52rem);
+  }
+
+  .title-bar__actions {
+    right: clamp(0.65rem, 1.25vw, 1rem);
+  }
+}
