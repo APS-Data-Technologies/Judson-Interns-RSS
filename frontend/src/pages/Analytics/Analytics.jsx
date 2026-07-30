@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation, useOutletContext, useSearchParams } from "react-router-dom";
 import {
   ChevronLeft,
@@ -1002,6 +1003,7 @@ function OverviewMetricCard({ delta, isKeyMetric = false, label, status, trendVa
 }
 
 function OverviewPerformanceCard({ delta, info, isKeyMetric = false, label, tone, value, valueKind = "rate" }) {
+  const hasValue = value !== null && value !== undefined;
   const currentValue = valueKind === "days" ? value : formatRate(value);
   const previousRate = valueKind === "rate" && delta !== null ? Number(value) - Number(delta) : null;
   const previousValue = previousRate === null ? "" : formatRate(previousRate);
@@ -1016,7 +1018,7 @@ function OverviewPerformanceCard({ delta, info, isKeyMetric = false, label, tone
   }[tone];
   return (
     <article
-      className={`analytics-overview-performance-card analytics-overview-performance-card--${tone}${isKeyMetric ? " analytics-overview-performance-card--key" : ""}`}
+      className={`analytics-overview-performance-card analytics-overview-performance-card--${tone}${isKeyMetric && hasValue ? " analytics-overview-performance-card--key" : ""}${!hasValue ? " analytics-overview-performance-card--empty" : ""}`}
       data-drill-current={currentValue ?? "--"}
       data-drill-difference={difference}
       data-drill-difference-percent={differencePercent}
@@ -1389,8 +1391,15 @@ function VolumeTemporalRankings({ allTimeRows, focusStatus, rows }) {
   );
 }
 
-function VolumePerformanceRankings({ allTimeRankings, rankings }) {
-  const [status, setStatus] = useState("all");
+function VolumePerformanceRankings({ allTimeRankings, focusStatus, rankings }) {
+  const initialStatus = {
+    churned: "churned",
+    enrolled: "enrolled",
+    no_show: "noShow",
+    scheduled: "booked",
+    toured: "toured",
+  }[focusStatus] || "all";
+  const [status, setStatus] = useState(initialStatus);
   const [direction, setDirection] = useState("highest");
   const [scope, setScope] = useState("selected");
   const selectedStatus = volumePerformanceStatusOptions.find((option) => option.value === status) || volumePerformanceStatusOptions[0];
@@ -1460,6 +1469,8 @@ function VolumeAnalyticsWorkspace({ analytics, filters, focusStatus, onDrillThro
   const canShowNewerTrends = trendWindowOffset > 0;
   const trendWindowLabel = visibleTrendRows.length ? `${visibleTrendRows[0].label || visibleTrendRows[0].date} – ${visibleTrendRows.at(-1).label || visibleTrendRows.at(-1).date}` : "No dates available";
   const selectedTrendMetrics = selectableVolumeTrendMetrics.filter((metric) => selectedTrendStatuses.includes(metric.status));
+  const primaryTrendMetric = selectableVolumeTrendMetrics.find((metric) => metric.status === focusStatus)
+    || volumeChartMetrics.find((metric) => metric.status === "scheduled");
   const selectedTourTrendMetrics = selectedTrendMetrics.filter((metric) => ["toured", "no_show"].includes(metric.status));
   const selectedOutcomeTrendMetrics = selectedTrendMetrics.filter((metric) => ["enrolled", "churned"].includes(metric.status));
   const toggleTrendStatus = (status) => setSelectedTrendStatuses((selected) => (
@@ -1523,7 +1534,7 @@ function VolumeAnalyticsWorkspace({ analytics, filters, focusStatus, onDrillThro
         <div className="analytics-volume-panel__heading"><div><h2 id="volume-events-title">Volume Trends</h2></div><div className="analytics-volume-trend__controls"><div className="analytics-volume-trend__field"><span>Timeline</span><details className="analytics-volume-trend__picker analytics-volume-trend__picker--timeline"><summary>{eventTrendMode[0].toUpperCase() + eventTrendMode.slice(1)}</summary><div>{["daily", "weekly", "monthly"].map((mode) => <button className={eventTrendMode === mode ? "is-selected" : ""} key={mode} onClick={(event) => { setEventTrendMode(mode); setTrendWindowOffset(0); event.currentTarget.closest("details")?.removeAttribute("open"); }} type="button"><span>{mode[0].toUpperCase() + mode.slice(1)}</span>{eventTrendMode === mode && <Check aria-hidden="true" />}</button>)}</div></details></div><div className="analytics-volume-trend__field"><span>Statuses</span><details className="analytics-volume-trend__picker"><summary>{selectedTrendStatuses.length ? `${selectedTrendStatuses.length} selected` : "Select statuses"}</summary><div><div className="analytics-volume-trend__actions"><button onClick={() => setSelectedTrendStatuses(selectableVolumeTrendMetrics.map((metric) => metric.status))} type="button">Select all</button><button onClick={() => setSelectedTrendStatuses([])} type="button">Clear</button></div>{selectableVolumeTrendMetrics.map((metric) => <label key={metric.status}><input checked={selectedTrendStatuses.includes(metric.status)} onChange={() => toggleTrendStatus(metric.status)} type="checkbox" /><i className={`is-${metric.status}`} />{metric.label}</label>)}</div></details></div></div></div>
         <div className="analytics-volume-trend__navigator"><button aria-label="Show older dates" disabled={!canShowOlderTrends} onClick={() => setTrendWindowOffset((offset) => Math.min(eventTrendRows.length, offset + trendWindowSize))} type="button"><ChevronLeft aria-hidden="true" />Older</button><strong>{trendWindowLabel}</strong><button aria-label="Show newer dates" disabled={!canShowNewerTrends} onClick={() => setTrendWindowOffset((offset) => Math.max(0, offset - trendWindowSize))} type="button">Newer<ChevronRight aria-hidden="true" /></button></div>
         </div>
-        <section className="analytics-volume-trend__booked"><div className="analytics-volume-trend__chart-heading"><h3>Booked</h3><button className="analytics-chart-drill-trigger" disabled={!visibleTrendRows.length} onClick={() => openTrendDrillThrough("Booked trend", volumeChartMetrics.filter((metric) => metric.status === "scheduled"))} type="button">Drill through</button></div><div className="analytics-volume-trend__legend"><span><i />Booked</span></div><VolumeTrendChart metrics={volumeChartMetrics.filter((metric) => metric.status === "scheduled")} rows={visibleTrendRows} /></section>
+        <section className="analytics-volume-trend__booked"><div className="analytics-volume-trend__chart-heading"><h3>{primaryTrendMetric.label}</h3><button className="analytics-chart-drill-trigger" disabled={!visibleTrendRows.length} onClick={() => openTrendDrillThrough(`${primaryTrendMetric.label} trend`, [primaryTrendMetric])} type="button">Drill through</button></div><div className="analytics-volume-trend__legend"><span><i className={`is-${primaryTrendMetric.status}`} />{primaryTrendMetric.label}</span></div><VolumeTrendChart barStatuses={primaryTrendMetric.status === "no_show" || primaryTrendMetric.status === "churned" ? [primaryTrendMetric.status] : []} metrics={[primaryTrendMetric]} rows={visibleTrendRows} /></section>
         <div className="analytics-volume-trend__split">
           <section><div className="analytics-volume-trend__chart-heading"><h3>Tours</h3><button className="analytics-chart-drill-trigger" disabled={!visibleTrendRows.length || !selectedTourTrendMetrics.length} onClick={() => openTrendDrillThrough("Tours trend", selectedTourTrendMetrics)} type="button">Drill through</button></div>{selectedTourTrendMetrics.length ? <><div className="analytics-volume-trend__legend">{selectedTourTrendMetrics.map((metric) => <span key={metric.status}><i className={`is-${metric.status}`} />{metric.label}</span>)}</div><VolumeTrendChart barStatuses={["no_show"]} metrics={selectedTourTrendMetrics} rows={visibleTrendRows} /></> : <div className="analytics-volume-trend__empty">Select Toured or No Show to view this trend.</div>}</section>
           <section><div className="analytics-volume-trend__chart-heading"><h3>Outcomes</h3><button className="analytics-chart-drill-trigger" disabled={!visibleTrendRows.length || !selectedOutcomeTrendMetrics.length} onClick={() => openTrendDrillThrough("Outcomes trend", selectedOutcomeTrendMetrics)} type="button">Drill through</button></div>{selectedOutcomeTrendMetrics.length ? <><div className="analytics-volume-trend__legend">{selectedOutcomeTrendMetrics.map((metric) => <span key={metric.status}><i className={`is-${metric.status}`} />{metric.label}</span>)}</div><VolumeTrendChart barStatuses={["churned"]} metrics={selectedOutcomeTrendMetrics} rows={visibleTrendRows} /></> : <div className="analytics-volume-trend__empty">Select Enrolled or Churned to view this trend.</div>}</section>
@@ -1532,7 +1543,7 @@ function VolumeAnalyticsWorkspace({ analytics, filters, focusStatus, onDrillThro
 
       <VolumeTemporalRankings allTimeRows={analytics.allTimeVolumeCalendarData} focusStatus={focusStatus} rows={analytics.volumeCalendarData} />
 
-      <VolumePerformanceRankings allTimeRankings={analytics.allTimeVolumePerformanceRankings} rankings={analytics.volumePerformanceRankings} />
+      <VolumePerformanceRankings allTimeRankings={analytics.allTimeVolumePerformanceRankings} focusStatus={focusStatus} rankings={analytics.volumePerformanceRankings} />
 
     </section>
   );
@@ -1883,8 +1894,8 @@ function getRelatedPerformance(row, dimension, mode) {
   }).filter(Boolean);
 }
 
-function EntityHealthTable({ dimension, entityLabel, onDrillThrough, rows }) {
-  const [mode, setMode] = useState("volume");
+function EntityHealthTable({ dimension, entityLabel, initialMode = "volume", onDrillThrough, rows }) {
+  const [mode, setMode] = useState(initialMode === "rate" ? "rate" : "volume");
   const metrics = mode === "volume" ? healthVolumeMetrics : healthRateMetrics;
   const showRelatedPerformance = dimension !== "staff";
   const comparison = (current, previous, metric, hasPrevious = true) => {
@@ -1928,7 +1939,7 @@ function EntityHealthTable({ dimension, entityLabel, onDrillThrough, rows }) {
   );
 }
 
-function EntityAnalyticsWorkspace({ analytics, dimension, filters, leadSources, locations, onDrillThrough, user }) {
+function EntityAnalyticsWorkspace({ analytics, dimension, filters, healthMode, leadSources, locations, onDrillThrough, user }) {
   const [volumeStatus, setVolumeStatus] = useState("all");
   const [performanceMetric, setPerformanceMetric] = useState("conversion");
   const [selectedVolumeEntity, setSelectedVolumeEntity] = useState(null);
@@ -2125,7 +2136,7 @@ function EntityAnalyticsWorkspace({ analytics, dimension, filters, leadSources, 
           )}
         </section>
       </div>
-      <EntityHealthTable dimension={dimension} entityLabel={dimensionConfig.entityLabel} onDrillThrough={onDrillThrough} rows={analytics.entityHealth?.[dimension] || []} />
+      <EntityHealthTable dimension={dimension} entityLabel={dimensionConfig.entityLabel} initialMode={healthMode} onDrillThrough={onDrillThrough} rows={analytics.entityHealth?.[dimension] || []} />
     </section>
   );
 }
@@ -2156,24 +2167,86 @@ function formatAverageDays(value) {
 
 function InfoHint({ label }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState({ left: 8, top: 8 });
+  const buttonRef = useRef(null);
+  const popoverRef = useRef(null);
+  const hintId = useId();
+  const tooltipId = `${hintId}-tooltip`;
+
+  useEffect(() => {
+    const closeOtherHint = (event) => {
+      if (event.detail !== hintId) setIsOpen(false);
+    };
+    document.addEventListener("rss-info-hint-open", closeOtherHint);
+    return () => document.removeEventListener("rss-info-hint-open", closeOtherHint);
+  }, [hintId]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const updatePosition = () => {
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const width = Math.min(260, window.innerWidth - 16);
+      const left = Math.min(Math.max(8, rect.right - width), window.innerWidth - width - 8);
+      const popoverHeight = popoverRef.current?.offsetHeight || 96;
+      const top = rect.top > popoverHeight + 12
+        ? rect.top - popoverHeight - 8
+        : rect.bottom + 8;
+      setPosition({ left, top });
+    };
+    const closeOutside = (event) => {
+      if (!buttonRef.current?.contains(event.target) && !popoverRef.current?.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+    updatePosition();
+    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("pointerdown", closeOutside);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("pointerdown", closeOutside);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [isOpen]);
+
+  const toggleHint = () => {
+    setIsOpen((current) => {
+      const next = !current;
+      if (next) document.dispatchEvent(new CustomEvent("rss-info-hint-open", { detail: hintId }));
+      return next;
+    });
+  };
 
   return (
     <span className="analytics-info-wrap">
       <button
+        aria-describedby={isOpen ? tooltipId : undefined}
         aria-expanded={isOpen}
         aria-label={label}
         className="analytics-info-hint"
-        onBlur={() => setIsOpen(false)}
-        onClick={() => setIsOpen((current) => !current)}
-        title={label}
+        onClick={toggleHint}
+        ref={buttonRef}
         type="button"
       >
         <Info aria-hidden="true" />
       </button>
-      {isOpen && (
-        <span className="analytics-info-popover" role="tooltip">
+      {isOpen && createPortal(
+        <span
+          className="analytics-info-popover analytics-info-popover--portal"
+          id={tooltipId}
+          ref={popoverRef}
+          role="tooltip"
+          style={position}
+        >
           {label}
-        </span>
+        </span>,
+        document.body,
       )}
     </span>
   );
@@ -2544,8 +2617,10 @@ function buildTemporalConversionGroups(rows, metric) {
   });
 }
 
-function TemporalConversionRankings({ allTimeRows, rows }) {
-  const [metricValue, setMetricValue] = useState("conversion");
+function TemporalConversionRankings({ allTimeRows, initialMetric = "conversion", rows }) {
+  const [metricValue, setMetricValue] = useState(
+    temporalConversionMetricOptions.some((option) => option.value === initialMetric) ? initialMetric : "conversion",
+  );
   const [direction, setDirection] = useState("highest");
   const [scope, setScope] = useState("selected");
   const [expandedGroup, setExpandedGroup] = useState(null);
@@ -2587,9 +2662,13 @@ function buildCohortRateTrendRows(rows, mode) {
   }));
 }
 
-function ConversionTrends({ data, filters, onDrillThrough }) {
+function ConversionTrends({ data, filters, initialMetric, onDrillThrough }) {
   const [mode, setMode] = useState("daily");
-  const [selectedRates, setSelectedRates] = useState(["toured", "conversion"]);
+  const [selectedRates, setSelectedRates] = useState(
+    Object.values(cohortRateTrendMetrics).some((metric) => metric.status === initialMetric)
+      ? [initialMetric]
+      : ["toured", "conversion"],
+  );
   const [windowOffset, setWindowOffset] = useState(0);
   const availableRates = Object.values(cohortRateTrendMetrics);
   const selectedRateMetrics = availableRates.filter((metric) => selectedRates.includes(metric.status));
@@ -2720,6 +2799,29 @@ function AnalyticsExecutiveSummary({ brief }) {
   );
 }
 
+function exportFilterState(searchParams) {
+  if (searchParams.get("analytics_export") !== "true") return {};
+  try {
+    const exported = JSON.parse(searchParams.get("export_filters") || "{}");
+    const split = (value) => String(value || "").split(",").filter(Boolean);
+    return {
+      ...(exported.date_from || exported.date_to ? {
+        datePreset: "custom",
+        dateFrom: exported.date_from || "",
+        dateTo: exported.date_to || "",
+      } : {}),
+      locations: split(exported.location),
+      leadSources: split(exported.lead_source),
+      staff: split(exported.staff),
+      statuses: split(exported.status),
+      categories: split(exported.category),
+      search: exported.search || "",
+    };
+  } catch {
+    return {};
+  }
+}
+
 function AnalyticsWorkspace({ view = "overview" }) {
   const { user } = useAuth();
   const canViewRestrictedAnalytics = ["admin", "super_admin"].includes(user?.role);
@@ -2727,6 +2829,7 @@ function AnalyticsWorkspace({ view = "overview" }) {
   const [searchParams] = useSearchParams();
   const [filters, setFilters] = useState(() => ({
     ...createDefaultTourFilters(user),
+    ...exportFilterState(searchParams),
     ...(searchParams.get("location") ? { locations: [searchParams.get("location")] } : {}),
     ...(searchParams.get("leadSource") ? { leadSources: [searchParams.get("leadSource")] } : {}),
     ...(searchParams.get("staff") ? { staff: [searchParams.get("staff")] } : {}),
@@ -2736,7 +2839,10 @@ function AnalyticsWorkspace({ view = "overview" }) {
   const [tours, setTours] = useState([]);
   const [previousTours, setPreviousTours] = useState([]);
   const [cohortAnalytics, setCohortAnalytics] = useState(null);
-  const [rankingMetric, setRankingMetric] = useState("conversion");
+  const exportMetric = searchParams.get("export_metric");
+  const [rankingMetric, setRankingMetric] = useState(
+    rankingMetricOptions.some((option) => option.value === exportMetric) ? exportMetric : "conversion",
+  );
   const [rankingSort, setRankingSort] = useState("best");
   const [rankingScope, setRankingScope] = useState("selected");
   const [isLoading, setIsLoading] = useState(true);
@@ -2965,7 +3071,7 @@ function AnalyticsWorkspace({ view = "overview" }) {
   }
 
   return (
-    <section className="analytics-page" aria-label="Analytics" onClickCapture={onClickCapture}>
+    <section className="analytics-page" aria-label="Analytics" data-export-ready={!isLoading} onClickCapture={onClickCapture}>
       <AnalyticsExport filters={exportFilters} page={view} />
       <TourFilterControls
         filters={filters}
@@ -3076,7 +3182,7 @@ function AnalyticsWorkspace({ view = "overview" }) {
       ) : view === "volume" ? (
         <VolumeAnalyticsWorkspace analytics={analytics} filters={filters} focusStatus={searchParams.get("focus")} key={periodComparison.selected} onDrillThrough={openDrillThrough} periodComparison={periodComparison} />
       ) : ["locations", "leadSources", "staff"].includes(view) ? (
-        <EntityAnalyticsWorkspace analytics={analytics} dimension={view} filters={filters} leadSources={leadSources} locations={locations} onDrillThrough={openDrillThrough} user={user} />
+        <EntityAnalyticsWorkspace analytics={analytics} dimension={view} filters={filters} healthMode={searchParams.get("insight_mode")} leadSources={leadSources} locations={locations} onDrillThrough={openDrillThrough} user={user} />
       ) : (
         <section className="analytics-workspace" aria-label="Cohort analytics">
           <div className="analytics-period">
@@ -3171,11 +3277,11 @@ function AnalyticsWorkspace({ view = "overview" }) {
             </aside>
           </div>
 
-          <ConversionTrends data={analytics.trendData} filters={filters} onDrillThrough={openDrillThrough} />
+          <ConversionTrends data={analytics.trendData} filters={filters} initialMetric={exportMetric} onDrillThrough={openDrillThrough} />
 
           <TimeToProgress data={analytics.timeToProgress} onDrillThrough={openDrillThrough} />
 
-          <TemporalConversionRankings allTimeRows={analytics.allTimeTrendData} rows={analytics.trendData} />
+          <TemporalConversionRankings allTimeRows={analytics.allTimeTrendData} initialMetric={exportMetric} rows={analytics.trendData} />
 
           <RankingSortControl
             metric={rankingMetric}

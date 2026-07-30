@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, CalendarDays, Check, ChevronDown, MapPin, Minus, SlidersHorizontal } from "lucide-react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useSearchParams } from "react-router-dom";
 
 import { getCohortAnalytics } from "../../features/analytics/analyticsApi";
 import { getLocations } from "../../features/tours/tourApi";
@@ -538,14 +538,31 @@ function LocationPerformance({ comparisonRows, onDrillThrough, rows }) {
   );
 }
 
+function exportFinancialFilters(searchParams) {
+  if (searchParams.get("analytics_export") !== "true") return {};
+  try {
+    return JSON.parse(searchParams.get("export_filters") || "{}");
+  } catch {
+    return {};
+  }
+}
+
 function CostsMarginAnalytics() {
   const { setAnalyticsLoading } = useOutletContext();
+  const [searchParams] = useSearchParams();
+  const exportedFilters = useMemo(() => exportFinancialFilters(searchParams), [searchParams]);
   const latestCompletedMonth = useMemo(() => monthValue(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1)), []);
-  const [startMonth, setStartMonth] = useState(() => shiftMonth(latestCompletedMonth, -5));
-  const [endMonth, setEndMonth] = useState(latestCompletedMonth);
+  const exportedEndMonth = exportedFilters.date_to?.slice(0, 7);
+  const initialEndMonth = exportedEndMonth && exportedEndMonth < latestCompletedMonth ? exportedEndMonth : latestCompletedMonth;
+  const exportedStartMonth = exportedFilters.date_from?.slice(0, 7);
+  const initialStartMonth = exportedStartMonth && exportedStartMonth <= initialEndMonth
+    ? exportedStartMonth
+    : shiftMonth(initialEndMonth, -5);
+  const [startMonth, setStartMonth] = useState(initialStartMonth);
+  const [endMonth, setEndMonth] = useState(initialEndMonth);
   const [compareIsCustom, setCompareIsCustom] = useState(false);
   const [customCompareStart, setCustomCompareStart] = useState(() => shiftMonth(latestCompletedMonth, -11));
-  const [location, setLocation] = useState("");
+  const [location, setLocation] = useState(exportedFilters.location || "");
   const [locations, setLocations] = useState([]);
   const [current, setCurrent] = useState({ revenue: 0, cost: 0, margin: 0 });
   const [previous, setPrevious] = useState({ revenue: 0, cost: 0, margin: 0 });
@@ -673,7 +690,7 @@ function CostsMarginAnalytics() {
   }
 
   return (
-    <section className="analytics-page costs-margin-page" aria-label="Costs & Margin analytics" onClickCapture={onClickCapture}>
+    <section className="analytics-page costs-margin-page" aria-label="Costs & Margin analytics" data-export-ready={!isLoading} onClickCapture={onClickCapture}>
       <AnalyticsExport filters={exportFilters} page="cost-margin" />
       <CostsMarginFilters compareEnd={compareEnd} compareIsCustom={compareIsCustom} compareStart={compareStart} endMonth={endMonth} latestCompletedMonth={latestCompletedMonth} location={location} locations={locations} onCompareEndChange={updateCompareEnd} onCompareReset={() => setCompareIsCustom(false)} onCompareStartChange={updateCompareStart} onEndChange={updateEnd} onLocationChange={setLocation} onStartChange={updateStart} selectedMonthCount={selectedMonthCount} startMonth={startMonth} />
 

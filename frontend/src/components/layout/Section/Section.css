@@ -32,7 +32,7 @@
   width: 100%;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1181px), (min-width: 768px) and (max-width: 1180px) and (orientation: landscape) {
   .rss-section__header {
     flex-direction: row;
     align-items: center;

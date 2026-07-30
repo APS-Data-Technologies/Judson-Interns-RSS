@@ -1,5 +1,63 @@
 import api from "../../services/api/api";
 
+const analyticsPageLabels = {
+  overview: "Overview",
+  volume: "Volume & Trend",
+  cohort: "Conversion & Cohort",
+  locations: "Location",
+  leadSources: "Lead Source",
+  staff: "Staff",
+  "cost-margin": "Costs & Margin",
+};
+const analyticsPageRoutes = {
+  overview: "/analytics/overview",
+  volume: "/analytics/volume",
+  cohort: "/analytics/cohort",
+  locations: "/analytics/locations",
+  leadSources: "/analytics/lead-sources",
+  staff: "/analytics/staff",
+  "cost-margin": "/analytics/cost-margin",
+};
+
+function safeFilenamePart(value) {
+  return String(value || "")
+    .split("")
+    .map((character) => character.charCodeAt(0) < 32 ? "-" : character)
+    .join("")
+    .replace(/[<>:"/\\|?*]+/g, "-")
+    .replace(/\s+/g, " ")
+    .replace(/^[ .-]+|[ .-]+$/g, "");
+}
+
+function responseFilename(disposition) {
+  const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded.replace(/^"|"$/g, ""));
+    } catch {
+      return encoded;
+    }
+  }
+  return disposition.match(/filename="([^"]+)"/i)?.[1]
+    || disposition.match(/filename=([^;]+)/i)?.[1]?.trim().replace(/^"|"$/g, "");
+}
+
+function analyticsPdfFallbackFilename(payload) {
+  const coverage = payload.coverage === "all"
+    ? "All Pages"
+    : analyticsPageLabels[payload.page] || "Analytics";
+  const viewScope = payload.viewScope === "all" ? "All Views" : "Current View";
+  const dataScope = payload.dataScope === "all_authorized"
+    ? "All Authorized Data"
+    : "Current Filtered Data";
+  return [
+    "RSS Analytics",
+    coverage,
+    viewScope,
+    dataScope,
+  ].map(safeFilenamePart).filter(Boolean).join(" - ") + ".pdf";
+}
+
 export async function getCohortAnalytics(params = {}) {
   const response = await api.get("/analytics/cohort/", { params });
   return response.data;
@@ -8,8 +66,8 @@ export async function getCohortAnalytics(params = {}) {
 export async function exportAnalytics(payload) {
   const response = await api.post("/analytics/export/", payload, { responseType: "blob" });
   const disposition = response.headers["content-disposition"] || "";
-  const filename = disposition.match(/filename="([^"]+)"/)?.[1]
-    || (payload.format === "pdf" ? "analytics-report.pdf" : "analytics-data.xlsx");
+  const filename = responseFilename(disposition)
+    || (payload.format === "pdf" ? analyticsPdfFallbackFilename(payload) : "analytics-data.xlsx");
   const url = URL.createObjectURL(response.data);
   const link = document.createElement("a");
   link.href = url;
@@ -18,6 +76,269 @@ export async function exportAnalytics(payload) {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function waitForAnalyticsPage(frame, timeoutMs = 30000) {
+  return new Promise((resolve, reject) => {
+    const started = Date.now();
+    const check = () => {
+      const page = frame.contentDocument?.querySelector('.analytics-page[data-export-ready="true"]');
+      if (page) {
+        resolve(page);
+        return;
+      }
+      if (Date.now() - started >= timeoutMs) {
+        reject(new Error("Timed out while preparing an analytics page for export."));
+        return;
+      }
+      window.setTimeout(check, 150);
+    };
+    check();
+  });
+}
+
+async function loadAnalyticsPageForExport(page, filters, routeParams = {}) {
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.cssText = "position:fixed;left:-100000px;top:0;width:1440px;height:1000px;border:0;opacity:0;pointer-events:none;";
+  const route = analyticsPageRoutes[page];
+  const query = new URLSearchParams({
+    analytics_export: "true",
+    export_filters: JSON.stringify(filters || {}),
+    ...routeParams,
+  });
+  frame.src = `${route}?${query}`;
+  document.body.appendChild(frame);
+  await new Promise((resolve, reject) => {
+    frame.addEventListener("load", resolve, { once: true });
+    frame.addEventListener("error", () => reject(new Error(`Unable to load ${page} analytics.`)), { once: true });
+  });
+  return { frame, page: await waitForAnalyticsPage(frame) };
+}
+
+async function captureAnalyticsPage(element, html2canvas, reportTitle, viewTitle) {
+  const reportHeading = element.ownerDocument.createElement("header");
+  reportHeading.className = "analytics-layout-pdf-heading";
+  const eyebrow = element.ownerDocument.createElement("span");
+  eyebrow.textContent = "RSS Analytics";
+  const title = element.ownerDocument.createElement("h1");
+  title.textContent = reportTitle;
+  const subtitle = element.ownerDocument.createElement("p");
+  subtitle.textContent = viewTitle;
+  reportHeading.append(eyebrow, title, subtitle);
+  element.prepend(reportHeading);
+  element.classList.add("is-layout-pdf-export");
+  try {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const rootRect = element.getBoundingClientRect();
+    const breakElements = element.querySelectorAll([
+      ":scope > .tour-filter-controls",
+      ":scope > .executive-brief",
+      ":scope > .analytics-workspace > *",
+      ":scope > .costs-margin-workspace > *",
+      ".analytics-location-health tbody > tr",
+      ".location-performance-cards > article",
+    ].join(","));
+    const canvas = await html2canvas(element, {
+      backgroundColor: "#f4f7fb",
+      logging: false,
+      scale: 1.35,
+      useCORS: true,
+      windowHeight: element.scrollHeight,
+      windowWidth: Math.max(1280, element.scrollWidth),
+    });
+    const scaleY = canvas.height / Math.max(1, element.scrollHeight);
+    const breakpoints = Array.from(breakElements)
+      .map((child) => Math.round((child.getBoundingClientRect().top - rootRect.top) * scaleY))
+      .filter((position) => position > 0 && position < canvas.height)
+      .sort((first, second) => first - second);
+    return { breakpoints, canvas };
+  } finally {
+    element.classList.remove("is-layout-pdf-export");
+    reportHeading.remove();
+  }
+}
+
+function exportViewVariants(page, viewScope) {
+  if (viewScope !== "all") {
+    return [{
+      label: "Current view",
+      params: {},
+    }];
+  }
+  if (["locations", "leadSources", "staff"].includes(page)) {
+    return [
+      { label: "Volume metrics", params: { insight_mode: "volume" } },
+      { label: "Rate metrics", params: { insight_mode: "rate" } },
+    ];
+  }
+  if (page === "cohort") {
+    return [
+      { label: "Conversion Rate", params: { export_metric: "conversion" } },
+      { label: "Toured Rate", params: { export_metric: "toured" } },
+      { label: "Close Rate", params: { export_metric: "close" } },
+      { label: "Average Days to Enrollment", params: { export_metric: "average_days" } },
+    ];
+  }
+  if (page !== "volume") {
+    return [{
+      label: page === "overview" ? "Analytics overview" : "Financial overview and location performance",
+      params: {},
+    }];
+  }
+  return [
+    { label: "All Events", params: {} },
+    { label: "Booked", params: { focus: "scheduled" } },
+    { label: "Toured", params: { focus: "toured" } },
+    { label: "No Show", params: { focus: "no_show" } },
+    { label: "Enrolled", params: { focus: "enrolled" } },
+    { label: "Churned", params: { focus: "churned" } },
+  ];
+}
+
+function appendCanvasPages(pdf, capture, hasExistingPage) {
+  const { breakpoints, canvas } = capture;
+  const margin = 18;
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const imageWidth = pageWidth - margin * 2;
+  const usableHeight = pageHeight - margin * 2;
+  const sourcePageHeight = Math.max(1, Math.floor((usableHeight * canvas.width) / imageWidth));
+  const segmentEdges = [0, ...breakpoints, canvas.height]
+    .filter((position, index, positions) => index === 0 || position > positions[index - 1])
+    .filter((position) => position >= 0 && position <= canvas.height);
+  let cursorY = 0;
+  let hasPage = hasExistingPage;
+
+  const addSlice = (sourceY, currentSliceHeight) => {
+    const slice = document.createElement("canvas");
+    slice.width = canvas.width;
+    slice.height = currentSliceHeight;
+    const context = slice.getContext("2d");
+    context.fillStyle = "#f4f7fb";
+    context.fillRect(0, 0, slice.width, slice.height);
+    context.drawImage(
+      canvas,
+      0,
+      sourceY,
+      canvas.width,
+      currentSliceHeight,
+      0,
+      0,
+      canvas.width,
+      currentSliceHeight,
+    );
+    const renderedHeight = (currentSliceHeight * imageWidth) / canvas.width;
+    pdf.addImage(
+      slice.toDataURL("image/jpeg", 0.94),
+      "JPEG",
+      margin,
+      margin + cursorY,
+      imageWidth,
+      renderedHeight,
+      undefined,
+      "FAST",
+    );
+    cursorY += renderedHeight;
+  };
+
+  const startPage = () => {
+    if (hasPage) pdf.addPage();
+    hasPage = true;
+    cursorY = 0;
+  };
+
+  startPage();
+  segmentEdges.slice(0, -1).forEach((segmentStart, index) => {
+    let sourceY = segmentStart;
+    let remainingSourceHeight = segmentEdges[index + 1] - segmentStart;
+    if (remainingSourceHeight <= 0) return;
+
+    while (remainingSourceHeight > 0) {
+      const availableRenderedHeight = usableHeight - cursorY;
+      const segmentRenderedHeight = (remainingSourceHeight * imageWidth) / canvas.width;
+
+      if (segmentRenderedHeight > availableRenderedHeight && cursorY > 0) {
+        startPage();
+        continue;
+      }
+
+      const currentSliceHeight = Math.min(remainingSourceHeight, sourcePageHeight);
+      addSlice(sourceY, currentSliceHeight);
+      sourceY += currentSliceHeight;
+      remainingSourceHeight -= currentSliceHeight;
+      if (remainingSourceHeight > 0) startPage();
+    }
+  });
+  return hasPage;
+}
+
+export async function exportAnalyticsLayoutPdf({ currentElement, filters, onProgress, options, page, role }) {
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+    import("html2canvas-pro"),
+    import("jspdf"),
+  ]);
+  const allPages = ["overview", "volume", "cohort", "locations", "leadSources"];
+  if (["admin", "super_admin"].includes(role)) allPages.push("staff", "cost-margin");
+  const pages = options.coverage === "all" ? allPages : [page];
+  const views = pages.flatMap((targetPage) => (
+    exportViewVariants(targetPage, options.viewScope).map((variant) => ({
+      ...variant,
+      page: targetPage,
+    }))
+  ));
+  const exportFilters = options.dataScope === "all_authorized"
+    ? Object.fromEntries(
+      Object.entries(filters || {}).filter(([key]) => !["location", "locations", "lead_source", "lead_sources", "staff"].includes(key)),
+    )
+    : filters;
+  const pdf = new jsPDF({ format: "letter", orientation: "landscape", unit: "pt" });
+  let hasPage = false;
+
+  for (const [viewIndex, view] of views.entries()) {
+    let frame;
+    try {
+      onProgress?.({
+        current: viewIndex + 1,
+        label: `${analyticsPageLabels[view.page] || "Analytics"} - ${view.label}`,
+        total: views.length,
+      });
+      const useCurrentElement = view.page === page
+        && options.coverage === "current"
+        && options.dataScope === "current"
+        && options.viewScope === "current";
+      let element = currentElement;
+      if (!useCurrentElement) {
+        const prepared = await loadAnalyticsPageForExport(view.page, exportFilters, view.params);
+        frame = prepared.frame;
+        element = prepared.page;
+      }
+      const capture = await captureAnalyticsPage(
+        element,
+        html2canvas,
+        analyticsPageLabels[view.page] || "Analytics",
+        view.label,
+      );
+      hasPage = appendCanvasPages(pdf, capture, hasPage);
+    } finally {
+      frame?.remove();
+    }
+  }
+  const pageCount = pdf.getNumberOfPages();
+  for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+    pdf.setPage(pageNumber);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(7);
+    pdf.setTextColor(91, 109, 134);
+    pdf.text(
+      `RSS Analytics · ${pageNumber} of ${pageCount}`,
+      pdf.internal.pageSize.getWidth() - 18,
+      pdf.internal.pageSize.getHeight() - 6,
+      { align: "right" },
+    );
+  }
+  pdf.save(analyticsPdfFallbackFilename({ ...options, page }));
+  return { total: views.length };
 }
 
 export async function getAnalyticsDrillThrough(params = {}) {
@@ -43,7 +364,7 @@ export async function exportAnalyticsDrillThrough(params = {}) {
     params.drill_visualization,
     params.drill_kpi,
   ].map(safeFilenamePart).filter(Boolean).join(" - ").slice(0, 180).replace(/[ .-]+$/g, "");
-  const filename = disposition.match(/filename="([^"]+)"/)?.[1]
+  const filename = responseFilename(disposition)
     || `${generatedName || "Analytics Drill-Through"}.xlsx`;
   const url = URL.createObjectURL(response.data);
   const link = document.createElement("a");
@@ -53,44 +374,4 @@ export async function exportAnalyticsDrillThrough(params = {}) {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
-}
-
-export async function exportVisualAnalyticsPdf(element, filename = "analytics-report.pdf") {
-  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-    import("html2canvas-pro"),
-    import("jspdf"),
-  ]);
-  element.classList.add("is-exporting-pdf");
-  try {
-    const canvas = await html2canvas(element, {
-      backgroundColor: "#f4f7fb",
-      scale: Math.min(1.75, window.devicePixelRatio || 1),
-      useCORS: true,
-      windowHeight: element.scrollHeight,
-      windowWidth: element.scrollWidth,
-    });
-    const pdf = new jsPDF({
-      format: "letter",
-      orientation: canvas.width > canvas.height ? "landscape" : "portrait",
-      unit: "pt",
-    });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const imageWidth = pageWidth;
-    const imageHeight = (canvas.height * imageWidth) / canvas.width;
-    let remainingHeight = imageHeight;
-    let position = 0;
-    const image = canvas.toDataURL("image/jpeg", 0.94);
-    pdf.addImage(image, "JPEG", 0, position, imageWidth, imageHeight, undefined, "FAST");
-    remainingHeight -= pageHeight;
-    while (remainingHeight > 0) {
-      position -= pageHeight;
-      pdf.addPage();
-      pdf.addImage(image, "JPEG", 0, position, imageWidth, imageHeight, undefined, "FAST");
-      remainingHeight -= pageHeight;
-    }
-    pdf.save(filename);
-  } finally {
-    element.classList.remove("is-exporting-pdf");
-  }
 }

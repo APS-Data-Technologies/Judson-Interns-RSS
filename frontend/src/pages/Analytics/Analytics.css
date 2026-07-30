@@ -657,9 +657,12 @@
 }
 
 .analytics-overview-performance-card--key {
-  border-top: 4px solid var(--status-enrolled);
-  box-shadow: inset 0 0 0 2px var(--status-enrolled), 0 14px 30px color-mix(in srgb, var(--status-enrolled) 20%, transparent);
-  z-index: 1;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--status-enrolled) 5%, white), var(--status-enrolled-soft));
+}
+
+.analytics-overview-performance-card--empty {
+  --performance-color: var(--color-text-secondary);
+  --performance-soft: #ffffff;
 }
 
 .analytics-overview-performance-card__label {
@@ -2175,6 +2178,16 @@
   width: max-content;
 }
 
+.analytics-info-popover--portal {
+  bottom: auto;
+  box-sizing: border-box;
+  max-width: min(260px, calc(100vw - 16px));
+  position: fixed;
+  right: auto;
+  width: max-content;
+  z-index: 10000;
+}
+
 .analytics-flow-node .analytics-info-popover {
   max-width: min(200px, 68vw);
 }
@@ -2204,7 +2217,7 @@
   color: var(--color-text-secondary);
 }
 
-@media (max-width: 980px) {
+@media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
   .analytics-location-comparison__grid { grid-template-columns: 1fr; }
   .analytics-location-comparison__panel { min-height: 22rem; }
   .analytics-location-health__scroll > header { align-items: center; flex-direction: row; }
@@ -2989,6 +3002,47 @@
 
 .analytics-export-trigger svg { height: 1rem; width: 1rem; }
 
+.analytics-export-status {
+  align-items: center;
+  background: var(--brand-navy);
+  border: 1px solid color-mix(in srgb, var(--rss-gold) 45%, transparent);
+  border-radius: 0.75rem;
+  bottom: 1.25rem;
+  box-shadow: 0 1rem 2.5rem rgba(5, 21, 47, 0.3);
+  color: #ffffff;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  max-width: min(28rem, calc(100vw - 2rem));
+  min-width: min(22rem, calc(100vw - 2rem));
+  padding: 0.85rem 1rem;
+  position: fixed;
+  right: 1.25rem;
+  z-index: 1100;
+}
+
+.analytics-export-status > svg {
+  color: var(--rss-gold);
+  height: 1.35rem;
+  width: 1.35rem;
+}
+
+.analytics-export-status > span { display: grid; gap: 0.2rem; }
+.analytics-export-status strong { font-size: 0.78rem; line-height: 1.35; }
+.analytics-export-status small { color: #c9d7e8; font-size: 0.66rem; font-weight: 800; }
+.analytics-export-status--success { border-color: var(--status-enrolled); }
+.analytics-export-status--success > svg { color: #62d99a; }
+.analytics-export-status--error { border-color: var(--status-churned); }
+.analytics-export-status--error > svg { color: #ff8d9d; }
+.analytics-export-status > button { background: transparent; border: 0; color: #ffffff; cursor: pointer; display: grid; padding: 0.2rem; place-items: center; }
+.analytics-export-status > button svg { height: 1rem; width: 1rem; }
+
+.analytics-export-status__spinner { animation: analytics-export-spin 900ms linear infinite; }
+
+@keyframes analytics-export-spin {
+  to { transform: rotate(360deg); }
+}
+
 .analytics-location-health tbody .analytics-health__comparison,
 .analytics-location-health tbody td > .analytics-health__current {
   border-radius: 0.35rem;
@@ -3090,7 +3144,7 @@
   width: calc(100% - 2rem);
 }
 
-.analytics-export-dialog__progress { display: grid; gap: 0.3rem; grid-template-columns: repeat(4, 1fr); padding: 0.9rem 1.2rem 0; }
+.analytics-export-dialog__progress { display: grid; gap: 0.3rem; grid-template-columns: repeat(3, 1fr); padding: 0.9rem 1.2rem 0; }
 .analytics-export-dialog__progress i { background: var(--color-border); border-radius: 1rem; height: 0.25rem; }
 .analytics-export-dialog__progress i.is-active { background: var(--rss-gold); }
 .analytics-export-dialog__error { background: #fff0f0; border: 1px solid #efb2b2; border-radius: 0.5rem; color: #9f2020; font-size: 0.72rem; font-weight: 800; margin: 0.8rem 1.2rem 0; padding: 0.65rem 0.75rem; }
@@ -3107,16 +3161,150 @@
 .analytics-export-dialog footer button:disabled { cursor: not-allowed; opacity: 0.45; }
 .analytics-export-dialog footer svg { height: 0.9rem; width: 0.9rem; }
 
-.analytics-page.is-exporting-pdf {
+.analytics-page.is-layout-pdf-export {
   background: #f4f7fb;
+  box-sizing: border-box;
+  max-width: none;
+  min-width: 1240px;
   padding: 1rem;
+  width: 100%;
 }
 
-.analytics-page.is-exporting-pdf .analytics-page-actions {
+.analytics-layout-pdf-heading {
+  background: linear-gradient(115deg, var(--brand-navy-dark), var(--brand-blue));
+  border-radius: var(--radius-md);
+  color: #ffffff;
+  display: grid;
+  gap: 0.2rem;
+  padding: 1rem 1.2rem;
+}
+
+.analytics-layout-pdf-heading span {
+  color: var(--rss-gold);
+  font-size: 0.65rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.analytics-layout-pdf-heading h1 {
+  color: var(--rss-gold);
+  font-family: var(--font-family-heading);
+  font-size: 1.65rem;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.analytics-layout-pdf-heading p {
+  font-size: 0.78rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-chart-drill-trigger,
+.analytics-page.is-layout-pdf-export .analytics-overview-section__title > a,
+.analytics-page.is-layout-pdf-export .analytics-preview-card > a,
+.analytics-page.is-layout-pdf-export [data-export-only-interactive="true"] {
+  display: none !important;
+}
+
+.analytics-page.is-layout-pdf-export button,
+.analytics-page.is-layout-pdf-export a {
+  pointer-events: none !important;
+}
+
+.analytics-page.is-layout-pdf-export details > :not(summary) {
+  display: none !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-location-health__scroll,
+.analytics-page.is-layout-pdf-export .analytics-location-health__table-wrap {
+  min-width: 0;
+  overflow: visible;
+  width: 100%;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-location-health__scroll > header {
+  min-width: 0;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-location-health.has-best-timing th {
+  width: auto !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-location-health th,
+.analytics-page.is-layout-pdf-export .analytics-location-health td {
+  font-size: 0.58rem;
+  padding: 0.45rem 0.32rem;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-location-health thead th {
+  font-size: 0.52rem;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-location-health tbody th strong {
+  font-size: 0.72rem;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-health__sparkline {
+  width: 58px;
+}
+
+.analytics-page.is-layout-pdf-export .location-performance-table-wrap,
+.analytics-page.is-layout-pdf-export .location-performance-mobile-controls {
   display: none;
 }
 
+.analytics-page.is-layout-pdf-export .location-performance-cards {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.analytics-page.is-layout-pdf-export .location-performance-cards article {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.8rem;
+}
+
+.analytics-page.is-layout-pdf-export .location-performance-cards header > strong {
+  color: var(--brand-navy-dark);
+}
+
+.analytics-page.is-layout-pdf-export .location-performance-cards dl {
+  display: grid;
+  gap: 0.55rem 0.8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0.7rem 0 0;
+}
+
+.analytics-page.is-layout-pdf-export .location-performance-cards dl div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.analytics-page.is-layout-pdf-export .location-performance-cards dt {
+  color: var(--color-text-secondary);
+  font-size: 0.58rem;
+  font-weight: 850;
+}
+
+.analytics-page.is-layout-pdf-export .location-performance-cards dd {
+  color: var(--brand-navy-dark);
+  font-size: 0.72rem;
+  font-weight: 900;
+  margin: 0;
+}
+
 @media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
+  .analytics-export-status {
+    bottom: calc(var(--bottom-nav-height, 4.5rem) + 0.75rem);
+    left: 1rem;
+    max-width: none;
+    min-width: 0;
+    right: 1rem;
+  }
+
   .analytics-export-trigger {
     min-height: 2.2rem;
     padding: 0.5rem;

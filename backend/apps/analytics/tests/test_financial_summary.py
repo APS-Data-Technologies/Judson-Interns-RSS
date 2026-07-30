@@ -254,17 +254,26 @@ class FinancialSummaryTests(TestCase):
 
         self.assertTrue(content.startswith(b"%PDF"))
         self.assertEqual(content_type, "application/pdf")
-        self.assertEqual(filename, "analytics-report.pdf")
+        self.assertEqual(
+            filename,
+            "RSS Analytics - All Pages - Current View - Current Filtered Data.pdf",
+        )
         self.assertNotIn("staff", allowed_pages(self.staff))
         self.assertNotIn("cost-margin", allowed_pages(self.staff))
 
-        admin_content, _, _ = export_analytics(self.admin, {
+        admin_content, _, admin_filename = export_analytics(self.admin, {
             "coverage": "current",
+            "dataScope": "current",
             "filters": {"date_from": "2026-01-01", "date_to": "2026-02-28"},
             "format": "pdf",
             "page": "cost-margin",
+            "viewScope": "current",
         })
         self.assertTrue(admin_content.startswith(b"%PDF"))
+        self.assertEqual(
+            admin_filename,
+            "RSS Analytics - Costs & Margin - Current View - Current Filtered Data.pdf",
+        )
 
     def test_global_search_scopes_records_and_staff_results_by_role(self):
         source = LeadSource.objects.create(source_name="Community Search")

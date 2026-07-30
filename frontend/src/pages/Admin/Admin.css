@@ -271,7 +271,7 @@
   }
 }
 
-@media (min-width: 760px) {
+@media (min-width: 1181px), (min-width: 768px) and (max-width: 1180px) and (orientation: landscape) {
   .user-row {
     align-items: center;
     display: grid;

@@ -1,9 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, Download, FileSpreadsheet, FileText, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, Download, FileSpreadsheet, LoaderCircle, X } from "lucide-react";
 
-import { exportAnalytics, exportAnalyticsDrillThrough, exportVisualAnalyticsPdf, getAnalyticsDrillThrough } from "../../features/analytics/analyticsApi";
+import { exportAnalyticsDrillThrough, exportAnalyticsLayoutPdf, getAnalyticsDrillThrough } from "../../features/analytics/analyticsApi";
+import useAuth from "../../features/auth/useAuth";
 
 const drillSelector = [
   ".analytics-overview-card",
@@ -305,20 +306,18 @@ const choices = {
     { value: "current", label: "Current filtered data", detail: "Use the active period, comparison, and entity filters." },
     { value: "all_authorized", label: "All authorized data", detail: "Include all entities you are permitted to access." },
   ],
-  format: [
-    { value: "pdf", label: "PDF report", detail: "Decision-ready report with summaries and compact tables.", icon: FileText },
-    { value: "xlsx", label: "Excel workbook", detail: "Underlying tables in analysis-ready worksheets.", icon: FileSpreadsheet },
-  ],
 };
 
 export function AnalyticsExport({ filters, page }) {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState("");
-  const [options, setOptions] = useState({ coverage: "current", viewScope: "current", dataScope: "current", format: "pdf" });
-  const keys = ["coverage", "viewScope", "dataScope", "format"];
-  const titles = ["What should be included?", "Which page views?", "How much data?", "Choose a format"];
+  const [exportStatus, setExportStatus] = useState(null);
+  const [options, setOptions] = useState({ coverage: "current", viewScope: "current", dataScope: "current" });
+  const keys = ["coverage", "viewScope", "dataScope"];
+  const titles = ["What should be included?", "Which page views?", "How much data?"];
   const currentKey = keys[step];
 
   function close() {
@@ -330,22 +329,36 @@ export function AnalyticsExport({ filters, page }) {
   async function download() {
     setIsExporting(true);
     setExportError("");
+    setExportStatus({ message: "Preparing analytics export…", status: "loading" });
     try {
-      if (options.format === "pdf") {
-        close();
-        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        const analyticsPage = document.querySelector(".analytics-page");
-        if (analyticsPage) {
-          await exportVisualAnalyticsPdf(analyticsPage, `${page}-analytics.pdf`);
-        }
-      } else {
-        await exportAnalytics({ ...options, filters, page });
-        close();
-      }
+      close();
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const result = await exportAnalyticsLayoutPdf({
+        currentElement: document.querySelector(".analytics-page"),
+        filters,
+        onProgress: ({ current, label, total }) => setExportStatus({
+          detail: `${current} of ${total}`,
+          message: `Preparing ${label}`,
+          status: "loading",
+        }),
+        options,
+        page,
+        role: user?.role,
+      });
+      setExportStatus({
+        detail: `${result.total} view${result.total === 1 ? "" : "s"} exported`,
+        message: "PDF export complete. Download started.",
+        status: "success",
+      });
+      window.setTimeout(() => setExportStatus((current) => current?.status === "success" ? null : current), 5000);
     } catch {
       setIsOpen(true);
-      setStep(3);
+      setStep(2);
       setExportError("The export could not be generated. Please try again.");
+      setExportStatus({
+        message: "PDF export failed. Please try again.",
+        status: "error",
+      });
     } finally {
       setIsExporting(false);
     }
@@ -359,17 +372,22 @@ export function AnalyticsExport({ filters, page }) {
   return (
     <>
       {titleActions ? createPortal(trigger, titleActions) : trigger}
+      {exportStatus && <aside aria-live="polite" className={`analytics-export-status analytics-export-status--${exportStatus.status}`} role={exportStatus.status === "error" ? "alert" : "status"}>
+        {exportStatus.status === "loading" ? <LoaderCircle aria-hidden="true" className="analytics-export-status__spinner" /> : exportStatus.status === "success" ? <CheckCircle2 aria-hidden="true" /> : <AlertCircle aria-hidden="true" />}
+        <span><strong>{exportStatus.message}</strong>{exportStatus.detail && <small>{exportStatus.detail}</small>}</span>
+        {exportStatus.status !== "loading" && <button aria-label="Dismiss export status" onClick={() => setExportStatus(null)} type="button"><X aria-hidden="true" /></button>}
+      </aside>}
       {isOpen && <div className="analytics-export-layer">
         <button aria-label="Close export" className="analytics-export-layer__backdrop" onClick={close} type="button" />
         <section aria-modal="true" className="analytics-export-dialog" role="dialog">
-          <header><div><small>Step {step + 1} of 4</small><h2>{titles[step]}</h2></div><button aria-label="Close" onClick={close} type="button"><X /></button></header>
+          <header><div><small>Step {step + 1} of 3</small><h2>{titles[step]}</h2></div><button aria-label="Close" onClick={close} type="button"><X /></button></header>
           <div className="analytics-export-dialog__progress">{keys.map((key, index) => <i className={index <= step ? "is-active" : ""} key={key} />)}</div>
           {exportError && <p className="analytics-export-dialog__error" role="alert">{exportError}</p>}
           <div className="analytics-export-dialog__choices">{choices[currentKey].map((choice) => {
             const Icon = choice.icon;
             return <button className={options[currentKey] === choice.value ? "is-selected" : ""} key={choice.value} onClick={() => setOptions((current) => ({ ...current, [currentKey]: choice.value }))} type="button">{Icon && <Icon />}<span><strong>{choice.label}</strong><small>{choice.detail}</small></span></button>;
           })}</div>
-          <footer><button disabled={step === 0} onClick={() => setStep((value) => value - 1)} type="button">Back</button>{step < 3 ? <button className="is-primary" onClick={() => setStep((value) => value + 1)} type="button">Continue</button> : <button className="is-primary" disabled={isExporting} onClick={download} type="button"><Download />{isExporting ? "Preparing…" : "Export"}</button>}</footer>
+          <footer><button disabled={step === 0} onClick={() => setStep((value) => value - 1)} type="button">Back</button>{step < 2 ? <button className="is-primary" onClick={() => setStep((value) => value + 1)} type="button">Continue</button> : <button className="is-primary" disabled={isExporting} onClick={download} type="button"><Download />{isExporting ? "Preparing…" : "Export PDF"}</button>}</footer>
         </section>
       </div>}
     </>
