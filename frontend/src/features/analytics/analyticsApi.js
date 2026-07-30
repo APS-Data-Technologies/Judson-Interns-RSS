@@ -100,7 +100,9 @@ function waitForAnalyticsPage(frame, timeoutMs = 30000) {
 async function loadAnalyticsPageForExport(page, filters, routeParams = {}) {
   const frame = document.createElement("iframe");
   frame.setAttribute("aria-hidden", "true");
-  frame.style.cssText = "position:fixed;left:-100000px;top:0;width:1440px;height:1000px;border:0;opacity:0;pointer-events:none;";
+  frame.setAttribute("height", "1000");
+  frame.setAttribute("width", "1440");
+  frame.style.cssText = "position:fixed;left:-100000px;top:0;width:1440px!important;min-width:1440px!important;max-width:none!important;height:1000px;border:0;opacity:0;pointer-events:none;";
   const route = analyticsPageRoutes[page];
   const query = new URLSearchParams({
     analytics_export: "true",
@@ -273,7 +275,7 @@ function appendCanvasPages(pdf, capture, hasExistingPage) {
   return hasPage;
 }
 
-export async function exportAnalyticsLayoutPdf({ currentElement, filters, onProgress, options, page, role }) {
+export async function exportAnalyticsLayoutPdf({ filters, onProgress, options, page, role }) {
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
     import("html2canvas-pro"),
     import("jspdf"),
@@ -303,16 +305,9 @@ export async function exportAnalyticsLayoutPdf({ currentElement, filters, onProg
         label: `${analyticsPageLabels[view.page] || "Analytics"} - ${view.label}`,
         total: views.length,
       });
-      const useCurrentElement = view.page === page
-        && options.coverage === "current"
-        && options.dataScope === "current"
-        && options.viewScope === "current";
-      let element = currentElement;
-      if (!useCurrentElement) {
-        const prepared = await loadAnalyticsPageForExport(view.page, exportFilters, view.params);
-        frame = prepared.frame;
-        element = prepared.page;
-      }
+      const prepared = await loadAnalyticsPageForExport(view.page, exportFilters, view.params);
+      frame = prepared.frame;
+      const element = prepared.page;
       const capture = await captureAnalyticsPage(
         element,
         html2canvas,

@@ -12,7 +12,6 @@ import Analytics from "./pages/Analytics/Analytics";
 import CostsMarginAnalytics from "./pages/Analytics/CostsMarginAnalytics";
 import Admin from "./pages/Admin/Admin";
 import CostBasisAdmin from "./pages/Admin/CostBasisAdmin";
-import AnalyticsEngineAdmin from "./pages/Admin/AnalyticsEngineAdmin";
 import Account from "./pages/Account/Account";
 
 import ProtectedRoute from "./features/auth/ProtectedRoute";
@@ -146,10 +145,6 @@ const router = createBrowserRouter([
           {
             path: "/admin/cost-basis/:id/edit",
             element: <CostBasisAdmin />,
-          },
-          {
-            path: "/admin/analytics-engine",
-            element: <AnalyticsEngineAdmin />,
           },
         ],
       },
