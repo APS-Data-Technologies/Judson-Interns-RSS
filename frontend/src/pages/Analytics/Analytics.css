@@ -3259,6 +3259,64 @@
   display: none !important;
 }
 
+/*
+ * A mobile Safari export frame remains a coarse, hoverless pointer
+ * environment even at the fixed desktop export width. Override every
+ * mobile-only collapsed analytics section so PDFs always contain the full
+ * report. Picker/dropdown details remain closed above.
+ */
+.analytics-page.is-layout-pdf-export .analytics-overview-links .analytics-preview-card {
+  display: grid !important;
+  gap: 0.7rem !important;
+  grid-template-rows: auto auto 1fr auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  padding: 0.85rem !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-overview-links .analytics-preview-card h3 {
+  margin: 0 !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-preview-card__winner,
+.analytics-page.is-layout-pdf-export .analytics-preview-card__ranking,
+.analytics-page.is-layout-pdf-export .analytics-preview-card__financial-rows {
+  display: grid !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-preview-card__toggle,
+.analytics-page.is-layout-pdf-export .analytics-temporal-rankings__card-heading > svg,
+.analytics-page.is-layout-pdf-export .analytics-ranking__mobile-heading {
+  display: none !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-temporal-rankings__grid article > span {
+  display: block !important;
+  margin-top: 0.35rem !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-temporal-rankings__grid article > .analytics-temporal-plot {
+  display: flex !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-temporal-rankings__grid article > .analytics-temporal-line-plot,
+.analytics-page.is-layout-pdf-export .analytics-temporal-rankings__grid article > ol,
+.analytics-page.is-layout-pdf-export .analytics-ranking > .analytics-ranking__list {
+  display: grid !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-ranking > .analytics-section-heading {
+  display: flex !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-ranking > .analytics-ranking__list {
+  height: auto !important;
+  margin-top: 0.65rem !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
 .analytics-page.is-layout-pdf-export .analytics-location-health__scroll,
 .analytics-page.is-layout-pdf-export .analytics-location-health__table-wrap {
   min-width: 0;

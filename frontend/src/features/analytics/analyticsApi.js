@@ -176,6 +176,10 @@ async function captureAnalyticsPage(element, html2canvas, reportTitle, viewTitle
       ":scope > .executive-brief",
       ":scope > .analytics-workspace > *",
       ":scope > .costs-margin-workspace > *",
+      ".analytics-overview-links > .analytics-preview-card",
+      ".analytics-temporal-rankings__grid > article",
+      ".analytics-ranking-grid > .analytics-ranking",
+      ".analytics-insights > .analytics-insight",
       ".analytics-location-health tbody > tr",
       ".location-performance-cards > article",
     ].join(","));
