@@ -357,7 +357,7 @@
   grid-column: 1 / -1;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 1181px), (min-width: 768px) and (max-width: 1180px) and (orientation: landscape) {
   .tours-page {
     max-width: 1480px;
     margin: 0 auto;
@@ -365,6 +365,7 @@
 
   .tours-workspace {
     grid-template-columns: minmax(360px, 0.82fr) minmax(460px, 1.18fr);
+    overflow-x: auto;
   }
 
   .tours-list {
@@ -375,7 +376,7 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
   .tour-card__content {
     align-items: flex-start;
     display: grid;

@@ -171,6 +171,7 @@ CORS_ALLOWED_ORIGINS = env.list(
         'http://127.0.0.1:5173',
     ],
 )
+CORS_EXPOSE_HEADERS = ['Content-Disposition']
 
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
 
