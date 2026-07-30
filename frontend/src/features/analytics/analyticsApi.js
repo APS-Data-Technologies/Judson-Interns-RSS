@@ -156,7 +156,7 @@ async function loadAnalyticsPageForExport(page, filters, routeParams = {}) {
   return { frame, page: preparedPage };
 }
 
-async function captureAnalyticsPage(element, html2canvas, reportTitle, viewTitle) {
+async function captureAnalyticsPage(element, html2canvas, reportTitle, viewTitle, compactVariant = false) {
   const reportHeading = element.ownerDocument.createElement("header");
   reportHeading.className = "analytics-layout-pdf-heading";
   const eyebrow = element.ownerDocument.createElement("span");
@@ -168,6 +168,7 @@ async function captureAnalyticsPage(element, html2canvas, reportTitle, viewTitle
   reportHeading.append(eyebrow, title, subtitle);
   element.prepend(reportHeading);
   element.classList.add("is-layout-pdf-export");
+  if (compactVariant) element.classList.add("is-layout-pdf-export--compact-variant");
   try {
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const rootRect = element.getBoundingClientRect();
@@ -176,7 +177,6 @@ async function captureAnalyticsPage(element, html2canvas, reportTitle, viewTitle
       ":scope > .executive-brief",
       ":scope > .analytics-workspace > *",
       ":scope > .costs-margin-workspace > *",
-      ".analytics-overview-links > .analytics-preview-card",
       ".analytics-temporal-rankings__grid > article",
       ".analytics-ranking-grid > .analytics-ranking",
       ".analytics-insights > .analytics-insight",
@@ -227,6 +227,7 @@ async function captureAnalyticsPage(element, html2canvas, reportTitle, viewTitle
     return { breakpoints, canvas, repeatingHeaders };
   } finally {
     element.classList.remove("is-layout-pdf-export");
+    element.classList.remove("is-layout-pdf-export--compact-variant");
     reportHeading.remove();
   }
 }
@@ -268,7 +269,7 @@ function exportViewVariants(page, viewScope) {
   ];
 }
 
-function appendCanvasPages(pdf, capture, hasExistingPage) {
+function appendCanvasPages(pdf, capture, hasExistingPage, pageLabel, pageContexts) {
   const { breakpoints, canvas, repeatingHeaders = [] } = capture;
   const margin = 18;
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -322,6 +323,7 @@ function appendCanvasPages(pdf, capture, hasExistingPage) {
     if (hasPage) pdf.addPage();
     hasPage = true;
     cursorY = 0;
+    pageContexts.set(pdf.internal.getCurrentPageInfo().pageNumber, pageLabel);
     const continuationHeader = sourceY === null ? null : continuationHeaderFor(sourceY);
     if (continuationHeader) {
       addSlice(continuationHeader.headerY, continuationHeader.headerHeight);
@@ -335,24 +337,23 @@ function appendCanvasPages(pdf, capture, hasExistingPage) {
     let remainingSourceHeight = segmentEdges[index + 1] - segmentStart;
     if (remainingSourceHeight <= 0) continue;
 
-    const availableSourceHeight = Math.max(
-      0,
-      Math.floor(((usableHeight - cursorY) * canvas.width) / imageWidth),
-    );
-    const nextSegmentHeight = index + 2 < segmentEdges.length
-      ? segmentEdges[index + 2] - segmentEdges[index + 1]
-      : 0;
-    const isShortLeadIn = remainingSourceHeight < sourcePageHeight * 0.28;
-    const nextWillNotFit = remainingSourceHeight + nextSegmentHeight > availableSourceHeight;
-    if (cursorY > 0 && isShortLeadIn && nextWillNotFit) {
-      startPage(sourceY);
-    }
-
     while (remainingSourceHeight > 0) {
       const availableRenderedHeight = usableHeight - cursorY;
       const segmentRenderedHeight = (remainingSourceHeight * imageWidth) / canvas.width;
+      const availableSourceHeight = Math.max(
+        1,
+        Math.floor((availableRenderedHeight * canvas.width) / imageWidth),
+      );
+      const continuationHeader = continuationHeaderFor(sourceY);
+      const freshPageCapacity = sourcePageHeight - (continuationHeader?.headerHeight || 0);
+      const fitsOnFreshPage = remainingSourceHeight <= freshPageCapacity;
+      const availableSpaceIsTooSmall = availableSourceHeight < sourcePageHeight * 0.14;
 
-      if (segmentRenderedHeight > availableRenderedHeight && cursorY > 0) {
+      if (
+        segmentRenderedHeight > availableRenderedHeight
+        && cursorY > 0
+        && (fitsOnFreshPage || availableSpaceIsTooSmall)
+      ) {
         startPage(sourceY);
         continue;
       }
@@ -375,6 +376,68 @@ function appendCanvasPages(pdf, capture, hasExistingPage) {
   return hasPage;
 }
 
+function addExecutiveCover(pdf, options, pages, views) {
+  const width = pdf.internal.pageSize.getWidth();
+  const height = pdf.internal.pageSize.getHeight();
+  const generatedAt = new Intl.DateTimeFormat("en-US", {
+    dateStyle: "long",
+    timeStyle: "short",
+  }).format(new Date());
+  const coverage = options.coverage === "all"
+    ? "All authorized analytics pages"
+    : analyticsPageLabels[pages[0]] || "Current analytics page";
+  const viewScope = options.viewScope === "all" ? "All available views" : "Current view";
+  const dataScope = options.dataScope === "all_authorized"
+    ? "All authorized data"
+    : "Current filtered data";
+
+  pdf.setFillColor(10, 42, 86);
+  pdf.rect(0, 0, width, height, "F");
+  pdf.setFillColor(15, 111, 211);
+  pdf.rect(width * 0.62, 0, width * 0.38, height, "F");
+  pdf.setTextColor(255, 190, 24);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(12);
+  pdf.text("CONFIDENTIAL - EXECUTIVE ANALYTICS", 48, 66);
+  pdf.setFontSize(34);
+  pdf.text("RSS Analytics", 48, 122);
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(22);
+  pdf.text("Leadership Performance Report", 48, 156);
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(11);
+  pdf.text(`Generated ${generatedAt}`, 48, 194);
+
+  const details = [
+    ["Coverage", coverage],
+    ["Views", viewScope],
+    ["Data scope", dataScope],
+    ["Included report views", String(views.length)],
+  ];
+  details.forEach(([label, value], index) => {
+    const y = 262 + index * 50;
+    pdf.setTextColor(190, 211, 235);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(8);
+    pdf.text(label.toUpperCase(), 48, y);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(12);
+    pdf.text(value, 48, y + 18);
+  });
+  pdf.setTextColor(10, 42, 86);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(17);
+  pdf.text("Decision-ready analytics", width * 0.68, 120);
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(10);
+  const note = pdf.splitTextToSize(
+    "This report summarizes current performance, historical comparisons, operational trends, rankings, and financial outcomes for authorized RSS data.",
+    width * 0.24,
+  );
+  pdf.text(note, width * 0.68, 150);
+}
+
 export async function exportAnalyticsLayoutPdf({ filters, onProgress, options, page, role }) {
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
     import("html2canvas-pro"),
@@ -384,18 +447,29 @@ export async function exportAnalyticsLayoutPdf({ filters, onProgress, options, p
   if (["admin", "super_admin"].includes(role)) allPages.push("staff", "cost-margin");
   const pages = options.coverage === "all" ? allPages : [page];
   const views = pages.flatMap((targetPage) => (
-    exportViewVariants(targetPage, options.viewScope).map((variant) => ({
+    exportViewVariants(targetPage, options.viewScope).map((variant, variantIndex) => ({
       ...variant,
       page: targetPage,
+      variantIndex,
     }))
   ));
   const exportFilters = options.dataScope === "all_authorized"
     ? Object.fromEntries(
       Object.entries(filters || {}).filter(([key]) => !["location", "locations", "lead_source", "lead_sources", "staff"].includes(key)),
     )
-    : filters;
+    : { ...(filters || {}) };
+  exportFilters.exclude_test_data = "true";
   const pdf = new jsPDF({ format: "letter", orientation: "landscape", unit: "pt" });
-  let hasPage = false;
+  pdf.setProperties({
+    author: "Ready Set STEM",
+    creator: "RSS Analytics",
+    keywords: "RSS, analytics, executive report, performance",
+    subject: "Leadership performance analytics",
+    title: analyticsPdfFallbackFilename({ ...options, page }).replace(/\.pdf$/i, ""),
+  });
+  addExecutiveCover(pdf, options, pages, views);
+  const pageContexts = new Map([[1, "Executive report cover"]]);
+  let hasPage = true;
 
   for (const [viewIndex, view] of views.entries()) {
     let frame;
@@ -413,8 +487,10 @@ export async function exportAnalyticsLayoutPdf({ filters, onProgress, options, p
         html2canvas,
         analyticsPageLabels[view.page] || "Analytics",
         view.label,
+        view.variantIndex > 0,
       );
-      hasPage = appendCanvasPages(pdf, capture, hasPage);
+      const pageLabel = `${analyticsPageLabels[view.page] || "Analytics"} - ${view.label}`;
+      hasPage = appendCanvasPages(pdf, capture, hasPage, pageLabel, pageContexts);
     } finally {
       frame?.remove();
     }
@@ -426,7 +502,7 @@ export async function exportAnalyticsLayoutPdf({ filters, onProgress, options, p
     pdf.setFontSize(7);
     pdf.setTextColor(91, 109, 134);
     pdf.text(
-      `RSS Analytics · ${pageNumber} of ${pageCount}`,
+      `${pageContexts.get(pageNumber) || "RSS Analytics"}  |  ${pageNumber} of ${pageCount}`,
       pdf.internal.pageSize.getWidth() - 18,
       pdf.internal.pageSize.getHeight() - 6,
       { align: "right" },

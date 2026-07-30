@@ -32,9 +32,20 @@
 
 @media (min-width: 1181px), (min-width: 768px) and (max-width: 1180px) and (orientation: landscape) {
   .rss-page-header {
-    flex-direction: row;
     align-items: flex-start;
+    flex-direction: row;
+    gap: clamp(10px, 1vw, 14px);
     justify-content: space-between;
+    margin-bottom: clamp(18px, 2vw, 24px);
+  }
+
+  .rss-page-header__title {
+    font-size: clamp(23px, 2vw, 27px);
+  }
+
+  .rss-page-header__subtitle {
+    font-size: clamp(13px, 1.1vw, 15px);
+    margin-top: 5px;
   }
 
   .rss-page-header__actions {

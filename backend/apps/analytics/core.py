@@ -104,6 +104,14 @@ def apply_filters(queryset, filters):
     statuses = parse_csv(filters.get("status") or filters.get("statuses"))
     staff_ids = parse_csv(filters.get("staff") or filters.get("assigned_staff") or filters.get("assignedStaff"))
     search = filters.get("search")
+    exclude_test_data = str(filters.get("exclude_test_data", "")).lower() in {"1", "true", "yes"}
+    if exclude_test_data:
+        queryset = queryset.exclude(
+            location__location_name__iexact="Authentication Test Location",
+        ).exclude(
+            assigned_staff__first_name__iexact="Authentication",
+            assigned_staff__last_name__iexact="Staff",
+        )
     if location_ids:
         queryset = queryset.filter(location_id__in=location_ids)
     if lead_source_ids:

@@ -12,11 +12,17 @@ from .core import parse_csv
 from .metrics import build_rates, count_cohort_progress, count_period_volume
 
 
+def exclude_test_cost_basis(queryset, query_params):
+    if str(query_params.get("exclude_test_data", "")).lower() in {"1", "true", "yes"}:
+        return queryset.exclude(location__location_name__iexact="Authentication Test Location")
+    return queryset
+
+
 def build_financial_summary(user, query_params, start, end):
-    queryset = filter_queryset_by_location(
+    queryset = exclude_test_cost_basis(filter_queryset_by_location(
         CostBasis.objects.filter(is_active=True),
         user,
-    )
+    ), query_params)
     location_ids = parse_csv(query_params.get("location") or query_params.get("locations"))
     if location_ids:
         queryset = queryset.filter(location_id__in=location_ids)
@@ -53,10 +59,10 @@ def build_financial_trend(user, query_params, start, end):
     if not start or not end:
         return []
 
-    queryset = filter_queryset_by_location(
+    queryset = exclude_test_cost_basis(filter_queryset_by_location(
         CostBasis.objects.filter(is_active=True),
         user,
-    )
+    ), query_params)
     location_ids = parse_csv(query_params.get("location") or query_params.get("locations"))
     if location_ids:
         queryset = queryset.filter(location_id__in=location_ids)
@@ -111,7 +117,10 @@ def build_cost_efficiency_trend(tours, financial_trend):
 def build_location_financial_performance(user, query_params, start, end, tours):
     if not start or not end:
         return []
-    queryset = filter_queryset_by_location(CostBasis.objects.filter(is_active=True), user)
+    queryset = exclude_test_cost_basis(
+        filter_queryset_by_location(CostBasis.objects.filter(is_active=True), user),
+        query_params,
+    )
     location_ids = parse_csv(query_params.get("location") or query_params.get("locations"))
     if location_ids:
         queryset = queryset.filter(location_id__in=location_ids)

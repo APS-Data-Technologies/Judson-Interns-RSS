@@ -274,23 +274,23 @@ function ChatAssistant() {
   }
 
   const suggestions = [
-    { label: "View today’s tours", icon: CalendarDays, group: "today" },
-    { label: "Review upcoming tours", icon: MessageCircle, group: "today" },
-    { label: "Review overdue follow-ups", icon: CircleHelp, group: "today" },
-    { label: "Record a tour outcome", icon: Plus, group: "today" },
-    { label: "Create a new tour", icon: Plus, group: "tours" },
-    { label: "Find a family or tour", icon: Search, group: "tours" },
-    { label: "Review no-shows", icon: BarChart3, group: "tours" },
-    { label: "View the enrollment pipeline", icon: BarChart3, group: "tours" },
-    { label: "Review enrollment performance", icon: BarChart3, group: "analytics" },
-    { label: "Compare conversion trends", icon: BarChart3, group: "analytics" },
-    { label: "Compare location performance", icon: MapPin, group: "analytics" },
-    ...(isAdmin ? [{ label: "Analyze lead sources", icon: MessageCircle, group: "analytics" }] : []),
-    ...(isAdmin ? [{ label: "Review staff performance", icon: UsersRound, group: "analytics" }] : []),
-    ...(isAdmin ? [{ label: "Review costs and margins", icon: BarChart3, group: "analytics" }] : []),
-    ...(isAdmin ? [{ label: "Manage locations", icon: MapPin, group: "administration" }] : []),
-    ...(isAdmin ? [{ label: "Manage lead sources", icon: MessageCircle, group: "administration" }] : []),
-    ...(isSuperAdmin ? [{ label: "Manage users", icon: UsersRound, group: "administration" }] : []),
+    { label: "View today’s tours", icon: CalendarDays, group: "today", to: `/tours?date=${localDate()}` },
+    { label: "Review upcoming tours", icon: MessageCircle, group: "today", to: "/tours" },
+    { label: "Review overdue follow-ups", icon: CircleHelp, group: "today", to: "/pipeline?category=off_track" },
+    { label: "Record a tour outcome", icon: Plus, group: "today", to: "/tours" },
+    { label: "Create a new tour", icon: Plus, group: "tours", to: "/tours/new" },
+    { label: "Find a family or tour", icon: Search, group: "tours", to: "/tours" },
+    { label: "Review no-shows", icon: BarChart3, group: "tours", to: "/tours?status=no_show" },
+    { label: "View the enrollment pipeline", icon: BarChart3, group: "tours", to: "/pipeline" },
+    { label: "Review enrollment performance", icon: BarChart3, group: "analytics", to: "/analytics/overview" },
+    { label: "Compare conversion trends", icon: BarChart3, group: "analytics", to: "/analytics/cohort" },
+    { label: "Compare location performance", icon: MapPin, group: "analytics", to: "/analytics/locations" },
+    ...(isAdmin ? [{ label: "Analyze lead sources", icon: MessageCircle, group: "analytics", to: "/analytics/lead-sources" }] : []),
+    ...(isAdmin ? [{ label: "Review staff performance", icon: UsersRound, group: "analytics", to: "/analytics/staff" }] : []),
+    ...(isAdmin ? [{ label: "Review costs and margins", icon: BarChart3, group: "analytics", to: "/analytics/cost-margin" }] : []),
+    ...(isAdmin ? [{ label: "Manage locations", icon: MapPin, group: "administration", to: "/admin/locations" }] : []),
+    ...(isAdmin ? [{ label: "Manage lead sources", icon: MessageCircle, group: "administration", to: "/admin/lead-sources" }] : []),
+    ...(isSuperAdmin ? [{ label: "Manage users", icon: UsersRound, group: "administration", to: "/admin/users" }] : []),
     { label: "How do I update a tour?", icon: CircleHelp, group: "help" },
     { label: "What can RSS Assistant do?", icon: CircleHelp, group: "help" },
   ];
@@ -321,6 +321,17 @@ function ChatAssistant() {
   function openSearchResult(result) {
     navigate(result.path);
     setSearchQuery("");
+    setIsOpen(false);
+  }
+
+  function openShortcut(shortcut) {
+    if (!shortcut.to) {
+      handleIntent(shortcut.label);
+      return;
+    }
+    navigate(shortcut.to);
+    setSearchQuery("");
+    setSearchResults({});
     setIsOpen(false);
   }
 
@@ -364,9 +375,12 @@ function ChatAssistant() {
             {suggestionGroups.map(({ group, items }) => <section className="chat-assistant__suggestion-group" key={group}>
               <h3>{suggestionGroupLabels[group]}</h3>
               <div>
-                {items.map(({ label, icon: Icon }) => (
-                  <button type="button" key={label} onClick={() => handleIntent(label)} disabled={isWorking}><Icon size={15} aria-hidden="true" />{label}</button>
-                ))}
+                {items.map((shortcut) => {
+                  const { label, icon: Icon } = shortcut;
+                  return (
+                    <button type="button" key={label} onClick={() => openShortcut(shortcut)} disabled={isWorking}><Icon size={15} aria-hidden="true" />{label}</button>
+                  );
+                })}
               </div>
             </section>)}
           </div>}

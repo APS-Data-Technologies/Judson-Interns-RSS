@@ -220,6 +220,57 @@ class FinancialSummaryTests(TestCase):
         self.assertEqual(analytics["financialSummary"]["margin"], Decimal("52000.00"))
         self.assertEqual(len(analytics["executiveBriefs"]["staff"]["keyFigures"]), 5)
 
+    def test_executive_export_filter_excludes_known_authentication_test_records(self):
+        test_location = Location.objects.create(
+            location_name="Authentication Test Location",
+            address="1 Test Street",
+            city="Chicago",
+            state="IL",
+            zip_code="60603",
+        )
+        test_staff = User.objects.create_user(
+            email="authentication@example.com",
+            password="StrongPass123!",
+            first_name="Authentication",
+            last_name="Staff",
+            role=User.Role.STAFF,
+            location=test_location,
+        )
+        source = LeadSource.objects.create(source_name="Executive Export Test")
+        Tour.objects.create(
+            family=Family.objects.create(family_name="Authentication Family"),
+            location=test_location,
+            lead_source=source,
+            assigned_staff=test_staff,
+            scheduled_tour_date=timezone.make_aware(datetime(2026, 2, 10, 10, 0)),
+        )
+        CostBasis.objects.create(
+            location=test_location,
+            reporting_month=date(2026, 2, 1),
+            cost_type=CostBasis.CostType.REVENUE,
+            cost_amount=Decimal("99999.00"),
+        )
+
+        analytics = cohort_analytics(self.admin, {
+            "date_from": "2026-02-01",
+            "date_to": "2026-02-28",
+            "exclude_test_data": "true",
+        })
+
+        self.assertNotIn(
+            "Authentication Test Location",
+            [row["name"] for row in analytics["rankings"]["locations"]],
+        )
+        self.assertNotIn(
+            "Authentication Staff",
+            [row["name"] for row in analytics["rankings"]["staff"]],
+        )
+        self.assertNotIn(
+            "Authentication Staff",
+            [row["name"] for row in analytics["staffOptions"]],
+        )
+        self.assertEqual(analytics["financialSummary"]["revenue"], Decimal("26000.00"))
+
     def test_admin_executive_brief_uses_explicit_comparison_period(self):
         analytics = cohort_analytics(self.admin, {
             "date_from": "2026-02-01",
