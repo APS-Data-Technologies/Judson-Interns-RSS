@@ -910,8 +910,23 @@ function RateDeltaBadge({ delta, inverse = false }) {
 }
 
 function MetricNode({ className = "", delta, label, status, value }) {
+  const hasComparison = delta?.difference !== undefined;
+  const previousValue = hasComparison ? Number(value) - Number(delta.difference) : "";
+  const difference = hasComparison ? `${delta.difference > 0 ? "+" : ""}${delta.difference}` : "";
+  const differencePercent = delta?.percent === null || delta?.percent === undefined
+    ? ""
+    : `${delta.percent > 0 ? "+" : ""}${delta.percent}%`;
   return (
-    <article className={`analytics-flow-node analytics-flow-node--${status} ${className}`}>
+    <article
+      className={`analytics-flow-node analytics-flow-node--${status} ${className}`}
+      data-drill-current={value}
+      data-drill-difference={difference}
+      data-drill-difference-percent={differencePercent}
+      data-drill-mode="cohort"
+      data-drill-previous={previousValue}
+      data-drill-status={status}
+      data-drill-title={label}
+    >
       <span className="analytics-flow-node__heading">
         <span className="analytics-flow-node__label">{label}</span>
         <InfoHint label={"Selected-period cohort count.\nCompared with previous period."} />
@@ -964,8 +979,20 @@ function OverviewSparkline({ status, values }) {
 }
 
 function OverviewMetricCard({ delta, isKeyMetric = false, label, status, trendValues, value }) {
+  const previousValue = delta?.difference === undefined ? "" : Number(value) - Number(delta.difference);
+  const difference = delta?.difference === undefined ? "" : `${delta.difference > 0 ? "+" : ""}${delta.difference}`;
+  const differencePercent = delta?.percent === null || delta?.percent === undefined ? "" : `${delta.percent > 0 ? "+" : ""}${delta.percent}%`;
   return (
-    <article className={`analytics-overview-card analytics-overview-card--${status}${isKeyMetric ? " analytics-overview-card--key" : ""}`}>
+    <article
+      className={`analytics-overview-card analytics-overview-card--${status}${isKeyMetric ? " analytics-overview-card--key" : ""}`}
+      data-drill-current={value}
+      data-drill-difference={difference}
+      data-drill-difference-percent={differencePercent}
+      data-drill-mode="event"
+      data-drill-previous={previousValue}
+      data-drill-status={status}
+      data-drill-title={label}
+    >
       <span className="analytics-overview-card__label">{label}</span>
       <strong>{value}</strong>
       <DeltaBadge delta={delta} />
@@ -975,8 +1002,30 @@ function OverviewMetricCard({ delta, isKeyMetric = false, label, status, trendVa
 }
 
 function OverviewPerformanceCard({ delta, info, isKeyMetric = false, label, tone, value, valueKind = "rate" }) {
+  const currentValue = valueKind === "days" ? value : formatRate(value);
+  const previousRate = valueKind === "rate" && delta !== null ? Number(value) - Number(delta) : null;
+  const previousValue = previousRate === null ? "" : formatRate(previousRate);
+  const difference = previousRate === null ? "" : `${delta > 0 ? "+" : ""}${delta} pts`;
+  const differencePercent = previousRate ? `${delta > 0 ? "+" : ""}${((Number(delta) / previousRate) * 100).toFixed(1)}%` : "";
+  const drillDefinition = {
+    toured: { denominator: "scheduled", numerator: "toured" },
+    close: { denominator: "toured", numerator: "enrolled,churned" },
+    "no-show": { denominator: "scheduled", numerator: "no_show" },
+    conversion: { denominator: "toured", numerator: "enrolled" },
+    average: { denominator: "enrolled", numerator: "enrolled" },
+  }[tone];
   return (
-    <article className={`analytics-overview-performance-card analytics-overview-performance-card--${tone}${isKeyMetric ? " analytics-overview-performance-card--key" : ""}`}>
+    <article
+      className={`analytics-overview-performance-card analytics-overview-performance-card--${tone}${isKeyMetric ? " analytics-overview-performance-card--key" : ""}`}
+      data-drill-current={currentValue ?? "--"}
+      data-drill-difference={difference}
+      data-drill-difference-percent={differencePercent}
+      data-drill-denominator={drillDefinition?.denominator}
+      data-drill-mode="cohort"
+      data-drill-numerator={drillDefinition?.numerator}
+      data-drill-previous={previousValue}
+      data-drill-title={label}
+    >
       <span className="analytics-overview-performance-card__label">{label}</span>
       <strong>
         {valueKind === "days"
@@ -996,20 +1045,29 @@ function OverviewRankingCard({ icon: Icon, items, metric, path, title }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const rankedItems = items.slice(0, 3);
   const first = rankedItems[0];
+  const dimension = title.replace(" Analytics", "");
+  const metricLabel = rankingMetricOptions.find((option) => option.value === metric)?.label || "Performance";
+  const rankingAttributes = (item) => drillDataAttributes({
+    dimension,
+    entity: item.name,
+    label: `${metricLabel} · ${item.name}`,
+    metric,
+    current: formatRankingValue(item.value, metric),
+  });
 
   return (
     <article className={`analytics-preview-card${isExpanded ? " analytics-preview-card--expanded" : ""}`}>
       <h3><button aria-expanded={isExpanded} onClick={() => setIsExpanded((current) => !current)} type="button"><Icon aria-hidden="true" /><span>{title}</span>{isExpanded ? <ChevronUp className="analytics-preview-card__toggle" aria-hidden="true" /> : <ChevronDown className="analytics-preview-card__toggle" aria-hidden="true" />}</button></h3>
       {first ? (
         <>
-          <div className="analytics-preview-card__winner">
+          <div className="analytics-preview-card__winner" {...rankingAttributes(first)}>
             <span>1</span>
             <div><small>Top performer</small><strong>{first.name}</strong></div>
             <b>{formatRankingValue(first.value, metric)}</b>
           </div>
           <div className="analytics-preview-card__ranking">
             {rankedItems.slice(1).map((item, index) => (
-              <div key={item.name}>
+              <div key={item.name} {...rankingAttributes(item)}>
                 <span>{index + 2}</span>
                 <strong>{item.name}</strong>
                 <b>{formatRankingValue(item.value, metric)}</b>
@@ -1033,13 +1091,13 @@ function OverviewFinancialCard({ summary }) {
   return (
     <article className={`analytics-preview-card analytics-preview-card--financial${isExpanded ? " analytics-preview-card--expanded" : ""}`}>
       <h3><button aria-expanded={isExpanded} onClick={() => setIsExpanded((current) => !current)} type="button"><CircleDollarSign aria-hidden="true" /><span>Costs &amp; Margin</span>{isExpanded ? <ChevronUp className="analytics-preview-card__toggle" aria-hidden="true" /> : <ChevronDown className="analytics-preview-card__toggle" aria-hidden="true" />}</button></h3>
-      <div className="analytics-preview-card__winner">
+      <div className="analytics-preview-card__winner" data-drill-current={revenue || cost ? `$${Math.round(margin).toLocaleString()}` : "--"} data-drill-financial="margin" data-drill-title="Contribution Margin">
         <div><small>Contribution margin</small><strong>{revenue || cost ? `$${Math.round(margin).toLocaleString()}` : "--"}</strong></div>
         <b>{marginRate === null ? "--" : `${marginRate}%`}</b>
       </div>
       <div className="analytics-preview-card__financial-rows">
-        <div><span>Revenue</span><strong>{revenue ? `$${Math.round(revenue).toLocaleString()}` : "--"}</strong></div>
-        <div><span>Cost</span><strong>{cost ? `$${Math.round(cost).toLocaleString()}` : "--"}</strong></div>
+        <div data-drill-current={revenue ? `$${Math.round(revenue).toLocaleString()}` : "--"} data-drill-financial="revenue" data-drill-title="Revenue"><span>Revenue</span><strong>{revenue ? `$${Math.round(revenue).toLocaleString()}` : "--"}</strong></div>
+        <div data-drill-current={cost ? `$${Math.round(cost).toLocaleString()}` : "--"} data-drill-financial="cost" data-drill-title="Cost"><span>Cost</span><strong>{cost ? `$${Math.round(cost).toLocaleString()}` : "--"}</strong></div>
       </div>
       <Link to="/analytics/cost-margin">Explore more</Link>
     </article>
@@ -1150,11 +1208,30 @@ function VolumeTrendChart({ barStatuses = [], curvedStatuses = [], dottedStatuse
   );
 }
 
-function VolumeStackedOption({ metrics }) {
+function VolumeStackedOption({ hasComparison, metrics, onDrillThrough }) {
   const total = metrics.reduce((sum, metric) => sum + Number(metric.value || 0), 0);
+  const previousTotal = metrics.reduce((sum, metric) => sum + Number(metric.previousValue || 0), 0);
+  const difference = total - previousTotal;
+  const differencePercent = previousTotal ? Math.round((difference / previousTotal) * 100) : null;
   return (
     <section className="analytics-volume-panel" aria-labelledby="volume-stacked-option-title">
-      <div className="analytics-volume-panel__heading"><div><h2 id="volume-stacked-option-title">Volume and Event Share</h2></div></div>
+      <div className="analytics-volume-panel__heading"><div><h2 id="volume-stacked-option-title">Volume and Event Share</h2></div><button className="analytics-chart-drill-trigger" onClick={() => onDrillThrough({
+        currentValue: total.toLocaleString(),
+        difference: `${difference > 0 ? "+" : ""}${difference}`,
+        differencePercent: differencePercent === null ? "" : `${differencePercent > 0 ? "+" : ""}${differencePercent}%`,
+        drillParams: {
+          drill_kpi: "All volume events",
+          drill_mode: "event",
+          drill_statuses: "scheduled,toured,no_show,enrolled,churned",
+        },
+        hasComparison,
+        previousValue: previousTotal.toLocaleString(),
+        title: "All volume events",
+        viewContext: {
+          Section: "Volume and Event Share",
+          "Chart / card": "Current and previous event share",
+        },
+      })} type="button">Drill through</button></div>
       <div className="analytics-volume-stacked">
         <div className="analytics-volume-stacked__bar">
           {metrics.map((metric) => {
@@ -1306,7 +1383,7 @@ function VolumeTemporalRankings({ allTimeRows, focusStatus, rows }) {
         const entries = [...group.entries].sort((first, second) => (rankingDirection === "lowest" ? first.value - second.value : second.value - first.value) || first.label.localeCompare(second.label));
         const topEntry = entries[0];
         const isExpanded = expandedGroup === group.key;
-        return <article className={isExpanded ? "is-expanded" : ""} key={group.key}><button aria-expanded={isExpanded} className="analytics-temporal-rankings__card-heading" onClick={() => setExpandedGroup((current) => current === group.key ? null : group.key)} type="button"><h3>{group.title}</h3>{topEntry && <strong><span>{topEntry.label}</span><em>{topEntry.value}</em></strong>}<ChevronDown aria-hidden="true" /></button><span>{rankingDirection === "highest" ? "Highest volume" : "Lowest volume"}</span><TemporalDistributionPlot dimension={group.key} entries={group.entries} status={metric.status} /><ol>{entries.map((entry, index) => <li className={index === 0 ? "is-top" : ""} key={entry.key}><b>{index + 1}</b><strong>{entry.label}</strong><em><span>{entry.value}</span><small>{groupTotal ? `${((entry.value / groupTotal) * 100).toFixed(1)}%` : "0%"}</small></em></li>)}</ol></article>;
+        return <article className={isExpanded ? "is-expanded" : ""} key={group.key}><button aria-expanded={isExpanded} className="analytics-temporal-rankings__card-heading" onClick={() => setExpandedGroup((current) => current === group.key ? null : group.key)} type="button"><h3>{group.title}</h3>{topEntry && <strong><span>{topEntry.label}</span><em>{topEntry.value}</em></strong>}<ChevronDown aria-hidden="true" /></button><span>{rankingDirection === "highest" ? "Highest volume" : "Lowest volume"}</span><TemporalDistributionPlot dimension={group.key} entries={group.entries} status={metric.status} /><ol>{entries.map((entry, index) => <li className={index === 0 ? "is-top" : ""} data-drill-current={entry.value} data-drill-mode="event" data-drill-scope={rankingScope} data-drill-status={metric.status} data-drill-temporal-dimension={group.key} data-drill-temporal-value={entry.key} data-drill-title={`${metric.label} · ${group.title}: ${entry.label}`} key={entry.key}><b>{index + 1}</b><strong>{entry.label}</strong><em><span>{entry.value}</span><small>{groupTotal ? `${((entry.value / groupTotal) * 100).toFixed(1)}%` : "0%"}</small></em></li>)}</ol></article>;
       })}</div>
     </section>
   );
@@ -1318,12 +1395,20 @@ function VolumePerformanceRankings({ allTimeRankings, rankings }) {
   const [scope, setScope] = useState("selected");
   const selectedStatus = volumePerformanceStatusOptions.find((option) => option.value === status) || volumePerformanceStatusOptions[0];
   const activeRankings = scope === "all" ? allTimeRankings : rankings;
+  const statusFields = ["booked", "toured", "noShow", "enrolled", "churned"];
+  const drillStatus = {
+    booked: "scheduled",
+    churned: "churned",
+    enrolled: "enrolled",
+    noShow: "no_show",
+    toured: "toured",
+  }[status];
   const prepareItems = (items) => {
     const prepared = [...(items || [])].map((item) => ({
       ...item,
       detail: status === "all" ? "Total status events" : `${Number(item[status] || 0).toLocaleString()} ${selectedStatus.label.toLowerCase()} event${Number(item[status] || 0) === 1 ? "" : "s"}`,
       metric: "enrollment",
-      value: Number(item[status] || 0),
+      value: status === "all" ? statusFields.reduce((total, field) => total + Number(item[field] || 0), 0) : Number(item[status] || 0),
     }));
     const total = prepared.reduce((sum, item) => sum + item.value, 0);
     return prepared
@@ -1342,15 +1427,15 @@ function VolumePerformanceRankings({ allTimeRankings, rankings }) {
         </div>
       </div>
       <div className="analytics-ranking-grid">
-        <RankingList items={prepareItems(activeRankings?.locations)} metric="enrollment" metricLabel={selectedStatus.label} sortLabel={`${direction === "highest" ? "Highest" : "Lowest"} volume · ${scope === "all" ? "All time" : "Selected period"}`} title="Location" />
-        <RankingList items={prepareItems(activeRankings?.leadSources)} metric="enrollment" metricLabel={selectedStatus.label} sortLabel={`${direction === "highest" ? "Highest" : "Lowest"} volume · ${scope === "all" ? "All time" : "Selected period"}`} title="Lead Source" />
-        <RankingList items={prepareItems(activeRankings?.staff)} metric="enrollment" metricLabel={selectedStatus.label} sortLabel={`${direction === "highest" ? "Highest" : "Lowest"} volume · ${scope === "all" ? "All time" : "Selected period"}`} title="Staff" />
+        <RankingList drillMetric={drillStatus} drillMode="event" drillScope={scope} drillStatus={drillStatus} drillStatuses={status === "all" ? "scheduled,toured,no_show,enrolled,churned" : undefined} items={prepareItems(activeRankings?.locations)} metric="enrollment" metricLabel={selectedStatus.label} sortLabel={`${direction === "highest" ? "Highest" : "Lowest"} volume · ${scope === "all" ? "All time" : "Selected period"}`} title="Location" />
+        <RankingList drillMetric={drillStatus} drillMode="event" drillScope={scope} drillStatus={drillStatus} drillStatuses={status === "all" ? "scheduled,toured,no_show,enrolled,churned" : undefined} items={prepareItems(activeRankings?.leadSources)} metric="enrollment" metricLabel={selectedStatus.label} sortLabel={`${direction === "highest" ? "Highest" : "Lowest"} volume · ${scope === "all" ? "All time" : "Selected period"}`} title="Lead Source" />
+        <RankingList drillMetric={drillStatus} drillMode="event" drillScope={scope} drillStatus={drillStatus} drillStatuses={status === "all" ? "scheduled,toured,no_show,enrolled,churned" : undefined} items={prepareItems(activeRankings?.staff)} metric="enrollment" metricLabel={selectedStatus.label} sortLabel={`${direction === "highest" ? "Highest" : "Lowest"} volume · ${scope === "all" ? "All time" : "Selected period"}`} title="Staff" />
       </div>
     </section>
   );
 }
 
-function VolumeAnalyticsWorkspace({ analytics, focusStatus, periodComparison }) {
+function VolumeAnalyticsWorkspace({ analytics, filters, focusStatus, onDrillThrough, periodComparison }) {
   const [eventTrendMode, setEventTrendMode] = useState("daily");
   const [trendWindowOffset, setTrendWindowOffset] = useState(0);
   const [selectedTrendStatuses, setSelectedTrendStatuses] = useState(() => (
@@ -1380,6 +1465,42 @@ function VolumeAnalyticsWorkspace({ analytics, focusStatus, periodComparison }) 
   const toggleTrendStatus = (status) => setSelectedTrendStatuses((selected) => (
     selected.includes(status) ? selected.filter((item) => item !== status) : [...selected, status]
   ));
+  const chartWindow = (() => {
+    if (!visibleTrendRows.length) return {};
+    const selectedRange = getDateRange(filters);
+    let dateFrom = visibleTrendRows[0].date;
+    let dateTo = visibleTrendRows.at(-1).date;
+    const end = new Date(`${dateTo}T12:00:00`);
+    if (eventTrendMode === "weekly") end.setDate(end.getDate() + 6);
+    if (eventTrendMode === "monthly") end.setMonth(end.getMonth() + 1, 0);
+    dateTo = toDateInputValue(end);
+    if (selectedRange.dateFrom && dateFrom < selectedRange.dateFrom) dateFrom = selectedRange.dateFrom;
+    if (selectedRange.dateTo && dateTo > selectedRange.dateTo) dateTo = selectedRange.dateTo;
+    return { date_from: dateFrom, date_to: dateTo };
+  })();
+  const openTrendDrillThrough = (chartName, metrics) => {
+    const statuses = metrics.map((metric) => metric.status);
+    const fields = { scheduled: "booked", toured: "toured", no_show: "noShow", enrolled: "enrolled", churned: "churned" };
+    const currentValue = visibleTrendRows.reduce(
+      (total, row) => total + statuses.reduce((sum, status) => sum + Number(row[fields[status]] || 0), 0),
+      0,
+    );
+    onDrillThrough({
+      currentValue: currentValue.toLocaleString(),
+      drillParams: {
+        ...chartWindow,
+        drill_kpi: chartName,
+        drill_mode: "event",
+        drill_statuses: statuses.join(","),
+      },
+      title: chartName,
+      viewContext: {
+        Section: "Volume Trends",
+        "Chart / card": chartName,
+        "Visible window": trendWindowLabel,
+      },
+    });
+  };
 
   useEffect(() => {
     const dismissDropdowns = (event) => {
@@ -1395,17 +1516,17 @@ function VolumeAnalyticsWorkspace({ analytics, focusStatus, periodComparison }) 
     <section className="analytics-workspace analytics-volume-workspace" aria-label="Volume and trend analytics">
       <div className="analytics-period"><strong>{periodComparison.selected}</strong>{periodComparison.previous && <span>vs {periodComparison.previous}</span>}</div>
 
-      <VolumeStackedOption metrics={analytics.volumeMetrics} />
+      <VolumeStackedOption hasComparison={Boolean(periodComparison.previous)} metrics={analytics.volumeMetrics} onDrillThrough={onDrillThrough} />
 
       <section className="analytics-volume-panel" aria-labelledby="volume-events-title">
         <div className="analytics-volume-trend__control-region">
         <div className="analytics-volume-panel__heading"><div><h2 id="volume-events-title">Volume Trends</h2></div><div className="analytics-volume-trend__controls"><div className="analytics-volume-trend__field"><span>Timeline</span><details className="analytics-volume-trend__picker analytics-volume-trend__picker--timeline"><summary>{eventTrendMode[0].toUpperCase() + eventTrendMode.slice(1)}</summary><div>{["daily", "weekly", "monthly"].map((mode) => <button className={eventTrendMode === mode ? "is-selected" : ""} key={mode} onClick={(event) => { setEventTrendMode(mode); setTrendWindowOffset(0); event.currentTarget.closest("details")?.removeAttribute("open"); }} type="button"><span>{mode[0].toUpperCase() + mode.slice(1)}</span>{eventTrendMode === mode && <Check aria-hidden="true" />}</button>)}</div></details></div><div className="analytics-volume-trend__field"><span>Statuses</span><details className="analytics-volume-trend__picker"><summary>{selectedTrendStatuses.length ? `${selectedTrendStatuses.length} selected` : "Select statuses"}</summary><div><div className="analytics-volume-trend__actions"><button onClick={() => setSelectedTrendStatuses(selectableVolumeTrendMetrics.map((metric) => metric.status))} type="button">Select all</button><button onClick={() => setSelectedTrendStatuses([])} type="button">Clear</button></div>{selectableVolumeTrendMetrics.map((metric) => <label key={metric.status}><input checked={selectedTrendStatuses.includes(metric.status)} onChange={() => toggleTrendStatus(metric.status)} type="checkbox" /><i className={`is-${metric.status}`} />{metric.label}</label>)}</div></details></div></div></div>
         <div className="analytics-volume-trend__navigator"><button aria-label="Show older dates" disabled={!canShowOlderTrends} onClick={() => setTrendWindowOffset((offset) => Math.min(eventTrendRows.length, offset + trendWindowSize))} type="button"><ChevronLeft aria-hidden="true" />Older</button><strong>{trendWindowLabel}</strong><button aria-label="Show newer dates" disabled={!canShowNewerTrends} onClick={() => setTrendWindowOffset((offset) => Math.max(0, offset - trendWindowSize))} type="button">Newer<ChevronRight aria-hidden="true" /></button></div>
         </div>
-        <section className="analytics-volume-trend__booked"><h3>Booked</h3><div className="analytics-volume-trend__legend"><span><i />Booked</span></div><VolumeTrendChart metrics={volumeChartMetrics.filter((metric) => metric.status === "scheduled")} rows={visibleTrendRows} /></section>
+        <section className="analytics-volume-trend__booked"><div className="analytics-volume-trend__chart-heading"><h3>Booked</h3><button className="analytics-chart-drill-trigger" disabled={!visibleTrendRows.length} onClick={() => openTrendDrillThrough("Booked trend", volumeChartMetrics.filter((metric) => metric.status === "scheduled"))} type="button">Drill through</button></div><div className="analytics-volume-trend__legend"><span><i />Booked</span></div><VolumeTrendChart metrics={volumeChartMetrics.filter((metric) => metric.status === "scheduled")} rows={visibleTrendRows} /></section>
         <div className="analytics-volume-trend__split">
-          <section><h3>Tours</h3>{selectedTourTrendMetrics.length ? <><div className="analytics-volume-trend__legend">{selectedTourTrendMetrics.map((metric) => <span key={metric.status}><i className={`is-${metric.status}`} />{metric.label}</span>)}</div><VolumeTrendChart barStatuses={["no_show"]} metrics={selectedTourTrendMetrics} rows={visibleTrendRows} /></> : <div className="analytics-volume-trend__empty">Select Toured or No Show to view this trend.</div>}</section>
-          <section><h3>Outcomes</h3>{selectedOutcomeTrendMetrics.length ? <><div className="analytics-volume-trend__legend">{selectedOutcomeTrendMetrics.map((metric) => <span key={metric.status}><i className={`is-${metric.status}`} />{metric.label}</span>)}</div><VolumeTrendChart barStatuses={["churned"]} metrics={selectedOutcomeTrendMetrics} rows={visibleTrendRows} /></> : <div className="analytics-volume-trend__empty">Select Enrolled or Churned to view this trend.</div>}</section>
+          <section><div className="analytics-volume-trend__chart-heading"><h3>Tours</h3><button className="analytics-chart-drill-trigger" disabled={!visibleTrendRows.length || !selectedTourTrendMetrics.length} onClick={() => openTrendDrillThrough("Tours trend", selectedTourTrendMetrics)} type="button">Drill through</button></div>{selectedTourTrendMetrics.length ? <><div className="analytics-volume-trend__legend">{selectedTourTrendMetrics.map((metric) => <span key={metric.status}><i className={`is-${metric.status}`} />{metric.label}</span>)}</div><VolumeTrendChart barStatuses={["no_show"]} metrics={selectedTourTrendMetrics} rows={visibleTrendRows} /></> : <div className="analytics-volume-trend__empty">Select Toured or No Show to view this trend.</div>}</section>
+          <section><div className="analytics-volume-trend__chart-heading"><h3>Outcomes</h3><button className="analytics-chart-drill-trigger" disabled={!visibleTrendRows.length || !selectedOutcomeTrendMetrics.length} onClick={() => openTrendDrillThrough("Outcomes trend", selectedOutcomeTrendMetrics)} type="button">Drill through</button></div>{selectedOutcomeTrendMetrics.length ? <><div className="analytics-volume-trend__legend">{selectedOutcomeTrendMetrics.map((metric) => <span key={metric.status}><i className={`is-${metric.status}`} />{metric.label}</span>)}</div><VolumeTrendChart barStatuses={["churned"]} metrics={selectedOutcomeTrendMetrics} rows={visibleTrendRows} /></> : <div className="analytics-volume-trend__empty">Select Enrolled or Churned to view this trend.</div>}</section>
         </div>
       </section>
 
@@ -1611,6 +1732,73 @@ const healthRateMetrics = [
   { key: "averageDaysToEnroll", label: "Avg. Days to Enroll", color: "#8b5cf6", inverse: true, isDays: true },
 ];
 
+const drillDimensionByLabel = {
+  Location: "location",
+  "Lead Source": "lead_source",
+  Staff: "staff",
+};
+
+function drillDefinitionForMetric(metric) {
+  const definitions = {
+    averageDays: { denominator: "enrolled", mode: "cohort" },
+    average_days: { denominator: "enrolled", mode: "cohort" },
+    close: { denominator: "toured", numerator: "enrolled,churned", mode: "cohort" },
+    closeRate: { denominator: "toured", numerator: "enrolled,churned", mode: "cohort" },
+    churn: { denominator: "toured", numerator: "churned", mode: "cohort" },
+    conversion: { denominator: "toured", numerator: "enrolled", mode: "cohort" },
+    conversionRate: { denominator: "toured", numerator: "enrolled", mode: "cohort" },
+    enrollment: { status: "enrolled", mode: "cohort" },
+    enrollments: { status: "enrolled", mode: "event" },
+    noShow: { denominator: "scheduled", numerator: "no_show", mode: "cohort" },
+    noShowRate: { denominator: "scheduled", numerator: "no_show", mode: "cohort" },
+    no_show: { denominator: "scheduled", numerator: "no_show", mode: "cohort" },
+    toured: { denominator: "scheduled", numerator: "toured", mode: "cohort" },
+    touredRate: { denominator: "scheduled", numerator: "toured", mode: "cohort" },
+  };
+  return definitions[metric] || { status: metric === "booked" ? "scheduled" : metric, mode: "event" };
+}
+
+function drillDataAttributes({ dimension, entity, label, metric, current, previous }) {
+  const definition = drillDefinitionForMetric(metric);
+  return {
+    "data-drill-current": current,
+    "data-drill-denominator": definition.denominator,
+    "data-drill-dimension": drillDimensionByLabel[dimension],
+    "data-drill-dimension-value": entity,
+    "data-drill-mode": definition.mode,
+    "data-drill-numerator": definition.numerator,
+    "data-drill-previous": previous,
+    "data-drill-status": definition.status,
+    "data-drill-title": label,
+  };
+}
+
+function healthDrillDataAttributes({ current, dimension, entity, label, metric, mode, previous }) {
+  if (mode === "volume") {
+    const status = {
+      booked: "scheduled",
+      noShow: "no_show",
+    }[metric] || metric;
+    return {
+      "data-drill-current": current,
+      "data-drill-dimension": drillDimensionByLabel[dimension],
+      "data-drill-dimension-value": entity,
+      "data-drill-mode": "event",
+      "data-drill-previous": previous,
+      "data-drill-status": status,
+      "data-drill-title": label,
+    };
+  }
+  return drillDataAttributes({
+    current,
+    dimension,
+    entity,
+    label,
+    metric,
+    previous,
+  });
+}
+
 function getHealthRates(row, previous = false) {
   const prefix = previous ? "previous" : "";
   const value = (name) => row[prefix ? `${prefix}${name[0].toUpperCase()}${name.slice(1)}` : name] || 0;
@@ -1695,7 +1883,7 @@ function getRelatedPerformance(row, dimension, mode) {
   }).filter(Boolean);
 }
 
-function EntityHealthTable({ dimension, entityLabel, rows }) {
+function EntityHealthTable({ dimension, entityLabel, onDrillThrough, rows }) {
   const [mode, setMode] = useState("volume");
   const metrics = mode === "volume" ? healthVolumeMetrics : healthRateMetrics;
   const showRelatedPerformance = dimension !== "staff";
@@ -1710,7 +1898,15 @@ function EntityHealthTable({ dimension, entityLabel, rows }) {
   return (
     <section className={`analytics-location-health has-best-timing${showRelatedPerformance ? " has-related-performance" : ""}`} aria-label={`${entityLabel} insights`}>
       <div className="analytics-location-health__scroll">
-        <header><div><div className="analytics-location-health__title-row"><h2>{entityLabel} Insights</h2><div className="analytics-location-health__mode" role="group" aria-label={`${entityLabel} insights metric type`}><button className={mode === "volume" ? "is-active" : ""} onClick={() => setMode("volume")} type="button">Volume metrics</button><button className={mode === "rate" ? "is-active" : ""} onClick={() => setMode("rate")} type="button">Rate metrics</button></div></div><p>Current vs previous period</p></div></header>
+        <header><div><div className="analytics-location-health__title-row"><h2>{entityLabel} Insights</h2><div className="analytics-location-health__mode" role="group" aria-label={`${entityLabel} insights metric type`}><button className={mode === "volume" ? "is-active" : ""} onClick={() => setMode("volume")} type="button">Volume metrics</button><button className={mode === "rate" ? "is-active" : ""} onClick={() => setMode("rate")} type="button">Rate metrics</button></div><button className="analytics-chart-drill-trigger" disabled={!rows.length} onClick={() => onDrillThrough({
+          contributionKind: mode === "rate" ? "rate" : "count",
+          currentValue: `${rows.length} ${entityLabel.toLowerCase()}${rows.length === 1 ? "" : "s"}`,
+          drillParams: mode === "volume"
+            ? { drill_kpi: `${entityLabel} Insights · Volume metrics`, drill_mode: "event", drill_statuses: "scheduled,toured,no_show,enrolled,churned" }
+            : { drill_denominator: "scheduled", drill_kpi: `${entityLabel} Insights · Rate metrics`, drill_mode: "cohort", drill_numerator: "toured,no_show,enrolled,churned" },
+          title: `${entityLabel} Insights · ${mode === "volume" ? "Volume metrics" : "Rate metrics"}`,
+          viewContext: { Section: `${entityLabel} Insights`, "Chart / card": mode === "volume" ? "Volume metrics" : "Rate metrics" },
+        })} type="button">Drill through</button></div><p>Current vs previous period</p></div></header>
         <div className="analytics-location-health__table-wrap">
           <table>
           <thead><tr><th scope="col">{entityLabel}</th><th scope="col">Positives</th><th scope="col">Needs attention</th>{showRelatedPerformance && <th scope="col">Entity Performance</th>}<th scope="col">Peak Periods</th>{metrics.map((metric) => <th key={metric.key} scope="col">{metric.label}</th>)}<th scope="col">Off track tours</th><th scope="col">Trends</th></tr></thead>
@@ -1723,7 +1919,7 @@ function EntityHealthTable({ dimension, entityLabel, rows }) {
             const bestTiming = row.bestTiming?.[mode] || {};
             const trendRows = mode === "volume" ? row.volumeTrend || [] : row.rateTrend || [];
             const renderSummaries = (items) => <div className="analytics-health__summaries">{items.length ? items.map((summary) => <span className={`analytics-health__attention is-${summary.tone}`} key={summary.label}>{summary.label}</span>) : <span className="analytics-health__none">None</span>}</div>;
-            return <tr key={row.name}><th scope="row"><strong>{row.name}</strong></th><td>{renderSummaries(summaries.positive)}</td><td>{renderSummaries(summaries.attention)}</td>{showRelatedPerformance && <td><div className="analytics-health__related">{relatedPerformance.length ? relatedPerformance.map((item) => <section key={item.group}><b>{item.group}</b><span><em className="is-best">{item.best.name}</em><em className="is-least">{item.least.name}</em></span></section>) : <span className="analytics-health__none">No qualifying data</span>}</div></td>}<td><div className="analytics-health__timing">{[["Quarter", "quarter"], ["Month", "month"], ["Week", "weekOfMonth"], ["Day", "dayOfWeek"]].map(([label, key]) => <span key={key}><b>{label}</b><em>{bestTiming[key]?.label || "--"}</em></span>)}</div></td>{metrics.map((metric) => { const current = mode === "volume" ? row.volume[metric.key] : currentRates[metric.key]; const previous = mode === "volume" ? row.previousVolume[metric.key] : previousRates[metric.key]; return <td key={metric.key}>{comparison(current, previous, metric, row.hasPreviousPeriod)}</td>; })}<td><strong className="analytics-health__current">{offTrack}</strong><small>{row.pendingTourOutcome || 0} awaiting tour outcome<br />{row.pendingEnrollmentOutcome || 0} awaiting enrollment outcome</small></td><td><div className="analytics-health__trends">{metrics.map((metric) => { const trendValues = trendRows.map((trendRow) => trendRow[metric.key]).filter((value) => value !== null && value !== undefined); return <span key={metric.key}><b style={{ color: metric.color }}>{metric.label}</b><HealthSparkline color={metric.color} fixedMaximum={mode === "rate" && !metric.isDays ? 100 : null} label={metric.label} showValue={false} values={trendValues} /></span>; })}</div></td></tr>;
+            return <tr key={row.name}><th scope="row"><strong>{row.name}</strong></th><td>{renderSummaries(summaries.positive)}</td><td>{renderSummaries(summaries.attention)}</td>{showRelatedPerformance && <td><div className="analytics-health__related">{relatedPerformance.length ? relatedPerformance.map((item) => <section key={item.group}><b>{item.group}</b><span><em className="is-best">{item.best.name}</em><em className="is-least">{item.least.name}</em></span></section>) : <span className="analytics-health__none">No qualifying data</span>}</div></td>}<td><div className="analytics-health__timing">{[["Quarter", "quarter"], ["Month", "month"], ["Week", "weekOfMonth"], ["Day", "dayOfWeek"]].map(([label, key]) => <span key={key}><b>{label}</b><em>{bestTiming[key]?.label || "--"}</em></span>)}</div></td>{metrics.map((metric) => { const current = mode === "volume" ? row.volume[metric.key] : currentRates[metric.key]; const previous = mode === "volume" ? row.previousVolume[metric.key] : previousRates[metric.key]; return <td key={metric.key} {...healthDrillDataAttributes({ dimension: entityLabel, entity: row.name, label: `${metric.label} · ${row.name}`, metric: metric.key, mode, current: current === null || current === undefined ? "--" : `${current}${metric.isDays ? " days" : mode === "rate" ? "%" : ""}`, previous: row.hasPreviousPeriod && previous !== null && previous !== undefined ? `${previous}${metric.isDays ? " days" : mode === "rate" ? "%" : ""}` : "" })}>{comparison(current, previous, metric, row.hasPreviousPeriod)}</td>; })}<td><strong className="analytics-health__current" data-drill-current={offTrack} data-drill-dimension={drillDimensionByLabel[entityLabel]} data-drill-dimension-value={row.name} data-drill-pending="all" data-drill-title={`Off track tours · ${row.name}`}>{offTrack}</strong><small>{row.pendingTourOutcome || 0} awaiting tour outcome<br />{row.pendingEnrollmentOutcome || 0} awaiting enrollment outcome</small></td><td><div className="analytics-health__trends">{metrics.map((metric) => { const trendValues = trendRows.map((trendRow) => trendRow[metric.key]).filter((value) => value !== null && value !== undefined); return <span key={metric.key}><b style={{ color: metric.color }}>{metric.label}</b><HealthSparkline color={metric.color} fixedMaximum={mode === "rate" && !metric.isDays ? 100 : null} label={metric.label} showValue={false} values={trendValues} /></span>; })}</div></td></tr>;
           }) : <tr><td className="analytics-location-health__empty" colSpan={showRelatedPerformance ? 12 : 11}>No {entityLabel.toLowerCase()} health data for this period.</td></tr>}</tbody>
           </table>
         </div>
@@ -1732,7 +1928,7 @@ function EntityHealthTable({ dimension, entityLabel, rows }) {
   );
 }
 
-function EntityAnalyticsWorkspace({ analytics, dimension, filters, leadSources, locations, user }) {
+function EntityAnalyticsWorkspace({ analytics, dimension, filters, leadSources, locations, onDrillThrough, user }) {
   const [volumeStatus, setVolumeStatus] = useState("all");
   const [performanceMetric, setPerformanceMetric] = useState("conversion");
   const [selectedVolumeEntity, setSelectedVolumeEntity] = useState(null);
@@ -1776,7 +1972,9 @@ function EntityAnalyticsWorkspace({ analytics, dimension, filters, leadSources, 
     })
     : (analytics.volumePerformanceRankings[dimension] || []).map((item) => ({
       name: item.name,
-      value: Number(item[volumeStatus] || 0),
+      value: volumeStatus === "all"
+        ? ["booked", "toured", "noShow", "enrolled", "churned"].reduce((total, status) => total + Number(item[status] || 0), 0)
+        : Number(item[volumeStatus] || 0),
     })).sort((first, second) => second.value - first.value);
   const volumeTotal = rawVolumeItems.reduce((total, item) => total + item.value, 0);
   const largestVolume = Math.max(...rawVolumeItems.map((item) => item.value), 1);
@@ -1835,6 +2033,16 @@ function EntityAnalyticsWorkspace({ analytics, dimension, filters, leadSources, 
   const toggleVolumeLocation = (name) => {
     setSelectedVolumeEntity((current) => current === name ? null : name);
   };
+  const volumeStatusMap = {
+    booked: "scheduled",
+    churned: "churned",
+    enrolled: "enrolled",
+    noShow: "no_show",
+    toured: "toured",
+  };
+  const volumeDrillStatuses = isSingleEntity || volumeStatus === "all"
+    ? ["scheduled", "toured", "no_show", "enrolled", "churned"]
+    : [volumeStatusMap[volumeStatus] || "scheduled"];
 
   useEffect(() => {
     const resetSelectionOutside = (event) => {
@@ -1850,7 +2058,19 @@ function EntityAnalyticsWorkspace({ analytics, dimension, filters, leadSources, 
     <section className="analytics-workspace analytics-location-comparison" aria-label={`${dimensionConfig.entityLabel} volume and performance comparison`}>
       <div className="analytics-location-comparison__grid">
         <section className="analytics-location-comparison__panel" aria-labelledby="location-volume-share-title">
-          <header><div><h2 id="location-volume-share-title">Volume by {dimensionConfig.entityLabel}</h2></div>{!isSingleEntity && <LocationChartPicker label="Status" onChange={(value) => { setVolumeStatus(value); setSelectedVolumeEntity(null); }} options={locationVolumeOptions} value={volumeStatus} />}</header>
+          <header><div><h2 id="location-volume-share-title">Volume by {dimensionConfig.entityLabel}</h2></div><div className="analytics-location-comparison__header-actions">{!isSingleEntity && <LocationChartPicker label="Status" onChange={(value) => { setVolumeStatus(value); setSelectedVolumeEntity(null); }} options={locationVolumeOptions} value={volumeStatus} />}<button className="analytics-chart-drill-trigger" onClick={() => onDrillThrough({
+            currentValue: volumeTotal.toLocaleString(),
+            drillParams: {
+              drill_kpi: isSingleEntity ? "Volume share" : volumeOption.label,
+              drill_mode: "event",
+              drill_statuses: volumeDrillStatuses.join(","),
+            },
+            title: `Volume by ${dimensionConfig.entityLabel}`,
+            viewContext: {
+              Section: `${dimensionConfig.entityLabel} volume and performance comparison`,
+              "Chart / card": `Volume by ${dimensionConfig.entityLabel}`,
+            },
+          })} type="button">Drill through</button></div></header>
           <div className="analytics-location-donut-layout" ref={volumeVisualizationRef}>
             <div className={`analytics-location-donut${selectedVolumeItem ? " has-selection" : ""}`}>
               <svg aria-label={`${volumeOption.label}: ${volumeTotal} total events`} role="img" viewBox="0 0 100 100">
@@ -1864,18 +2084,48 @@ function EntityAnalyticsWorkspace({ analytics, dimension, filters, leadSources, 
         </section>
 
         <section className={`analytics-location-comparison__panel analytics-location-comparison__panel--performance${isSingleEntity ? " analytics-location-comparison__panel--single" : ""}`} aria-labelledby="location-performance-title">
-          <header><div><h2 id="location-performance-title">Rate by {dimensionConfig.entityLabel}</h2></div>{!isSingleEntity && <LocationChartPicker label="Metric" onChange={setPerformanceMetric} options={locationPerformanceOptions} value={performanceMetric} />}</header>
+          <header><div><h2 id="location-performance-title">Rate by {dimensionConfig.entityLabel}</h2></div><button className="analytics-chart-drill-trigger" disabled={!singleEntityPerformanceItems.length && !performanceItems.length} onClick={() => {
+            if (isSingleEntity) {
+              onDrillThrough({
+                contributionKind: "rate",
+                currentValue: `${singleEntityPerformanceItems.length} metrics`,
+                drillParams: {
+                  drill_denominator: "scheduled",
+                  drill_kpi: `Rate by ${dimensionConfig.entityLabel} · All metrics`,
+                  drill_mode: "cohort",
+                  drill_numerator: "toured,no_show,enrolled,churned",
+                },
+                title: `Rate by ${dimensionConfig.entityLabel} · All metrics`,
+                viewContext: { Section: `${dimensionConfig.entityLabel} volume and performance comparison`, "Chart / card": `Rate by ${dimensionConfig.entityLabel}` },
+              });
+              return;
+            }
+            const definition = drillDefinitionForMetric(performanceMetric);
+            onDrillThrough({
+              contributionKind: definition.denominator ? (performanceMetric === "averageDays" ? "average" : "rate") : "count",
+              currentValue: formattedOverallPerformance,
+              drillParams: {
+                ...(definition.denominator ? { drill_denominator: definition.denominator } : {}),
+                drill_kpi: `Rate by ${dimensionConfig.entityLabel} · ${performanceOption.label}`,
+                drill_mode: definition.mode,
+                ...(definition.numerator ? { drill_numerator: definition.numerator } : {}),
+                ...(definition.status ? { drill_status: definition.status } : {}),
+              },
+              title: `Rate by ${dimensionConfig.entityLabel} · ${performanceOption.label}`,
+              viewContext: { Section: `${dimensionConfig.entityLabel} volume and performance comparison`, "Chart / card": `Rate by ${dimensionConfig.entityLabel}` },
+            });
+          }} type="button">Drill through</button>{!isSingleEntity && <LocationChartPicker label="Metric" onChange={setPerformanceMetric} options={locationPerformanceOptions} value={performanceMetric} />}</header>
           {isSingleEntity ? (
-            <div className="analytics-location-metric-list">{singleEntityPerformanceItems.length ? singleEntityPerformanceItems.map((item) => <article key={item.metric} style={{ "--metric-color": item.color }}><i /><div><strong>{item.label}</strong><span>{item.detail}</span></div><b>{item.value === null ? "--" : item.metric === "averageDays" ? `${item.value} days` : item.metric === "enrollments" ? Number(item.value).toLocaleString() : `${item.value}%`}</b></article>) : <p>No {dimensionConfig.entityLabel.toLowerCase()} data for this period.</p>}</div>
+            <div className="analytics-location-metric-list">{singleEntityPerformanceItems.length ? singleEntityPerformanceItems.map((item) => <article key={item.metric} style={{ "--metric-color": item.color }} {...drillDataAttributes({ dimension: dimensionConfig.entityLabel, entity: dimensionConfig.selectedName, label: `${item.label} · ${dimensionConfig.selectedName}`, metric: item.metric, current: item.value === null ? "--" : item.metric === "averageDays" ? `${item.value} days` : item.metric === "enrollments" ? Number(item.value).toLocaleString() : `${item.value}%` })}><i /><div><strong>{item.label}</strong><span>{item.detail}</span></div><b>{item.value === null ? "--" : item.metric === "averageDays" ? `${item.value} days` : item.metric === "enrollments" ? Number(item.value).toLocaleString() : `${item.value}%`}</b></article>) : <p>No {dimensionConfig.entityLabel.toLowerCase()} data for this period.</p>}</div>
           ) : (
             <div className="analytics-location-rate-layout">
-              <div className="analytics-location-performance__overall" style={{ "--overall-color": performanceOption.color }}><span>Overall {performanceOption.label}</span><strong>{formattedOverallPerformance}</strong></div>
-              <div className="analytics-location-bars">{performanceItems.length ? performanceItems.map((item, index) => <article key={item.name}><b>{index + 1}</b><div><span><strong>{item.name}</strong><em>{item.detail}</em></span><div><i style={{ background: item.color, width: `${Math.max((item.value / performanceMax) * 100, item.value ? 2 : 0)}%` }} /></div></div><strong>{performanceMetric === "averageDays" ? `${item.value} days` : performanceMetric === "enrollments" ? item.value.toLocaleString() : `${item.value}%`}</strong></article>) : <p>No {dimensionConfig.entityLabel.toLowerCase()} data for this period.</p>}</div>
+              <div className="analytics-location-performance__overall" style={{ "--overall-color": performanceOption.color }} {...drillDataAttributes({ label: `Overall ${performanceOption.label}`, metric: performanceMetric, current: formattedOverallPerformance })}><span>Overall {performanceOption.label}</span><strong>{formattedOverallPerformance}</strong></div>
+              <div className="analytics-location-bars">{performanceItems.length ? performanceItems.map((item, index) => <article key={item.name} {...drillDataAttributes({ dimension: dimensionConfig.entityLabel, entity: item.name, label: `${performanceOption.label} · ${item.name}`, metric: performanceMetric, current: performanceMetric === "averageDays" ? `${item.value} days` : performanceMetric === "enrollments" ? item.value.toLocaleString() : `${item.value}%` })}><b>{index + 1}</b><div><span><strong>{item.name}</strong><em>{item.detail}</em></span><div><i style={{ background: item.color, width: `${Math.max((item.value / performanceMax) * 100, item.value ? 2 : 0)}%` }} /></div></div><strong>{performanceMetric === "averageDays" ? `${item.value} days` : performanceMetric === "enrollments" ? item.value.toLocaleString() : `${item.value}%`}</strong></article>) : <p>No {dimensionConfig.entityLabel.toLowerCase()} data for this period.</p>}</div>
             </div>
           )}
         </section>
       </div>
-      <EntityHealthTable dimension={dimension} entityLabel={dimensionConfig.entityLabel} rows={analytics.entityHealth?.[dimension] || []} />
+      <EntityHealthTable dimension={dimension} entityLabel={dimensionConfig.entityLabel} onDrillThrough={onDrillThrough} rows={analytics.entityHealth?.[dimension] || []} />
     </section>
   );
 }
@@ -1930,8 +2180,23 @@ function InfoHint({ label }) {
 }
 
 function RateCard({ delta, formula, label, tone, value, variant = "default" }) {
+  const definition = drillDefinitionForMetric(tone === "no-show" ? "no_show" : tone);
+  const previousValue = delta === null || value === null ? "" : Number(value) - Number(delta);
+  const differencePercent = previousValue === "" || previousValue === 0
+    ? ""
+    : `${((Number(delta) / Math.abs(previousValue)) * 100) > 0 ? "+" : ""}${Math.round((Number(delta) / Math.abs(previousValue)) * 100)}%`;
   return (
-    <div className={`analytics-insight analytics-insight--${tone} analytics-insight--${variant}`}>
+    <div
+      className={`analytics-insight analytics-insight--${tone} analytics-insight--${variant}`}
+      data-drill-current={formatRate(value)}
+      data-drill-denominator={definition.denominator}
+      data-drill-difference={delta === null ? "" : `${delta > 0 ? "+" : ""}${delta} pts`}
+      data-drill-difference-percent={differencePercent}
+      data-drill-mode="cohort"
+      data-drill-numerator={definition.numerator}
+      data-drill-previous={previousValue === "" ? "" : formatRate(previousValue)}
+      data-drill-title={label}
+    >
       <span className="analytics-insight__label">
         <span>{label}</span>
         <InfoHint label={formula} />
@@ -2202,15 +2467,30 @@ function TrendChart({ data }) {
   );
 }
 
-function TimeToProgress({ data }) {
+function elapsedRange(label) {
+  const values = String(label).match(/\d+/g)?.map(Number) || [];
+  return label.includes("+")
+    ? { minimum: values[0], maximum: "" }
+    : { minimum: values[0], maximum: values[1] };
+}
+
+function TimeToProgress({ data, onDrillThrough }) {
   const displayedBuckets = data[0]?.buckets || progressDayBuckets;
   return (
     <section className="analytics-panel analytics-progress-time" aria-labelledby="progress-time-title">
-      <div className="analytics-section-heading"><h3 id="progress-time-title">Time to Progress <InfoHint label={"Elapsed time between completed cohort milestones.\nBooked → Enrolled starts at the scheduled tour date."} /></h3></div>
+      <div className="analytics-section-heading"><h3 id="progress-time-title">Time to Progress <InfoHint label={"Elapsed time between completed cohort milestones.\nBooked → Enrolled starts at the scheduled tour date."} /></h3><button className="analytics-chart-drill-trigger" disabled={!data.some((transition) => transition.total)} onClick={() => onDrillThrough({
+        currentValue: data.reduce((total, transition) => total + Number(transition.total || 0), 0).toLocaleString(),
+        drillParams: {
+          drill_kpi: "Time to Progress",
+          drill_transitions: data.map((transition) => transition.key).join(","),
+        },
+        title: "Time to Progress",
+        viewContext: { Section: "Progression Analysis", "Chart / card": "Time to Progress" },
+      })} type="button">Drill through</button></div>
       <div className="analytics-progress-time__table-wrap">
         <table className="analytics-progress-time__table">
           <thead><tr><th scope="col">Status change</th>{displayedBuckets.map((bucket) => <th key={bucket.label} scope="col"><span>{bucket.label.replace(" days", "")}</span><small>days</small></th>)}<th scope="col"><span>Average</span><small>days</small></th></tr></thead>
-          <tbody>{data.map((transition) => { const isPrimary = ["booked_to_toured", "toured_to_enrolled", "booked_to_enrolled"].includes(transition.key); const starCount = transition.key === "booked_to_enrolled" ? 2 : isPrimary ? 1 : 0; return <tr key={transition.key}><th scope="row"><strong>{transition.label}{starCount > 0 && <span className="analytics-progress-time__stars" aria-label={starCount === 2 ? "Primary end-to-end transition" : "Primary transition"}>{Array.from({ length: starCount }, (_, index) => <Star aria-hidden="true" className="analytics-progress-time__star" key={index} />)}</span>}</strong><small>{transition.total} eligible</small></th>{transition.buckets.map((bucket) => <td className="analytics-progress-time__heat-cell" key={bucket.label} style={{ "--cell-intensity": `${Math.max(5, bucket.percent)}%` }}><strong>{bucket.count}</strong><small>{bucket.percent}%</small></td>)}<td className="analytics-progress-time__average"><div><strong>{transition.averageDays ?? "--"}</strong><span>{transition.averageDays === null || transition.averageDays === undefined ? "No data" : "days"}</span></div></td></tr>; })}</tbody>
+          <tbody>{data.map((transition) => { const isPrimary = ["booked_to_toured", "toured_to_enrolled", "booked_to_enrolled"].includes(transition.key); const starCount = transition.key === "booked_to_enrolled" ? 2 : isPrimary ? 1 : 0; return <tr key={transition.key}><th scope="row"><strong>{transition.label}{starCount > 0 && <span className="analytics-progress-time__stars" aria-label={starCount === 2 ? "Primary end-to-end transition" : "Primary transition"}>{Array.from({ length: starCount }, (_, index) => <Star aria-hidden="true" className="analytics-progress-time__star" key={index} />)}</span>}</strong><small>{transition.total} eligible</small></th>{transition.buckets.map((bucket) => { const range = elapsedRange(bucket.label); return <td className="analytics-progress-time__heat-cell" data-drill-current={bucket.count} data-drill-elapsed-max={range.maximum} data-drill-elapsed-min={range.minimum} data-drill-title={`${transition.label} · ${bucket.label}`} data-drill-transition={transition.key} key={bucket.label} style={{ "--cell-intensity": `${Math.max(5, bucket.percent)}%` }}><strong>{bucket.count}</strong><small>{bucket.percent}%</small></td>; })}<td className="analytics-progress-time__average" data-drill-current={transition.averageDays === null || transition.averageDays === undefined ? "--" : `${transition.averageDays} days`} data-drill-title={`${transition.label} · Average`} data-drill-transition={transition.key}><div><strong>{transition.averageDays ?? "--"}</strong><span>{transition.averageDays === null || transition.averageDays === undefined ? "No data" : "days"}</span></div></td></tr>; })}</tbody>
         </table>
       </div>
     </section>
@@ -2289,7 +2569,8 @@ function TemporalConversionRankings({ allTimeRows, rows }) {
         const entries = [...group.entries].sort((first, second) => { if (first.value === null) return 1; if (second.value === null) return -1; return direction === "highest" ? second.value - first.value : first.value - second.value; });
         const topEntry = entries[0];
         const isExpanded = expandedGroup === group.key;
-        return <article className={isExpanded ? "is-expanded" : ""} key={group.key}><button aria-expanded={isExpanded} className="analytics-temporal-rankings__card-heading" onClick={() => setExpandedGroup((current) => current === group.key ? null : group.key)} type="button"><h3>{group.title}</h3>{topEntry && <strong><span>{topEntry.label}</span><em>{formatValue(topEntry.value)}</em></strong>}<ChevronDown aria-hidden="true" /></button><span>{direction === "highest" ? "Highest value" : "Lowest value"}</span><TemporalDistributionPlot dimension={group.key} entries={group.entries.map((entry) => ({ ...entry, value: entry.value || 0 }))} status={metric.value} /><ol>{entries.map((entry, index) => <li className={index === 0 ? "is-top" : ""} key={entry.key}><b>{index + 1}</b><strong><span>{entry.label}</span><small>{entry.detail}</small></strong><em>{formatValue(entry.value)}</em></li>)}</ol></article>;
+        const drillDefinition = drillDefinitionForMetric(metric.value);
+        return <article className={isExpanded ? "is-expanded" : ""} key={group.key}><button aria-expanded={isExpanded} className="analytics-temporal-rankings__card-heading" onClick={() => setExpandedGroup((current) => current === group.key ? null : group.key)} type="button"><h3>{group.title}</h3>{topEntry && <strong><span>{topEntry.label}</span><em>{formatValue(topEntry.value)}</em></strong>}<ChevronDown aria-hidden="true" /></button><span>{direction === "highest" ? "Highest value" : "Lowest value"}</span><TemporalDistributionPlot dimension={group.key} entries={group.entries.map((entry) => ({ ...entry, value: entry.value || 0 }))} status={metric.value} /><ol>{entries.map((entry, index) => <li className={index === 0 ? "is-top" : ""} data-drill-current={formatValue(entry.value)} data-drill-denominator={drillDefinition.denominator} data-drill-mode="cohort" data-drill-numerator={drillDefinition.numerator} data-drill-scope={scope} data-drill-status={drillDefinition.status} data-drill-temporal-dimension={group.key} data-drill-temporal-value={entry.key} data-drill-title={`${metric.label} · ${group.title}: ${entry.label}`} key={entry.key}><b>{index + 1}</b><strong><span>{entry.label}</span><small>{entry.detail}</small></strong><em>{formatValue(entry.value)}</em></li>)}</ol></article>;
       })}</div>
     </section>
   );
@@ -2306,7 +2587,7 @@ function buildCohortRateTrendRows(rows, mode) {
   }));
 }
 
-function ConversionTrends({ data }) {
+function ConversionTrends({ data, filters, onDrillThrough }) {
   const [mode, setMode] = useState("daily");
   const [selectedRates, setSelectedRates] = useState(["toured", "conversion"]);
   const [windowOffset, setWindowOffset] = useState(0);
@@ -2323,6 +2604,36 @@ function ConversionTrends({ data }) {
   const canShowOlder = windowStart > 0;
   const canShowNewer = windowOffset > 0;
   const rangeLabel = visibleRows.length ? `${visibleRows[0].label || visibleRows[0].date} – ${visibleRows.at(-1).label || visibleRows.at(-1).date}` : "No dates available";
+  const openTrendDrill = () => {
+    const selectedDefinitions = selectedRateMetrics.map((metric) => drillDefinitionForMetric(metric.status));
+    const denominator = selectedDefinitions.some((definition) => definition.denominator === "scheduled") ? "scheduled" : "toured";
+    const numerators = [...new Set(selectedDefinitions.flatMap((definition) => String(definition.numerator || "").split(",")).filter(Boolean))];
+    const selectedRange = getDateRange(filters);
+    let dateFrom = visibleRows[0]?.date || selectedRange.dateFrom;
+    let dateTo = visibleRows.at(-1)?.date || selectedRange.dateTo;
+    if (dateTo && mode !== "daily") {
+      const end = new Date(`${dateTo}T12:00:00`);
+      if (mode === "weekly") end.setDate(end.getDate() + 6);
+      else end.setMonth(end.getMonth() + 1, 0);
+      dateTo = toDateInputValue(end);
+    }
+    if (selectedRange.dateFrom && dateFrom < selectedRange.dateFrom) dateFrom = selectedRange.dateFrom;
+    if (selectedRange.dateTo && dateTo > selectedRange.dateTo) dateTo = selectedRange.dateTo;
+    onDrillThrough({
+      contributionKind: "rate",
+      currentValue: `${selectedRateMetrics.length} selected rate${selectedRateMetrics.length === 1 ? "" : "s"}`,
+      drillParams: {
+        date_from: dateFrom,
+        date_to: dateTo,
+        drill_denominator: denominator,
+        drill_kpi: "Conversion Trends",
+        drill_mode: "cohort",
+        drill_numerator: numerators.join(","),
+      },
+      title: "Conversion Trends",
+      viewContext: { Section: "Conversion Trends", "Chart / card": "Selected rate trends", "Visible window": rangeLabel },
+    });
+  };
   useEffect(() => {
     const dismiss = (event) => document.querySelectorAll(".analytics-conversion-trends .analytics-volume-trend__picker[open]").forEach((picker) => { if (!picker.contains(event.target)) picker.removeAttribute("open"); });
     document.addEventListener("pointerdown", dismiss);
@@ -2331,7 +2642,7 @@ function ConversionTrends({ data }) {
   return (
     <section className="analytics-volume-panel analytics-conversion-trends" aria-labelledby="conversion-trends-title">
       <div className="analytics-volume-trend__control-region">
-        <div className="analytics-volume-panel__heading"><h2 id="conversion-trends-title">Conversion Trends</h2><div className="analytics-volume-trend__controls"><div className="analytics-volume-trend__field"><span>Timeline</span><details className="analytics-volume-trend__picker analytics-volume-trend__picker--timeline"><summary>{mode[0].toUpperCase() + mode.slice(1)}</summary><div>{["daily", "weekly", "monthly"].map((option) => <button className={mode === option ? "is-selected" : ""} key={option} onClick={(event) => { setMode(option); setWindowOffset(0); event.currentTarget.closest("details")?.removeAttribute("open"); }} type="button"><span>{option[0].toUpperCase() + option.slice(1)}</span>{mode === option && <Check aria-hidden="true" />}</button>)}</div></details></div><div className="analytics-volume-trend__field"><span>Rates</span><details className="analytics-volume-trend__picker"><summary>{selectedRates.length ? `${selectedRates.length} selected` : "Select rates"}</summary><div><div className="analytics-volume-trend__actions"><button onClick={() => setSelectedRates(availableRates.map((metric) => metric.status))} type="button">Select all</button><button onClick={() => setSelectedRates([])} type="button">Clear</button></div>{availableRates.map((metric) => <label key={metric.status}><input checked={selectedRates.includes(metric.status)} onChange={() => toggleRate(metric.status)} type="checkbox" /><i className={`is-${metric.status}`} />{metric.label}</label>)}</div></details></div></div></div>
+        <div className="analytics-volume-panel__heading"><h2 id="conversion-trends-title">Conversion Trends</h2><button className="analytics-chart-drill-trigger" disabled={!selectedRateMetrics.length || !visibleRows.length} onClick={openTrendDrill} type="button">Drill through</button><div className="analytics-volume-trend__controls"><div className="analytics-volume-trend__field"><span>Timeline</span><details className="analytics-volume-trend__picker analytics-volume-trend__picker--timeline"><summary>{mode[0].toUpperCase() + mode.slice(1)}</summary><div>{["daily", "weekly", "monthly"].map((option) => <button className={mode === option ? "is-selected" : ""} key={option} onClick={(event) => { setMode(option); setWindowOffset(0); event.currentTarget.closest("details")?.removeAttribute("open"); }} type="button"><span>{option[0].toUpperCase() + option.slice(1)}</span>{mode === option && <Check aria-hidden="true" />}</button>)}</div></details></div><div className="analytics-volume-trend__field"><span>Rates</span><details className="analytics-volume-trend__picker"><summary>{selectedRates.length ? `${selectedRates.length} selected` : "Select rates"}</summary><div><div className="analytics-volume-trend__actions"><button onClick={() => setSelectedRates(availableRates.map((metric) => metric.status))} type="button">Select all</button><button onClick={() => setSelectedRates([])} type="button">Clear</button></div>{availableRates.map((metric) => <label key={metric.status}><input checked={selectedRates.includes(metric.status)} onChange={() => toggleRate(metric.status)} type="checkbox" /><i className={`is-${metric.status}`} />{metric.label}</label>)}</div></details></div></div></div>
         <div className="analytics-volume-trend__navigator"><button disabled={!canShowOlder} onClick={() => setWindowOffset((offset) => Math.min(rows.length, offset + windowSize))} type="button"><ChevronLeft aria-hidden="true" />Older</button><strong>{rangeLabel}</strong><button disabled={!canShowNewer} onClick={() => setWindowOffset((offset) => Math.max(0, offset - windowSize))} type="button">Newer<ChevronRight aria-hidden="true" /></button></div>
       </div>
       <div className="analytics-conversion-trends__charts">
@@ -2367,7 +2678,7 @@ function RankingSortControl({
   );
 }
 
-function RankingList({ items, metric, metricLabel, sortLabel, title }) {
+function RankingList({ drillMetric, drillMode, drillScope, drillStatus, drillStatuses, items, metric, metricLabel, sortLabel, title }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const topItem = items[0];
   return (
@@ -2379,7 +2690,7 @@ function RankingList({ items, metric, metricLabel, sortLabel, title }) {
       </div>
       <div className="analytics-ranking__list">
         {items.length ? items.map((item, index) => (
-          <article className="analytics-ranking__item" key={`${title}-${item.name}`}>
+          <article className="analytics-ranking__item" key={`${title}-${item.name}`} {...drillDataAttributes({ dimension: title, entity: item.name, label: `${metricLabel} · ${item.name}`, metric: drillMetric || metric, current: formatRankingValue(item.value, metric) })} {...(drillMode ? { "data-drill-mode": drillMode } : {})} {...(drillScope ? { "data-drill-scope": drillScope } : {})} {...(drillStatus ? { "data-drill-status": drillStatus } : {})} {...(drillStatuses ? { "data-drill-statuses": drillStatuses } : {})}>
             <span className="analytics-ranking__rank">{index + 1}</span>
             <div>
               <strong>{item.name}</strong>
@@ -2619,16 +2930,29 @@ function AnalyticsWorkspace({ view = "overview" }) {
     () => buildAnalyticsParams(filters, rankingMetric, rankingSort),
     [filters, rankingMetric, rankingSort],
   );
+  const drillFilterContext = useMemo(() => {
+    const selectedLabels = (values, options, labelFor, fallback) => {
+      if (!values?.length) return fallback;
+      if (options.length && values.length === options.length) return fallback;
+      return values.map((value) => labelFor(options.find((option) => String(option.id) === String(value)) || {})).filter(Boolean).join(", ") || fallback;
+    };
+    return {
+      Location: selectedLabels(filters.locations, locations, (item) => item.location_name, user?.role === "staff" ? user.location_name || "Assigned location" : "All locations"),
+      "Lead source": selectedLabels(filters.leadSources, leadSources, (item) => item.source_name, "All lead sources"),
+      Staff: selectedLabels(filters.staff, analytics.staffOptions, (item) => item.name || item.full_name || item.email, "All staff"),
+    };
+  }, [analytics.staffOptions, filters.leadSources, filters.locations, filters.staff, leadSources, locations, user]);
   const drillRows = useMemo(() => {
     if (view === "volume") return analytics.volumeTrendData || [];
     if (view === "cohort") return analytics.trendData || [];
     if (["locations", "leadSources", "staff"].includes(view)) return analytics.entityHealth?.[view] || [];
     return analytics.volumeMetrics || [];
   }, [analytics, view]);
-  const { drillThrough, onClickCapture } = useAnalyticsDrillThrough({
+  const { drillThrough, onClickCapture, openDrillThrough } = useAnalyticsDrillThrough({
     filters: exportFilters,
+    filterContext: drillFilterContext,
     page: view,
-    period: periodComparison.selected,
+    period: periodComparison,
     rows: drillRows,
   });
 
@@ -2696,7 +3020,7 @@ function AnalyticsWorkspace({ view = "overview" }) {
               <InfoHint label={"• Date = scheduled tour date\n• Later outcomes stay with the cohort"} />
               <Link to="/analytics/cohort">Explore more</Link>
             </div>
-            <div className="analytics-overview-performance-grid">
+            <div aria-label="Conversion and cohort KPI cards" className="analytics-overview-performance-grid">
               <OverviewPerformanceCard
                 delta={analytics.rateDeltas?.toured}
                 info="Toured Rate = Toured ÷ Booked"
@@ -2750,9 +3074,9 @@ function AnalyticsWorkspace({ view = "overview" }) {
           </section>
         </section>
       ) : view === "volume" ? (
-        <VolumeAnalyticsWorkspace analytics={analytics} focusStatus={searchParams.get("focus")} key={periodComparison.selected} periodComparison={periodComparison} />
+        <VolumeAnalyticsWorkspace analytics={analytics} filters={filters} focusStatus={searchParams.get("focus")} key={periodComparison.selected} onDrillThrough={openDrillThrough} periodComparison={periodComparison} />
       ) : ["locations", "leadSources", "staff"].includes(view) ? (
-        <EntityAnalyticsWorkspace analytics={analytics} dimension={view} filters={filters} leadSources={leadSources} locations={locations} user={user} />
+        <EntityAnalyticsWorkspace analytics={analytics} dimension={view} filters={filters} leadSources={leadSources} locations={locations} onDrillThrough={openDrillThrough} user={user} />
       ) : (
         <section className="analytics-workspace" aria-label="Cohort analytics">
           <div className="analytics-period">
@@ -2790,7 +3114,7 @@ function AnalyticsWorkspace({ view = "overview" }) {
             </section>
 
             <aside className="analytics-insights" aria-label="Analytics rates">
-              <div className="analytics-rate-stack">
+              <div aria-label="Cohort rate KPI cards" className="analytics-rate-stack">
                 <RateCard
                   delta={analytics.rateDeltas.toured}
                   formula={"Toured ÷ Booked.\nCompared with previous period."}
@@ -2822,21 +3146,21 @@ function AnalyticsWorkspace({ view = "overview" }) {
                 variant="featured"
               />
               <div className="analytics-secondary-metrics">
-                <div className="analytics-insight analytics-insight--average">
+                <div className="analytics-insight analytics-insight--average" data-drill-current={formatAverageDays(analytics.averageDaysToEnroll)} data-drill-denominator="enrolled" data-drill-mode="cohort" data-drill-numerator="enrolled" data-drill-title="Average days to enroll">
                   <span className="analytics-insight__label">
                     <span>Average days to enroll</span>
                     <InfoHint label={"Tour date to enrolled date.\nAverage across enrolled tours."} />
                   </span>
                   <strong>{formatAverageDays(analytics.averageDaysToEnroll)}</strong>
                 </div>
-                <div className="analytics-insight analytics-insight--active">
+                <div className="analytics-insight analytics-insight--active" data-drill-current={analytics.pendingOutcomes.pendingTourOutcome} data-drill-pending="tour_outcome" data-drill-title="Pending Toured / No Show">
                   <span className="analytics-insight__label">
                     <span>Pending Toured / No Show</span>
                     <InfoHint label={"Booked tours past tour date.\nMissing toured or no-show outcome."} />
                   </span>
                   <strong>{analytics.pendingOutcomes.pendingTourOutcome}</strong>
                 </div>
-                <div className="analytics-insight analytics-insight--active">
+                <div className="analytics-insight analytics-insight--active" data-drill-current={analytics.pendingOutcomes.pendingEnrollmentOutcome} data-drill-pending="final_outcome" data-drill-title="Pending Enrolled / Churned">
                   <span className="analytics-insight__label">
                     <span>Pending Enrolled / Churned</span>
                     <InfoHint label={"Toured families past follow-up window.\nMissing enrolled or churned outcome."} />
@@ -2847,9 +3171,9 @@ function AnalyticsWorkspace({ view = "overview" }) {
             </aside>
           </div>
 
-          <ConversionTrends data={analytics.trendData} />
+          <ConversionTrends data={analytics.trendData} filters={filters} onDrillThrough={openDrillThrough} />
 
-          <TimeToProgress data={analytics.timeToProgress} />
+          <TimeToProgress data={analytics.timeToProgress} onDrillThrough={openDrillThrough} />
 
           <TemporalConversionRankings allTimeRows={analytics.allTimeTrendData} rows={analytics.trendData} />
 
@@ -2863,9 +3187,9 @@ function AnalyticsWorkspace({ view = "overview" }) {
           />
 
           <div className={`analytics-ranking-grid analytics-cohort-performance-rankings analytics-cohort-performance-rankings--${rankingMetric}`} aria-label="Conversion rankings">
-            <RankingList items={sortedRankings.locations} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Location" />
-            <RankingList items={sortedRankings.leadSources} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Lead Source" />
-            <RankingList items={sortedRankings.staff} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Staff" />
+            <RankingList drillScope={rankingScope} items={sortedRankings.locations} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Location" />
+            <RankingList drillScope={rankingScope} items={sortedRankings.leadSources} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Lead Source" />
+            <RankingList drillScope={rankingScope} items={sortedRankings.staff} metric={rankingMetric} metricLabel={rankingMetricLabel} sortLabel={rankingSortLabel} title="Staff" />
           </div>
         </section>
       )}

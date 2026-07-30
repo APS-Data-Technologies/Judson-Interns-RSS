@@ -989,7 +989,7 @@
   }
 }
 
-@media (hover: none), (pointer: coarse), (max-width: 1180px) {
+@media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
   .pipeline-viewbar {
     align-items: stretch;
     position: relative;

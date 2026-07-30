@@ -247,7 +247,7 @@
   color: var(--rss-green);
 }
 
-@media (hover: hover) and (pointer: fine) and (min-width: 1181px) {
+@media (min-width: 1181px), (min-width: 768px) and (max-width: 1180px) and (orientation: landscape) {
   .account-actions {
     left: calc(clamp(10rem, 15vw, 15rem) + 24px);
     margin: 0 auto;
@@ -256,7 +256,7 @@
   }
 }
 
-@media (max-width: 1099px) {
+@media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
   .account-page {
     padding-bottom: calc(clamp(5.6rem, 12.5vmin, 6.9rem) + 96px);
   }

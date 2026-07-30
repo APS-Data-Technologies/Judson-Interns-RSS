@@ -22,12 +22,6 @@ import { globalSearch } from "../../features/search/globalSearchApi";
 import { listTours } from "../../features/tours/tourApi";
 import "./ChatAssistant.css";
 
-const roleLabels = {
-  staff: "Location assistant",
-  admin: "Operations assistant",
-  super_admin: "Leadership assistant",
-};
-
 const searchDestinations = [
   { group: "Pages", title: "Home", keywords: "dashboard start", path: "/home", roles: ["staff", "admin", "super_admin"] },
   { group: "Pages", title: "Tours", keywords: "families schedule", path: "/tours", roles: ["staff", "admin", "super_admin"] },
@@ -100,7 +94,7 @@ function initialMessage(user) {
   return {
     id: "welcome",
     from: "assistant",
-    text: `Hi ${name} — I’m your ${roleLabels[user.role] || "workspace assistant"}. I can help you find tours, open the right workspace, and explain common tasks.`,
+    text: `Hi ${name} — ask me about tours, no-shows, analytics, or navigating RSS.`,
   };
 }
 
@@ -108,7 +102,7 @@ function ChatAssistant() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
-  const [message, setMessage] = useState("");
+  const [activeView, setActiveView] = useState("chat");
   const [messages, setMessages] = useState(() => [initialMessage(user)]);
   const [isWorking, setIsWorking] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -120,7 +114,6 @@ function ChatAssistant() {
   const didDragRef = useRef(false);
   const feedRef = useRef(null);
   const inputRef = useRef(null);
-  const searchInputRef = useRef(null);
   const isAdmin = ["admin", "super_admin"].includes(user.role);
   const isSuperAdmin = user.role === "super_admin";
 
@@ -166,7 +159,7 @@ function ChatAssistant() {
 
   useEffect(() => {
     if (isOpen) {
-      searchInputRef.current?.focus();
+      inputRef.current?.focus();
     }
   }, [isOpen]);
 
@@ -215,8 +208,10 @@ function ChatAssistant() {
     const intent = rawIntent.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
     if (!intent) return;
 
+    setActiveView("chat");
     setMessages((current) => [...current, { id: `${Date.now()}-user`, from: "user", text: rawIntent }]);
-    setMessage("");
+    setSearchQuery("");
+    setSearchResults({});
 
     const today = localDate();
     try {
@@ -228,25 +223,45 @@ function ChatAssistant() {
         setIsWorking(true);
         const tours = normalizeTours(await listTours({ date_from: today }));
         addAssistantMessage(formatTourSummary(tours, "Upcoming tours"), { label: "Open tours", to: "/tours" });
+      } else if (intent.includes("overdue") || intent.includes("follow up")) {
+        addAssistantMessage("Review the off-track pipeline for tours that need follow-up or an outcome.", { label: "Review follow-ups", to: "/pipeline?category=off_track" });
       } else if (intent.includes("no show") || intent.includes("noshow")) {
         setIsWorking(true);
         const tours = normalizeTours(await listTours({ date_from: today.slice(0, 8) + "01", date_to: today, status: "no_show" }));
-        addAssistantMessage(formatTourSummary(tours, "No-shows this month"), { label: "Open analytics", to: "/analytics" });
+        addAssistantMessage(formatTourSummary(tours, "No-shows this month"), { label: "Review no-shows", to: "/tours?status=no_show" });
+      } else if (intent.includes("record") && intent.includes("outcome")) {
+        addAssistantMessage("Open the tour, then record its latest outcome and follow-up details.", { label: "Open tours", to: "/tours" });
       } else if (intent.includes("new") && intent.includes("tour")) {
         addAssistantMessage("I’ll take you to the secure tour form. Review the details before saving.", { label: "Create tour", to: "/tours/new" });
+      } else if (intent.includes("find") && (intent.includes("family") || intent.includes("tour"))) {
+        addAssistantMessage("Use the field below to search by family or tour details, then select a matching result.");
       } else if (intent.includes("update") && intent.includes("tour")) {
         addAssistantMessage("Open Tours, select the family, and use the available workflow controls to update contact details, progress, or scheduling.", { label: "Open tours", to: "/tours" });
+      } else if (intent.includes("enrollment performance")) {
+        addAssistantMessage("Review current enrollment outcomes and headline performance metrics.", { label: "Review performance", to: "/analytics/overview" });
+      } else if (intent.includes("conversion trend")) {
+        addAssistantMessage("Compare conversion performance across time and cohorts.", { label: "Compare trends", to: "/analytics/cohort" });
+      } else if (intent.includes("location performance")) {
+        addAssistantMessage("Review location-level performance within your permitted scope.", { label: "Compare locations", to: "/analytics/locations" });
+      } else if (isAdmin && intent.includes("analyze lead source")) {
+        addAssistantMessage("Compare lead-source volume and conversion performance.", { label: "Analyze lead sources", to: "/analytics/lead-sources" });
+      } else if (isAdmin && intent.includes("staff performance")) {
+        addAssistantMessage("Review staff-level activity and conversion performance.", { label: "Review staff", to: "/analytics/staff" });
+      } else if (isAdmin && (intent.includes("cost") || intent.includes("margin"))) {
+        addAssistantMessage("Review costs, revenue, and margin performance.", { label: "Review costs and margins", to: "/analytics/cost-margin" });
+      } else if (intent.includes("enrollment pipeline")) {
+        addAssistantMessage("Review tours by pipeline stage and identify records needing attention.", { label: "Open pipeline", to: "/pipeline" });
       } else if (intent.includes("my location") || intent.includes("assigned location")) {
         const locationName = user.location_name || "your assigned location";
         addAssistantMessage(`You are working in ${locationName}. Your tours and operational results are automatically limited to that location.`, { label: "Open settings", to: "/settings" });
-      } else if (intent.includes("analytic") || intent.includes("enrollment") || intent.includes("pipeline")) {
-        addAssistantMessage("Analytics shows your permitted tour and enrollment activity. Use the filters to focus the results.", { label: "Open analytics", to: "/analytics" });
-      } else if (isAdmin && (intent.includes("location") || intent.includes("lead source"))) {
+      } else if (isSuperAdmin && intent.includes("manage user")) {
+        addAssistantMessage("I’ll open user management. Review every role or account change before you save it.", { label: "Manage users", to: "/admin/users" });
+      } else if (isAdmin && intent.includes("manage") && (intent.includes("location") || intent.includes("lead source"))) {
         const target = intent.includes("lead source") ? "/admin/lead-sources" : "/admin/locations";
         addAssistantMessage("I’ll open the administration workspace. Changes there are protected by your administrator permissions.", { label: "Open administration", to: target });
-      } else if (isSuperAdmin && (intent.includes("user") || intent.includes("role"))) {
-        addAssistantMessage("I’ll open user management. Review every role or account change before you save it.", { label: "Manage users", to: "/admin/users" });
-      } else if (intent.includes("help") || intent.includes("what can you do")) {
+      } else if (intent.includes("analytic") || intent.includes("enrollment") || intent.includes("pipeline")) {
+        addAssistantMessage("Analytics shows your permitted tour and enrollment activity. Use the filters to focus the results.", { label: "Open analytics", to: "/analytics" });
+      } else if (intent.includes("help") || intent.includes("what can you do") || intent.includes("what can rss")) {
         addAssistantMessage(`I can help you find tours, review no-shows, open analytics, create a new tour, and explain tour updates.${isAdmin ? " I can also open location and lead-source administration." : ""}${isSuperAdmin ? " I can also open secure user management." : ""}`);
       } else {
         addAssistantMessage("I can help with tours, no-shows, analytics, and workspace navigation. Choose a suggestion below or ask for help.");
@@ -259,19 +274,41 @@ function ChatAssistant() {
   }
 
   const suggestions = [
-    { label: "My tours today", icon: CalendarDays },
-    { label: "Upcoming tours", icon: MessageCircle },
-    { label: "No-shows this month", icon: BarChart3 },
-    { label: "Create a new tour", icon: Plus },
-    { label: "How do I update a tour?", icon: CircleHelp },
-    { label: "Open analytics", icon: BarChart3 },
-    ...(user.role === "staff" ? [{ label: "My assigned location", icon: MapPin }] : []),
-    ...(isAdmin ? [{ label: "Manage locations", icon: MapPin }] : []),
-    ...(isAdmin ? [{ label: "Manage lead sources", icon: MessageCircle }] : []),
-    ...(isSuperAdmin ? [{ label: "Manage users", icon: UsersRound }] : []),
-    { label: "What can you do?", icon: CircleHelp },
+    { label: "View today’s tours", icon: CalendarDays, group: "today" },
+    { label: "Review upcoming tours", icon: MessageCircle, group: "today" },
+    { label: "Review overdue follow-ups", icon: CircleHelp, group: "today" },
+    { label: "Record a tour outcome", icon: Plus, group: "today" },
+    { label: "Create a new tour", icon: Plus, group: "tours" },
+    { label: "Find a family or tour", icon: Search, group: "tours" },
+    { label: "Review no-shows", icon: BarChart3, group: "tours" },
+    { label: "View the enrollment pipeline", icon: BarChart3, group: "tours" },
+    { label: "Review enrollment performance", icon: BarChart3, group: "analytics" },
+    { label: "Compare conversion trends", icon: BarChart3, group: "analytics" },
+    { label: "Compare location performance", icon: MapPin, group: "analytics" },
+    ...(isAdmin ? [{ label: "Analyze lead sources", icon: MessageCircle, group: "analytics" }] : []),
+    ...(isAdmin ? [{ label: "Review staff performance", icon: UsersRound, group: "analytics" }] : []),
+    ...(isAdmin ? [{ label: "Review costs and margins", icon: BarChart3, group: "analytics" }] : []),
+    ...(isAdmin ? [{ label: "Manage locations", icon: MapPin, group: "administration" }] : []),
+    ...(isAdmin ? [{ label: "Manage lead sources", icon: MessageCircle, group: "administration" }] : []),
+    ...(isSuperAdmin ? [{ label: "Manage users", icon: UsersRound, group: "administration" }] : []),
+    { label: "How do I update a tour?", icon: CircleHelp, group: "help" },
+    { label: "What can RSS Assistant do?", icon: CircleHelp, group: "help" },
   ];
+  const suggestionGroupLabels = {
+    today: "Today",
+    tours: "Tours",
+    analytics: "Analytics",
+    administration: "Administration",
+    help: "Help",
+  };
+  const suggestionGroups = Object.keys(suggestionGroupLabels)
+    .map((group) => {
+      const items = suggestions.filter((item) => item.group === group);
+      return { group, items };
+    })
+    .filter(({ items }) => items.length);
   const normalizedSearch = searchQuery.trim().toLowerCase();
+  const isWelcomeState = messages.length === 1 && messages[0].id === "welcome";
   const staticGroups = searchDestinations
     .filter((item) => item.roles.includes(user.role))
     .filter((item) => normalizedSearch.length >= 2 && `${item.title} ${item.keywords} ${item.parent || ""}`.toLowerCase().includes(normalizedSearch))
@@ -290,13 +327,12 @@ function ChatAssistant() {
   return (
     <aside className={`chat-assistant ${isOpen ? "chat-assistant--open" : ""}`} aria-label="RSS Assistant" ref={assistantRef} style={{ transform: `translate3d(${position.x}px, ${position.y}px, 0)` }}>
       {isOpen && (
-        <section className="chat-assistant__panel" aria-live="polite">
+        <section className={`chat-assistant__panel ${isWelcomeState ? "chat-assistant__panel--welcome" : ""}`} aria-live="polite">
           <header className="chat-assistant__header" onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
             <div className="chat-assistant__identity">
-              <span className="chat-assistant__bot-icon"><Bot size={19} aria-hidden="true" /></span>
+              <Bot className="chat-assistant__bot-icon" size={30} aria-hidden="true" />
               <div>
                 <strong>RSS Assistant</strong>
-                <span>{roleLabels[user.role] || "Workspace assistant"}</span>
               </div>
             </div>
             <div className="chat-assistant__header-actions">
@@ -305,52 +341,65 @@ function ChatAssistant() {
             </div>
           </header>
 
-          <section className="chat-assistant__global-search" aria-label="Global Search">
-            <label htmlFor="chat-assistant-search"><Search aria-hidden="true" /><span className="sr-only">Global Search</span></label>
-            <input
-              autoComplete="off"
-              id="chat-assistant-search"
-              onChange={(event) => {
-                const value = event.target.value;
-                setSearchQuery(value);
-                if (value.trim().length < 2) {
-                  setSearchResults({});
-                  setIsSearching(false);
-                }
-              }}
-              placeholder="Search pages, sections, families…"
-              ref={searchInputRef}
-              value={searchQuery}
-            />
-            {isSearching && <LoaderCircle aria-label="Searching" className="chat-assistant__search-spinner" />}
-            {normalizedSearch.length >= 2 && <div className="chat-assistant__search-results">
-              {resultGroups.length ? resultGroups.map((group) => <section key={group.label}><h3>{group.label}</h3>{group.items.map((result) => <button key={`${group.label}-${result.id || result.path}-${result.title}`} onClick={() => openSearchResult(result)} type="button"><span><strong>{result.title}</strong><small>{result.parent ? `${result.parent} › ${result.title}` : result.subtitle || group.label.slice(0, -1)}</small></span><ArrowUp aria-hidden="true" /></button>)}</section>) : !isSearching && <p>No matching destinations or records.</p>}
-            </div>}
-          </section>
+          <div className="chat-assistant__tabs" role="tablist" aria-label="Assistant views">
+            <button aria-selected={activeView === "chat"} className={activeView === "chat" ? "is-active" : ""} onClick={() => setActiveView("chat")} role="tab" type="button">Chat</button>
+            <button aria-selected={activeView === "shortcuts"} className={activeView === "shortcuts" ? "is-active" : ""} onClick={() => setActiveView("shortcuts")} role="tab" type="button">Shortcuts</button>
+          </div>
 
-          <div className="chat-assistant__feed" ref={feedRef}>
-            {messages.map((item) => (
+          {activeView === "chat" && <div className="chat-assistant__feed" ref={feedRef} role="tabpanel">
+            {isWelcomeState && <div className="chat-assistant__welcome">
+              <Bot aria-hidden="true" />
+              <strong>Hi {user.first_name || "there"}, how can I help?</strong>
+            </div>}
+            {messages.filter((item) => item.id !== "welcome").map((item) => (
               <div className={`chat-assistant__message chat-assistant__message--${item.from}`} key={item.id}>
                 <p>{item.text}</p>
                 {item.action && <button type="button" onClick={() => { navigate(item.action.to); setIsOpen(false); }}>{item.action.label}<ArrowUp size={14} aria-hidden="true" /></button>}
               </div>
             ))}
             {isWorking && <div className="chat-assistant__typing" aria-label="Assistant is working"><span /><span /><span /></div>}
-          </div>
+          </div>}
 
-          <div className="chat-assistant__suggestions" aria-label="Suggested questions">
-            {suggestions.map(({ label, icon: Icon }) => (
-              <button type="button" key={label} onClick={() => handleIntent(label)} disabled={isWorking}><Icon size={15} aria-hidden="true" />{label}</button>
-            ))}
-          </div>
-          <form className="chat-assistant__composer" onSubmit={(event) => { event.preventDefault(); handleIntent(message); }}>
-            <label className="sr-only" htmlFor="chat-assistant-message">Ask RSS Assistant</label>
-            <input ref={inputRef} id="chat-assistant-message" value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Ask about your workspace..." maxLength="240" disabled={isWorking} />
-            <button type="submit" disabled={!message.trim() || isWorking} aria-label="Send message"><ArrowUp size={18} /></button>
-          </form>
+          {activeView === "shortcuts" && <div className="chat-assistant__suggestions" aria-label="Suggested questions" role="tabpanel">
+            {suggestionGroups.map(({ group, items }) => <section className="chat-assistant__suggestion-group" key={group}>
+              <h3>{suggestionGroupLabels[group]}</h3>
+              <div>
+                {items.map(({ label, icon: Icon }) => (
+                  <button type="button" key={label} onClick={() => handleIntent(label)} disabled={isWorking}><Icon size={15} aria-hidden="true" />{label}</button>
+                ))}
+              </div>
+            </section>)}
+          </div>}
+
+          {activeView === "chat" && <div className="chat-assistant__input-area">
+            {normalizedSearch.length >= 2 && <div className="chat-assistant__search-results">
+              {resultGroups.length ? resultGroups.map((group) => <section key={group.label}><h3>{group.label}</h3>{group.items.map((result) => <button key={`${group.label}-${result.id || result.path}-${result.title}`} onClick={() => openSearchResult(result)} type="button"><span><strong>{result.title}</strong><small>{result.parent ? `${result.parent} › ${result.title}` : result.subtitle || group.label.slice(0, -1)}</small></span><ArrowUp aria-hidden="true" /></button>)}</section>) : !isSearching && <p>No matching destinations or records.</p>}
+            </div>}
+            <form className="chat-assistant__composer" onSubmit={(event) => { event.preventDefault(); handleIntent(searchQuery); }}>
+              <label htmlFor="chat-assistant-message">{isSearching ? <LoaderCircle aria-label="Searching" className="chat-assistant__search-spinner" /> : <Search aria-hidden="true" />}<span className="sr-only">Ask or search RSS</span></label>
+              <input
+                autoComplete="off"
+                ref={inputRef}
+                id="chat-assistant-message"
+                value={searchQuery}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setSearchQuery(value);
+                  if (value.trim().length < 2) {
+                    setSearchResults({});
+                    setIsSearching(false);
+                  }
+                }}
+                placeholder="Ask or search RSS…"
+                maxLength="240"
+                disabled={isWorking}
+              />
+              <button type="submit" disabled={!searchQuery.trim() || isWorking} aria-label="Send message"><ArrowUp size={18} /></button>
+            </form>
+          </div>}
         </section>
       )}
-      <button className="chat-assistant__launcher" type="button" onClick={toggleAssistant} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} aria-expanded={isOpen} aria-controls="chat-assistant-message">
+      <button className="chat-assistant__launcher" type="button" onClick={toggleAssistant} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} aria-label={isOpen ? "Minimize RSS Assistant" : "Open RSS Assistant"} aria-expanded={isOpen} aria-controls="chat-assistant-message">
         {isOpen ? <ChevronDown size={22} aria-hidden="true" /> : <MessageCircle size={23} aria-hidden="true" />}
         <span>{isOpen ? "Minimize" : "Ask RSS"}</span>
         {!isOpen && <i aria-hidden="true" />}

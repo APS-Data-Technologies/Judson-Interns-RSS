@@ -128,6 +128,84 @@ def export_analytics(user, payload):
     ), "analytics-data.xlsx"
 
 
+def export_drill_through(rows, params):
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Drill Through"
+    sheet.append(["Context", "Value"])
+    context_rows = [
+        ("KPI", params.get("drill_kpi")),
+        ("Current Value", params.get("drill_current_value")),
+        ("Previous Value", params.get("drill_previous_value")),
+        ("Difference", params.get("drill_difference")),
+        ("Difference %", params.get("drill_difference_percent")),
+        ("Page", params.get("drill_page")),
+        ("Section", params.get("drill_section")),
+        ("Chart / card", params.get("drill_visualization")),
+        ("Scope", "All time" if params.get("drill_scope") == "all" else "Selected period"),
+        ("Current Period", params.get("drill_current_period")),
+        ("Previous Period", params.get("drill_previous_period")),
+        ("Location", params.get("drill_location_label")),
+        ("Lead Source", params.get("drill_lead_source_label")),
+        ("Staff", params.get("drill_staff_label")),
+    ]
+    for label, value in context_rows:
+        if value not in (None, ""):
+            sheet.append([label, value])
+
+    sheet.append([])
+    sheet.append(["Contributing Data"])
+    tour_columns = [
+        ("contributingKpi", "Contributing KPI"),
+        ("contributionDate", "Contribution Date"),
+        *(
+            [
+                ("elapsedDays", "Elapsed Days"),
+                ("elapsedBucket", "Days Bucket"),
+            ]
+            if any(row.get("elapsedDays") is not None for row in rows)
+            else []
+        ),
+        ("familyName", "Family Name"),
+        ("scheduledDateTime", "Scheduled Tour"),
+        ("location", "Location"),
+        ("currentStatus", "Current Status"),
+        ("assignedStaff", "Assigned Staff"),
+        ("leadSource", "Lead Source"),
+        ("studentName", "Student Name"),
+        ("childGrade", "Child Grade"),
+        ("emailPhone", "Email / Phone"),
+    ]
+    financial_columns = [
+        ("contributingKpi", "Contributing KPI"),
+        ("reportingMonth", "Reporting Month"),
+        ("location", "Location"),
+        ("type", "Type"),
+        ("amount", "Amount"),
+        ("notes", "Notes"),
+    ]
+    columns = tour_columns if any(row.get("tourId") for row in rows) else financial_columns
+    data_header_row = sheet.max_row + 1
+    sheet.append([label for _, label in columns])
+    for row in rows:
+        sheet.append([row.get(key, "—") for key, _ in columns])
+
+    sheet.freeze_panes = f"A{data_header_row + 1}"
+    sheet.auto_filter.ref = f"A{data_header_row}:{sheet.cell(sheet.max_row, len(columns)).coordinate}"
+    for header_row in (1, data_header_row):
+        for cell in sheet[header_row]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill("solid", fgColor="163968")
+    sheet.cell(data_header_row - 1, 1).font = Font(bold=True, color="163968", size=14)
+    for column in sheet.columns:
+        width = min(45, max(12, max(len(str(cell.value or "")) for cell in column) + 2))
+        sheet.column_dimensions[column[0].column_letter].width = width
+
+    stream = BytesIO()
+    workbook.save(stream)
+    return stream.getvalue()
+
+
 def _excel(data, pages, params):
     workbook = Workbook()
     workbook.remove(workbook.active)

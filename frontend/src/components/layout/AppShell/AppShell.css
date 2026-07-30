@@ -31,8 +31,8 @@
   scroll-padding-top: 120px;
 }
 
-/* Compact composition is stable on touch devices through orientation changes. */
-@media (hover: none), (pointer: coarse), (max-width: 1180px) {
+/* Phones and portrait tablets use the compact composition. */
+@media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
   .app-shell {
     display: grid;
     grid-template-rows: auto auto 1fr;
@@ -81,8 +81,8 @@
   }
 }
 
-/* Full composition is reserved for sufficiently wide, precise-pointer devices. */
-@media (hover: hover) and (pointer: fine) and (min-width: 1181px) {
+/* Landscape tablets and wider screens use the full laptop composition. */
+@media (min-width: 1181px), (min-width: 768px) and (max-width: 1180px) and (orientation: landscape) {
   .app-shell {
     display: grid;
     grid-template-columns: 256px minmax(0, 1fr);
@@ -137,7 +137,6 @@
 
 @media (max-width: 520px) {
   .app-shell {
-    min-width: 360px;
     overflow: auto;
   }
 

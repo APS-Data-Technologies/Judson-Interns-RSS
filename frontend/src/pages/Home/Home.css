@@ -445,13 +445,13 @@
   }
 }
 
-@media (hover: hover) and (pointer: fine) and (min-width: 1181px) {
+@media (min-width: 1181px), (min-width: 768px) and (max-width: 1180px) and (orientation: landscape) {
   .home-fixed-action {
     left: calc(256px + var(--page-pad-x));
   }
 }
 
-@media (max-width: 1099px) {
+@media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
   .home-fixed-action {
     bottom: calc(clamp(5.6rem, 12.5vmin, 6.9rem) + 20px);
     left: 18px;
@@ -464,7 +464,7 @@
   }
 }
 
-@media (hover: none), (pointer: coarse), (max-width: 1180px) {
+@media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
   .home-page {
     gap: var(--space-2);
     padding-bottom: 150px;
