@@ -97,6 +97,39 @@ function waitForAnalyticsPage(frame, timeoutMs = 30000) {
   });
 }
 
+function copyApplicationStylesToFrame(frame) {
+  const frameDocument = frame.contentDocument;
+  if (!frameDocument?.head) return;
+
+  const cssText = Array.from(document.styleSheets)
+    .flatMap((sheet) => {
+      try {
+        return Array.from(sheet.cssRules || [], (rule) => rule.cssText);
+      } catch {
+        return [];
+      }
+    })
+    .join("\n");
+
+  if (!cssText) return;
+  const style = frameDocument.createElement("style");
+  style.dataset.analyticsExportStyles = "true";
+  style.textContent = cssText;
+  frameDocument.head.appendChild(style);
+}
+
+async function waitForFrameAssets(frame) {
+  const frameDocument = frame.contentDocument;
+  await frameDocument?.fonts?.ready;
+  const pendingImages = Array.from(frameDocument?.images || [])
+    .filter((image) => !image.complete)
+    .map((image) => new Promise((resolve) => {
+      image.addEventListener("load", resolve, { once: true });
+      image.addEventListener("error", resolve, { once: true });
+    }));
+  await Promise.all(pendingImages);
+}
+
 async function loadAnalyticsPageForExport(page, filters, routeParams = {}) {
   const frame = document.createElement("iframe");
   frame.setAttribute("aria-hidden", "true");
@@ -115,7 +148,12 @@ async function loadAnalyticsPageForExport(page, filters, routeParams = {}) {
     frame.addEventListener("load", resolve, { once: true });
     frame.addEventListener("error", () => reject(new Error(`Unable to load ${page} analytics.`)), { once: true });
   });
-  return { frame, page: await waitForAnalyticsPage(frame) };
+  const preparedPage = await waitForAnalyticsPage(frame);
+  // Mobile Safari can omit linked stylesheet rules when html2canvas clones an
+  // iframe document. An inline copy keeps the export faithful to the app UI.
+  copyApplicationStylesToFrame(frame);
+  await waitForFrameAssets(frame);
+  return { frame, page: preparedPage };
 }
 
 async function captureAnalyticsPage(element, html2canvas, reportTitle, viewTitle) {
