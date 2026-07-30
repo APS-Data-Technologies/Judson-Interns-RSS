@@ -183,20 +183,48 @@ async function captureAnalyticsPage(element, html2canvas, reportTitle, viewTitle
       ".analytics-location-health tbody > tr",
       ".location-performance-cards > article",
     ].join(","));
+    const captureHeight = Math.max(
+      element.scrollHeight,
+      element.offsetHeight,
+      Math.ceil(element.getBoundingClientRect().height),
+    );
     const canvas = await html2canvas(element, {
       backgroundColor: "#f4f7fb",
+      height: captureHeight,
       logging: false,
       scale: 1.35,
       useCORS: true,
-      windowHeight: element.scrollHeight,
+      windowHeight: captureHeight,
       windowWidth: Math.max(1280, element.scrollWidth),
     });
-    const scaleY = canvas.height / Math.max(1, element.scrollHeight);
+    const scaleY = canvas.height / Math.max(1, captureHeight);
     const breakpoints = Array.from(breakElements)
       .map((child) => Math.round((child.getBoundingClientRect().top - rootRect.top) * scaleY))
       .filter((position) => position > 0 && position < canvas.height)
       .sort((first, second) => first - second);
-    return { breakpoints, canvas };
+    const repeatingHeaders = Array.from(element.querySelectorAll(".analytics-location-health"))
+      .map((section) => {
+        const heading = section.querySelector(".analytics-location-health__scroll > header");
+        const tableHeading = section.querySelector("thead");
+        const firstRow = section.querySelector("tbody > tr");
+        if (!heading || !tableHeading || !firstRow) return null;
+        const sectionRect = section.getBoundingClientRect();
+        const headingRect = heading.getBoundingClientRect();
+        const firstRowRect = firstRow.getBoundingClientRect();
+        return {
+          contentStart: Math.round((firstRowRect.top - rootRect.top) * scaleY),
+          headerHeight: Math.round((firstRowRect.top - headingRect.top) * scaleY),
+          headerY: Math.round((headingRect.top - rootRect.top) * scaleY),
+          sourceEnd: Math.round((sectionRect.bottom - rootRect.top) * scaleY),
+        };
+      })
+      .filter((header) => (
+        header
+        && header.headerHeight > 0
+        && header.headerY >= 0
+        && header.sourceEnd <= canvas.height
+      ));
+    return { breakpoints, canvas, repeatingHeaders };
   } finally {
     element.classList.remove("is-layout-pdf-export");
     reportHeading.remove();
@@ -241,7 +269,7 @@ function exportViewVariants(page, viewScope) {
 }
 
 function appendCanvasPages(pdf, capture, hasExistingPage) {
-  const { breakpoints, canvas } = capture;
+  const { breakpoints, canvas, repeatingHeaders = [] } = capture;
   const margin = 18;
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -286,34 +314,64 @@ function appendCanvasPages(pdf, capture, hasExistingPage) {
     cursorY += renderedHeight;
   };
 
-  const startPage = () => {
+  const continuationHeaderFor = (sourceY) => repeatingHeaders.find((header) => (
+    sourceY >= header.contentStart && sourceY < header.sourceEnd
+  ));
+
+  const startPage = (sourceY = null) => {
     if (hasPage) pdf.addPage();
     hasPage = true;
     cursorY = 0;
+    const continuationHeader = sourceY === null ? null : continuationHeaderFor(sourceY);
+    if (continuationHeader) {
+      addSlice(continuationHeader.headerY, continuationHeader.headerHeight);
+    }
   };
 
   startPage();
-  segmentEdges.slice(0, -1).forEach((segmentStart, index) => {
+  for (let index = 0; index < segmentEdges.length - 1; index += 1) {
+    const segmentStart = segmentEdges[index];
     let sourceY = segmentStart;
     let remainingSourceHeight = segmentEdges[index + 1] - segmentStart;
-    if (remainingSourceHeight <= 0) return;
+    if (remainingSourceHeight <= 0) continue;
+
+    const availableSourceHeight = Math.max(
+      0,
+      Math.floor(((usableHeight - cursorY) * canvas.width) / imageWidth),
+    );
+    const nextSegmentHeight = index + 2 < segmentEdges.length
+      ? segmentEdges[index + 2] - segmentEdges[index + 1]
+      : 0;
+    const isShortLeadIn = remainingSourceHeight < sourcePageHeight * 0.28;
+    const nextWillNotFit = remainingSourceHeight + nextSegmentHeight > availableSourceHeight;
+    if (cursorY > 0 && isShortLeadIn && nextWillNotFit) {
+      startPage(sourceY);
+    }
 
     while (remainingSourceHeight > 0) {
       const availableRenderedHeight = usableHeight - cursorY;
       const segmentRenderedHeight = (remainingSourceHeight * imageWidth) / canvas.width;
 
       if (segmentRenderedHeight > availableRenderedHeight && cursorY > 0) {
-        startPage();
+        startPage(sourceY);
         continue;
       }
 
-      const currentSliceHeight = Math.min(remainingSourceHeight, sourcePageHeight);
+      const currentPageSourceCapacity = Math.max(
+        1,
+        Math.floor(((usableHeight - cursorY) * canvas.width) / imageWidth),
+      );
+      const sliceCount = Math.max(1, Math.ceil(remainingSourceHeight / currentPageSourceCapacity));
+      const currentSliceHeight = Math.min(
+        remainingSourceHeight,
+        Math.ceil(remainingSourceHeight / sliceCount),
+      );
       addSlice(sourceY, currentSliceHeight);
       sourceY += currentSliceHeight;
       remainingSourceHeight -= currentSliceHeight;
-      if (remainingSourceHeight > 0) startPage();
+      if (remainingSourceHeight > 0) startPage(sourceY);
     }
-  });
+  }
   return hasPage;
 }
 

@@ -3358,7 +3358,7 @@
 .analytics-page.is-layout-pdf-export .location-performance-cards {
   display: grid;
   gap: 0.8rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .analytics-page.is-layout-pdf-export .location-performance-cards article {
