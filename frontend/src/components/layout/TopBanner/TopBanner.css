@@ -33,13 +33,14 @@
 
 @media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
   .top-banner {
-    min-height: clamp(6rem, 15vmin, 7.4rem);
+    min-height: clamp(3.8rem, 9vmin, 4.6rem);
+    padding: 0 clamp(0.65rem, 2vw, 0.9rem);
     border-radius: var(--radius-md);
   }
 
   .top-banner__logo {
-    width: min(82vw, 24rem);
-    height: clamp(4rem, 11vmin, 5.6rem);
+    width: min(64vw, 18rem);
+    height: clamp(2.65rem, 6.8vmin, 3.5rem);
   }
 }
 
@@ -49,8 +50,8 @@
   }
 
   .top-banner__logo {
-    width: min(82vw, 20rem);
-    height: clamp(3.5rem, 18vw, 5rem);
+    width: min(66vw, 16rem);
+    height: clamp(2.5rem, 13vw, 3.35rem);
   }
 }
 

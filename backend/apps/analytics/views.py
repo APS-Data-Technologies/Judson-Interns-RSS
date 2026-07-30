@@ -18,8 +18,6 @@ from .metrics import (
     volume_event_timestamp,
 )
 from .services import cohort_analytics
-from .models import AnalyticsOperation
-from .operations import analytics_engine_status, validate_analytics_engine
 from apps.tours.models import TourStatus
 from apps.accounts.models import User
 from apps.accounts.permissions import filter_queryset_by_location
@@ -96,11 +94,6 @@ def matches_temporal_bucket(contribution_date, dimension, value):
 def drill_response(request, rows):
     if request.query_params.get("export") == "xlsx":
         content = export_drill_through(rows, request.query_params)
-        AnalyticsOperation.objects.create(
-            operation=AnalyticsOperation.Operation.EXPORT,
-            detail=f'Drill-through XLSX · {request.query_params.get("drill_kpi", "Analytics metric")}',
-            initiated_by=request.user,
-        )
         response = HttpResponse(
             content,
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -139,11 +132,6 @@ class AnalyticsExportView(APIView):
 
     def post(self, request):
         content, content_type, filename = export_analytics(request.user, request.data)
-        AnalyticsOperation.objects.create(
-            operation=AnalyticsOperation.Operation.EXPORT,
-            detail=f'{request.data.get("format", "xlsx").upper()} · {request.data.get("scope", "current page")}',
-            initiated_by=request.user,
-        )
         response = HttpResponse(content, content_type=content_type)
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
@@ -456,23 +444,3 @@ class GlobalSearchView(APIView):
             request.query_params.get("q", ""),
             request.query_params.get("limit", 5),
         ))
-
-
-class AnalyticsEngineAdminView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def _authorized(self, request):
-        return request.user.role in {"admin", "super_admin"}
-
-    def get(self, request):
-        if not self._authorized(request):
-            return Response({"detail": "You do not have permission to view analytics administration."}, status=403)
-        return Response(analytics_engine_status())
-
-    def post(self, request):
-        if request.user.role != "super_admin":
-            return Response({"detail": "Only super admins can run engine validation."}, status=403)
-        if request.data.get("action") != "validate":
-            return Response({"detail": "Unsupported action."}, status=400)
-        _, status = validate_analytics_engine(request.user)
-        return Response(status)

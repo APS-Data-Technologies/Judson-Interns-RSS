@@ -453,7 +453,7 @@
 
 @media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
   .home-fixed-action {
-    bottom: calc(clamp(5.6rem, 12.5vmin, 6.9rem) + 20px);
+    bottom: calc(clamp(4.4rem, 9.5vmin, 5rem) + 14px);
     left: 18px;
     right: 18px;
   }

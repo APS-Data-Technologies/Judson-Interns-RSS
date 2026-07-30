@@ -258,11 +258,11 @@
 
 @media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
   .account-page {
-    padding-bottom: calc(clamp(5.6rem, 12.5vmin, 6.9rem) + 96px);
+    padding-bottom: calc(clamp(4.4rem, 9.5vmin, 5rem) + 82px);
   }
 
   .account-actions {
-    bottom: calc(clamp(5.6rem, 12.5vmin, 6.9rem) + 20px);
+    bottom: calc(clamp(4.4rem, 9.5vmin, 5rem) + 14px);
   }
 }
 

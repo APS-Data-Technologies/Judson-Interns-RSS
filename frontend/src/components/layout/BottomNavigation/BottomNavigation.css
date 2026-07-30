@@ -43,8 +43,8 @@
 
 @media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
   .bottom-navigation {
-    min-height: clamp(5.6rem, 12.5vmin, 6.9rem);
-    padding: clamp(0.45rem, 1.2vmin, 0.75rem);
+    min-height: clamp(4.4rem, 9.5vmin, 5rem);
+    padding: clamp(0.3rem, 0.8vmin, 0.45rem);
   }
 
   .bottom-navigation__item {
@@ -52,12 +52,12 @@
   }
 
   .bottom-navigation__icon {
-    height: clamp(1.35rem, 3.8vmin, 1.8rem);
-    width: clamp(1.35rem, 3.8vmin, 1.8rem);
+    height: clamp(1.2rem, 3vmin, 1.5rem);
+    width: clamp(1.2rem, 3vmin, 1.5rem);
   }
 
   .bottom-navigation__label {
-    font-size: clamp(0.72rem, 2.2vmin, 0.92rem);
+    font-size: clamp(0.66rem, 1.75vmin, 0.8rem);
     font-weight: 850;
   }
 }
