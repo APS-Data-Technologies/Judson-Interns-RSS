@@ -6475,6 +6475,8 @@ INSERT INTO tours_tourevent (external_id, tour_id, status, event_timestamp, upda
 VALUES ('EVT-8fe3ed92-3093', (SELECT id FROM tours_tour WHERE external_id = 'TOUR-1e983557-b658'), 'enrolled', '2026-05-10 16:30:00+00:00'::timestamptz, (SELECT id FROM accounts_user WHERE external_id = 'USR-cc0909f9-7d40'), 'Family enrolled after follow-up.')
 ON CONFLICT (external_id) DO NOTHING;
 
+ALTER TABLE reports_costbasis ALTER COLUMN is_active SET DEFAULT true;
+
 INSERT INTO reports_costbasis (external_id, location_id, reporting_month, cost_type, cost_amount, notes, created_at, updated_at)
 VALUES ('COST-b36a333b-4a34', (SELECT id FROM sites_location WHERE external_id = 'LOC-257c3c20-dbc4'), '2026-03-01'::date, 'Facebook Ads', 3354.52, 'Facebook Ads spend for Schaumburg - Mar 2026', '2026-02-15 09:00:00+00:00'::timestamptz, '2026-06-30 17:00:00+00:00'::timestamptz)
 ON CONFLICT (external_id) DO UPDATE SET location_id = EXCLUDED.location_id, reporting_month = EXCLUDED.reporting_month, cost_type = EXCLUDED.cost_type, cost_amount = EXCLUDED.cost_amount, notes = EXCLUDED.notes, created_at = EXCLUDED.created_at, updated_at = EXCLUDED.updated_at;
