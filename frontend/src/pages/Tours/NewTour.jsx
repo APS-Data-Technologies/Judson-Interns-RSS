@@ -7,6 +7,7 @@ import {
   getLeadSources,
   getLocations,
 } from "../../features/tours/tourApi";
+import { gradeOptions } from "../../features/tours/gradeOptions";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
 import { toTitleCaseWords } from "../../utils/displayText";
 import "./NewTour.css";
@@ -28,7 +29,6 @@ function getInitialForm() {
 
 const requiredFields = {
   familyName: "Family name is required.",
-  studentName: "Student name is required.",
   phone: "Phone is required.",
   email: "Email is required.",
   location: "Location is required.",
@@ -48,6 +48,7 @@ function NewTour() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+  const [familyMatches, setFamilyMatches] = useState([]);
   const [pendingAction, setPendingAction] = useState("");
   const [isSaved, setIsSaved] = useState(false);
 
@@ -113,6 +114,9 @@ function NewTour() {
       [name]: "",
     }));
     setPendingAction("");
+    if (name === "familyName") {
+      setFamilyMatches([]);
+    }
   }
 
   function validateForm() {
@@ -139,7 +143,7 @@ function NewTour() {
     setPendingAction("save");
   }
 
-  async function saveTour() {
+  async function saveTour(familyResolution = {}) {
     setError("");
     setPendingAction("");
     setIsSubmitting(true);
@@ -155,11 +159,17 @@ function NewTour() {
         child_grade: form.childGrade,
         scheduled_tour_date: `${form.tourDate}T${form.tourTime}:00`,
         notes: form.notes,
+        ...familyResolution,
       });
       setIsSaved(true);
       navigate("/tours");
     } catch (requestError) {
       const responseData = requestError.response?.data;
+      if (Array.isArray(responseData?.family_matches)) {
+        setFamilyMatches(responseData.family_matches);
+        setError("Choose the existing family or create a separate family record.");
+        return;
+      }
       const message =
         responseData?.detail ||
         responseData?.non_field_errors?.[0] ||
@@ -194,6 +204,36 @@ function NewTour() {
         </div>
       )}
 
+      {familyMatches.length > 0 && (
+        <div className="new-tour-confirm new-tour-family-match" role="alert">
+          <strong>Existing family found</strong>
+          <p>A family with this name already exists. Choose how to continue.</p>
+          <div className="new-tour-family-match__list">
+            {familyMatches.map((family) => (
+              <article key={family.id}>
+                <div>
+                  <strong>{family.family_name}</strong>
+                  <span>{family.contact_email || "No email"}</span>
+                  <span>{family.contact_phone || "No phone"}</span>
+                </div>
+                <Button type="button" onClick={() => saveTour({ existing_family: family.id })} disabled={isSubmitting}>
+                  Use Existing
+                </Button>
+              </article>
+            ))}
+          </div>
+          <p>Using an existing family keeps its current contact information.</p>
+          <div>
+            <Button type="button" variant="secondary" onClick={() => setFamilyMatches([])} disabled={isSubmitting}>
+              Go Back
+            </Button>
+            <Button type="button" onClick={() => saveTour({ create_new_family: true })} disabled={isSubmitting}>
+              Create New Family
+            </Button>
+          </div>
+        </div>
+      )}
+
       <form className="new-tour-form" noValidate onSubmit={requestSave}>
         <label>
           <span>Family name *</span>
@@ -205,13 +245,11 @@ function NewTour() {
           {fieldErrors.familyName && <small>{fieldErrors.familyName}</small>}
         </label>
         <label>
-          <span>Student name *</span>
+          <span>Student name</span>
           <input
             value={form.studentName}
             onChange={(event) => updateForm("studentName", event.target.value)}
-            aria-invalid={Boolean(fieldErrors.studentName)}
           />
-          {fieldErrors.studentName && <small>{fieldErrors.studentName}</small>}
         </label>
         <label>
           <span>Phone *</span>
@@ -267,11 +305,14 @@ function NewTour() {
         </label>
         <label>
           <span>Grade *</span>
-          <input
+          <select
             value={form.childGrade}
             onChange={(event) => updateForm("childGrade", event.target.value)}
             aria-invalid={Boolean(fieldErrors.childGrade)}
-          />
+          >
+            <option value="">Select grade</option>
+            {gradeOptions.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
+          </select>
           {fieldErrors.childGrade && <small>{fieldErrors.childGrade}</small>}
         </label>
         <label>

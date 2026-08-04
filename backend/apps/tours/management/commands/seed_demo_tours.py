@@ -115,6 +115,7 @@ class Command(BaseCommand):
                     "location": locations[location_index],
                     "lead_source": lead_sources[source_index],
                     "assigned_staff": staff_user,
+                    "student_name": student_name,
                     "child_grade": grade,
                     "current_status": status,
                 },

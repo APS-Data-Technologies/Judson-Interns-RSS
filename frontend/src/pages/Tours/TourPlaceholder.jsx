@@ -14,6 +14,7 @@ import {
   getTourTrackInfo,
   loadAverageDaysToEnroll,
 } from "../../features/tours/tourTrackUtils";
+import { gradeOptions } from "../../features/tours/gradeOptions";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
 import { toTitleCaseWords } from "../../utils/displayText";
 import "./TourPlaceholder.css";
@@ -37,6 +38,7 @@ function toTimeInput(value) {
 function getFormFromTour(tour) {
   return {
     familyName: tour.family_name || "",
+    studentName: tour.student_name || "",
     contactEmail: tour.contact_email || "",
     contactPhone: tour.contact_phone || "",
     location: tour.location ? String(tour.location) : "",
@@ -60,8 +62,7 @@ const editRequiredFields = {
 };
 
 function getFamilyDisplayName(familyName) {
-  if (!familyName) return "Family";
-  return familyName.endsWith("Family") ? familyName : `${familyName} Family`;
+  return familyName || "";
 }
 
 function TrackBadge({ trackInfo }) {
@@ -210,6 +211,7 @@ function TourPlaceholder({ mode }) {
 
       await updateTour(id, {
         family_name: form.familyName,
+        student_name: form.studentName,
         contact_email: form.contactEmail,
         contact_phone: form.contactPhone,
         location: Number(form.location),
@@ -303,6 +305,10 @@ function TourPlaceholder({ mode }) {
             {fieldErrors.familyName && <small>{fieldErrors.familyName}</small>}
           </label>
           <label>
+            <span>Student name</span>
+            <input value={form.studentName} onChange={(event) => updateForm("studentName", event.target.value)} />
+          </label>
+          <label>
             <span>Email *</span>
             <input type="email" value={form.contactEmail} onChange={(event) => updateForm("contactEmail", event.target.value)} aria-invalid={Boolean(fieldErrors.contactEmail)} />
             {fieldErrors.contactEmail && <small>{fieldErrors.contactEmail}</small>}
@@ -334,7 +340,10 @@ function TourPlaceholder({ mode }) {
           </label>
           <label>
             <span>Grade *</span>
-            <input value={form.childGrade} onChange={(event) => updateForm("childGrade", event.target.value)} aria-invalid={Boolean(fieldErrors.childGrade)} />
+            <select value={form.childGrade} onChange={(event) => updateForm("childGrade", event.target.value)} aria-invalid={Boolean(fieldErrors.childGrade)}>
+              <option value="">Select grade</option>
+              {gradeOptions.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
+            </select>
             {fieldErrors.childGrade && <small>{fieldErrors.childGrade}</small>}
           </label>
           <label>
@@ -382,6 +391,7 @@ function TourPlaceholder({ mode }) {
               <div><dt>Scheduled</dt><dd>{formatDateTime(tour.scheduled_tour_date)}</dd></div>
               <div><dt>Location</dt><dd>{toTitleCaseWords(tour.location_name)}</dd></div>
               <div><dt>Lead source</dt><dd>{toTitleCaseWords(tour.lead_source_name)}</dd></div>
+              <div><dt>Student</dt><dd>{tour.student_name || "Not set"}</dd></div>
               <div><dt>Grade</dt><dd>{tour.child_grade || "Not set"}</dd></div>
               <div><dt>Assigned staff</dt><dd>{toTitleCaseWords(tour.assigned_staff_name)}</dd></div>
             </dl>

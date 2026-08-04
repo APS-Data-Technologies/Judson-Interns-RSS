@@ -157,6 +157,34 @@
   gap: var(--space-2);
 }
 
+.new-tour-family-match__list {
+  display: grid !important;
+  gap: var(--space-2);
+}
+
+.new-tour-family-match__list article {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--info-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  padding: var(--space-3);
+  width: 100%;
+}
+
+.new-tour-family-match__list article > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.new-tour-family-match__list span {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
 .new-tour-actions {
   display: flex;
   gap: var(--space-3);

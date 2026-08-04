@@ -24,14 +24,6 @@ from apps.accounts.permissions import filter_queryset_by_location
 from apps.reports.models import CostBasis
 
 
-def student_name_from_notes(notes):
-    for line in (notes or "").splitlines():
-        label, separator, value = line.partition(":")
-        if separator and label.strip().lower() == "student":
-            return value.strip() or "—"
-    return "—"
-
-
 def drill_through_row(tour, contribution_date, contributing_kpi, metric_role=None):
     return {
         "tourId": tour.id,
@@ -44,7 +36,7 @@ def drill_through_row(tour, contribution_date, contributing_kpi, metric_role=Non
         "currentStatus": tour.get_current_status_display(),
         "assignedStaff": tour.assigned_staff.get_full_name() or tour.assigned_staff.email,
         "leadSource": str(tour.lead_source),
-        "studentName": student_name_from_notes(tour.family.notes),
+        "studentName": tour.student_name or "—",
         "childGrade": tour.child_grade or "—",
         "emailPhone": " · ".join(filter(None, [
             tour.family.contact_email,

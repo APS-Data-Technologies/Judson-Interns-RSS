@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowUp,
   BarChart3,
@@ -35,7 +35,7 @@ const searchDestinations = [
   { group: "Sections", title: "Lead Source Insights", keywords: "marketing source", path: "/analytics/lead-sources", roles: ["staff", "admin", "super_admin"], parent: "Analytics" },
   { group: "Sections", title: "Staff Insights", keywords: "employee performance", path: "/analytics/staff", roles: ["admin", "super_admin"], parent: "Analytics" },
   { group: "Sections", title: "Costs & Margin", keywords: "revenue financial cost efficiency", path: "/analytics/cost-margin", roles: ["admin", "super_admin"], parent: "Analytics" },
-  { group: "Sections", title: "Manage Users", keywords: "roles accounts", path: "/admin/users", roles: ["admin", "super_admin"], parent: "Admin" },
+  { group: "Sections", title: "Manage Users", keywords: "roles accounts", path: "/admin/users", roles: ["super_admin"], parent: "Admin" },
   { group: "Sections", title: "Manage Locations", keywords: "sites", path: "/admin/locations", roles: ["admin", "super_admin"], parent: "Admin" },
   { group: "Sections", title: "Manage Lead Sources", keywords: "marketing sources", path: "/admin/lead-sources", roles: ["admin", "super_admin"], parent: "Admin" },
   { group: "Statuses", title: "Booked", keywords: "status scheduled upcoming", path: "/pipeline?status=scheduled", roles: ["staff", "admin", "super_admin"], parent: "Pipeline" },
@@ -100,6 +100,7 @@ function initialMessage(user) {
 
 function ChatAssistant() {
   const { user } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [activeView, setActiveView] = useState("chat");
@@ -223,8 +224,8 @@ function ChatAssistant() {
         setIsWorking(true);
         const tours = normalizeTours(await listTours({ date_from: today }));
         addAssistantMessage(formatTourSummary(tours, "Upcoming tours"), { label: "Open tours", to: "/tours" });
-      } else if (intent.includes("overdue") || intent.includes("follow up")) {
-        addAssistantMessage("Review the off-track pipeline for tours that need follow-up or an outcome.", { label: "Review follow-ups", to: "/pipeline?category=off_track" });
+      } else if (intent.includes("overdue") || intent.includes("follow up") || intent.includes("pending action")) {
+        addAssistantMessage("Pending actions are tours that need Toured / No Show or Enrolled / Churned status updates.", { label: "Review pending actions", to: "/pipeline?category=off_track" });
       } else if (intent.includes("no show") || intent.includes("noshow")) {
         setIsWorking(true);
         const tours = normalizeTours(await listTours({ date_from: today.slice(0, 8) + "01", date_to: today, status: "no_show" }));
@@ -241,6 +242,10 @@ function ChatAssistant() {
         addAssistantMessage("Review current enrollment outcomes and headline performance metrics.", { label: "Review performance", to: "/analytics/overview" });
       } else if (intent.includes("conversion trend")) {
         addAssistantMessage("Compare conversion performance across time and cohorts.", { label: "Compare trends", to: "/analytics/cohort" });
+      } else if (intent.includes("conversion rate")) {
+        addAssistantMessage("Conversion rate is the percentage of eligible families that reached the selected outcome. The denominator depends on the KPI and cohort shown.", { label: "Open conversion analytics", to: "/analytics/cohort" });
+      } else if (intent.includes("headline") && intent.includes("record")) {
+        addAssistantMessage("A headline KPI and its contributing records can differ when they use different event-date or cohort-state logic. Open the KPI drill-through for its exact definition.", { label: "Open analytics", to: "/analytics/overview" });
       } else if (intent.includes("location performance")) {
         addAssistantMessage("Review location-level performance within your permitted scope.", { label: "Compare locations", to: "/analytics/locations" });
       } else if (isAdmin && intent.includes("analyze lead source")) {
@@ -262,9 +267,9 @@ function ChatAssistant() {
       } else if (intent.includes("analytic") || intent.includes("enrollment") || intent.includes("pipeline")) {
         addAssistantMessage("Analytics shows your permitted tour and enrollment activity. Use the filters to focus the results.", { label: "Open analytics", to: "/analytics" });
       } else if (intent.includes("help") || intent.includes("what can you do") || intent.includes("what can rss")) {
-        addAssistantMessage(`I can help you find tours, review no-shows, open analytics, create a new tour, and explain tour updates.${isAdmin ? " I can also open location and lead-source administration." : ""}${isSuperAdmin ? " I can also open secure user management." : ""}`);
+        addAssistantMessage(`I can find families and tours, review pending work, explain analytics, and open permitted workspaces.${isAdmin ? " I can also open location, lead-source, staff, and financial views." : ""}${isSuperAdmin ? " I can also open secure user management." : ""}`);
       } else {
-        addAssistantMessage("I can help with tours, no-shows, analytics, and workspace navigation. Choose a suggestion below or ask for help.");
+        addAssistantMessage("I couldn’t match that request yet. Try “find a family,” “today’s tours,” “pending actions,” or “open analytics.”");
       }
     } catch {
       addAssistantMessage("I couldn’t retrieve that information right now. Please try again, or open the workspace directly.");
@@ -273,40 +278,95 @@ function ChatAssistant() {
     }
   }
 
-  const suggestions = [
-    { label: "View today’s tours", icon: CalendarDays, group: "today", to: `/tours?date=${localDate()}` },
-    { label: "Review upcoming tours", icon: MessageCircle, group: "today", to: "/tours" },
-    { label: "Review overdue follow-ups", icon: CircleHelp, group: "today", to: "/pipeline?category=off_track" },
-    { label: "Record a tour outcome", icon: Plus, group: "today", to: "/tours" },
-    { label: "Create a new tour", icon: Plus, group: "tours", to: "/tours/new" },
-    { label: "Find a family or tour", icon: Search, group: "tours", to: "/tours" },
-    { label: "Review no-shows", icon: BarChart3, group: "tours", to: "/tours?status=no_show" },
-    { label: "View the enrollment pipeline", icon: BarChart3, group: "tours", to: "/pipeline" },
-    { label: "Review enrollment performance", icon: BarChart3, group: "analytics", to: "/analytics/overview" },
-    { label: "Compare conversion trends", icon: BarChart3, group: "analytics", to: "/analytics/cohort" },
-    { label: "Compare location performance", icon: MapPin, group: "analytics", to: "/analytics/locations" },
-    ...(isAdmin ? [{ label: "Analyze lead sources", icon: MessageCircle, group: "analytics", to: "/analytics/lead-sources" }] : []),
-    ...(isAdmin ? [{ label: "Review staff performance", icon: UsersRound, group: "analytics", to: "/analytics/staff" }] : []),
-    ...(isAdmin ? [{ label: "Review costs and margins", icon: BarChart3, group: "analytics", to: "/analytics/cost-margin" }] : []),
-    ...(isAdmin ? [{ label: "Manage locations", icon: MapPin, group: "administration", to: "/admin/locations" }] : []),
-    ...(isAdmin ? [{ label: "Manage lead sources", icon: MessageCircle, group: "administration", to: "/admin/lead-sources" }] : []),
-    ...(isSuperAdmin ? [{ label: "Manage users", icon: UsersRound, group: "administration", to: "/admin/users" }] : []),
-    { label: "How do I update a tour?", icon: CircleHelp, group: "help" },
-    { label: "What can RSS Assistant do?", icon: CircleHelp, group: "help" },
+  const commonSuggestions = [
+    { label: "Review pending actions", icon: CircleHelp, to: "/pipeline?category=off_track" },
+    { label: "Find a family or tour", icon: Search },
+    { label: "View today’s tours", icon: CalendarDays, to: `/tours?date=${localDate()}` },
+    { label: "Create a new tour", icon: Plus, to: "/tours/new" },
   ];
-  const suggestionGroupLabels = {
-    today: "Today",
-    tours: "Tours",
-    analytics: "Analytics",
-    administration: "Administration",
-    help: "Help",
-  };
-  const suggestionGroups = Object.keys(suggestionGroupLabels)
-    .map((group) => {
-      const items = suggestions.filter((item) => item.group === group);
-      return { group, items };
-    })
-    .filter(({ items }) => items.length);
+  let suggestions = commonSuggestions;
+  if (location.pathname.startsWith("/tours")) {
+    suggestions = [
+      { label: "Find a family or tour", icon: Search },
+      { label: "View today’s tours", icon: CalendarDays, to: `/tours?date=${localDate()}` },
+      { label: "Review no-shows", icon: BarChart3, to: "/tours?status=no_show" },
+      { label: "Create a new tour", icon: Plus, to: "/tours/new" },
+    ];
+  } else if (location.pathname.startsWith("/pipeline")) {
+    suggestions = [
+      { label: "Review pending actions", icon: CircleHelp, to: "/pipeline?category=off_track" },
+      { label: "View toured families", icon: BarChart3, to: "/pipeline?status=toured" },
+      { label: "View enrolled families", icon: BarChart3, to: "/pipeline?status=enrolled" },
+      { label: "Find a family or tour", icon: Search },
+    ];
+  } else if (location.pathname.startsWith("/analytics")) {
+    suggestions = [
+      { label: "Review enrollment performance", icon: BarChart3, to: "/analytics/overview" },
+      { label: "Compare conversion trends", icon: BarChart3, to: "/analytics/cohort" },
+      { label: "Compare locations", icon: MapPin, to: "/analytics/locations" },
+      ...(isAdmin ? [{ label: "Review staff performance", icon: UsersRound, to: "/analytics/staff" }] : []),
+      ...(isAdmin ? [{ label: "Review costs and margins", icon: BarChart3, to: "/analytics/cost-margin" }] : []),
+    ].slice(0, 5);
+  } else if (location.pathname.startsWith("/admin")) {
+    suggestions = [
+      { label: "Manage locations", icon: MapPin, to: "/admin/locations" },
+      { label: "Manage lead sources", icon: MessageCircle, to: "/admin/lead-sources" },
+      ...(isSuperAdmin ? [{ label: "Manage users", icon: UsersRound, to: "/admin/users" }] : []),
+      { label: "What can RSS Assistant do?", icon: CircleHelp },
+    ];
+  }
+  const allSuggestionGroups = [
+    {
+      label: "Today",
+      items: [
+        { label: "View today’s tours", icon: CalendarDays, to: `/tours?date=${localDate()}` },
+        { label: "Review upcoming tours", icon: MessageCircle, to: "/tours" },
+        { label: "Review pending actions", icon: CircleHelp, to: "/pipeline?category=off_track" },
+      ],
+    },
+    {
+      label: "Tours",
+      items: [
+        { label: "Find a family or tour", icon: Search },
+        { label: "Create a new tour", icon: Plus, to: "/tours/new" },
+        { label: "Review no-shows", icon: BarChart3, to: "/tours?status=no_show" },
+        { label: "View the enrollment pipeline", icon: BarChart3, to: "/pipeline" },
+      ],
+    },
+    {
+      label: "Analytics",
+      items: [
+        { label: "Review enrollment performance", icon: BarChart3, to: "/analytics/overview" },
+        { label: "Compare conversion trends", icon: BarChart3, to: "/analytics/cohort" },
+        { label: "Compare locations", icon: MapPin, to: "/analytics/locations" },
+        { label: "Analyze lead sources", icon: MessageCircle, to: "/analytics/lead-sources" },
+        ...(isAdmin ? [{ label: "Review staff performance", icon: UsersRound, to: "/analytics/staff" }] : []),
+        ...(isAdmin ? [{ label: "Review costs and margins", icon: BarChart3, to: "/analytics/cost-margin" }] : []),
+      ],
+    },
+    ...(isAdmin ? [{
+      label: "Administration",
+      items: [
+        { label: "Manage locations", icon: MapPin, to: "/admin/locations" },
+        { label: "Manage lead sources", icon: MessageCircle, to: "/admin/lead-sources" },
+        ...(isSuperAdmin ? [{ label: "Manage users", icon: UsersRound, to: "/admin/users" }] : []),
+      ],
+    }] : []),
+    {
+      label: "Help",
+      items: [
+        { label: "How do I update a tour?", icon: CircleHelp },
+        { label: "What can RSS Assistant do?", icon: CircleHelp },
+      ],
+    },
+  ];
+  const contextualLabels = new Set(suggestions.map((item) => item.label));
+  const remainingSuggestionGroups = allSuggestionGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !contextualLabels.has(item.label)),
+    }))
+    .filter((group) => group.items.length);
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const isWelcomeState = messages.length === 1 && messages[0].id === "welcome";
   const staticGroups = searchDestinations
@@ -325,6 +385,11 @@ function ChatAssistant() {
   }
 
   function openShortcut(shortcut) {
+    if (shortcut.label === "Find a family or tour") {
+      setActiveView("chat");
+      window.requestAnimationFrame(() => inputRef.current?.focus());
+      return;
+    }
     if (!shortcut.to) {
       handleIntent(shortcut.label);
       return;
@@ -372,17 +437,30 @@ function ChatAssistant() {
           </div>}
 
           {activeView === "shortcuts" && <div className="chat-assistant__suggestions" aria-label="Suggested questions" role="tabpanel">
-            {suggestionGroups.map(({ group, items }) => <section className="chat-assistant__suggestion-group" key={group}>
-              <h3>{suggestionGroupLabels[group]}</h3>
+            <section className="chat-assistant__suggestion-group">
+              <h3>Suggested for this page</h3>
               <div>
-                {items.map((shortcut) => {
+                {suggestions.map((shortcut) => {
                   const { label, icon: Icon } = shortcut;
                   return (
                     <button type="button" key={label} onClick={() => openShortcut(shortcut)} disabled={isWorking}><Icon size={15} aria-hidden="true" />{label}</button>
                   );
                 })}
               </div>
-            </section>)}
+            </section>
+            {remainingSuggestionGroups.map((group) => (
+              <section className="chat-assistant__suggestion-group" key={group.label}>
+                <h3>{group.label}</h3>
+                <div>
+                  {group.items.map((shortcut) => {
+                    const { label, icon: Icon } = shortcut;
+                    return (
+                      <button type="button" key={label} onClick={() => openShortcut(shortcut)} disabled={isWorking}><Icon size={15} aria-hidden="true" />{label}</button>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
           </div>}
 
           {activeView === "chat" && <div className="chat-assistant__input-area">
@@ -404,12 +482,13 @@ function ChatAssistant() {
                     setIsSearching(false);
                   }
                 }}
-                placeholder="Ask or search RSS…"
+                placeholder="Search or ask RSS…"
                 maxLength="240"
                 disabled={isWorking}
               />
               <button type="submit" disabled={!searchQuery.trim() || isWorking} aria-label="Send message"><ArrowUp size={18} /></button>
             </form>
+            <p className="chat-assistant__composer-help">Find a family, open a page, or ask about tours.</p>
           </div>}
         </section>
       )}

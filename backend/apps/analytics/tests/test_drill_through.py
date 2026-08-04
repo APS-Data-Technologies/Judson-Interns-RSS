@@ -60,11 +60,11 @@ class AnalyticsDrillThroughTests(APITestCase):
                 family_name=family_name,
                 contact_email="family@example.com",
                 contact_phone="210-555-0100",
-                notes="Student: Alex",
             ),
             location=self.location,
             lead_source=self.source,
             assigned_staff=self.staff,
+            student_name="Alex",
             scheduled_tour_date=scheduled_date,
             current_status=status,
         )

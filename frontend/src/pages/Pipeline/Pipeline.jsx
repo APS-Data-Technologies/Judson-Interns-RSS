@@ -85,9 +85,7 @@ function PipelineCard({ tour, onMove, isMoving, trackInfo }) {
   const [pendingStatus, setPendingStatus] = useState("");
   const status = pipelineStatuses.find((item) => item.value === tour.current_status);
   const StatusIcon = status?.icon;
-  const familyName = tour.family_name.endsWith("Family")
-    ? tour.family_name
-    : `${tour.family_name} Family`;
+  const familyName = tour.family_name;
   const moveOptions = nextStageActions[tour.current_status] || [];
 
   function confirmMove() {
@@ -194,9 +192,7 @@ function PipelineKanbanCard({ tour, onMove, isMoving, onTouchDrop, trackInfo }) 
   const [pendingStatus, setPendingStatus] = useState("");
   const status = pipelineStatuses.find((item) => item.value === tour.current_status);
   const StatusIcon = status?.icon;
-  const familyName = tour.family_name.endsWith("Family")
-    ? tour.family_name
-    : `${tour.family_name} Family`;
+  const familyName = tour.family_name;
   const moveOptions = nextStageActions[tour.current_status] || [];
 
   function beginTouchDrag(event) {

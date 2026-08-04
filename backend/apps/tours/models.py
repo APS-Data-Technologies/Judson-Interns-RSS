@@ -22,6 +22,7 @@ class Tour(models.Model):
         on_delete=models.PROTECT,
         related_name="assigned_tours",
     )
+    student_name = models.CharField(max_length=150, blank=True)
     child_grade = models.CharField(max_length=50, blank=True)
     scheduled_tour_date = models.DateTimeField()
     current_status = models.CharField(
