@@ -298,7 +298,7 @@ def filter_category(tours, categories, average_days):
     for tour in tours:
         tour_date = tour.scheduled_tour_date.date()
         is_tour_outcome_pending = (
-            tour.current_status in {TourStatus.SCHEDULED, TourStatus.RESCHEDULED}
+            tour.current_status == TourStatus.SCHEDULED
             and tour_date < today
             and not reached_status(tour, TourStatus.TOURED)
             and not reached_status(tour, TourStatus.NO_SHOW)

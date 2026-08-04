@@ -344,6 +344,7 @@ export function AnalyticsExport({ filters, page }) {
         options,
         page,
         role: user?.role,
+        user,
       });
       setExportStatus({
         detail: `${result.total} view${result.total === 1 ? "" : "s"} exported`,

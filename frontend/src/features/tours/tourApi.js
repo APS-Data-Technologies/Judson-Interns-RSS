@@ -45,6 +45,11 @@ export async function rescheduleTour(tourId, payload) {
   return response.data;
 }
 
+export async function cancelTour(tourId, payload = {}) {
+  const response = await api.post(`/tours/${tourId}/cancel/`, payload);
+  return response.data;
+}
+
 export async function getTourEvents(tourId) {
   const response = await api.get(`/tours/${tourId}/events/`);
   return response.data;

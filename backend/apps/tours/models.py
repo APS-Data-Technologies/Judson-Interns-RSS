@@ -4,6 +4,14 @@ from django.db import models
 
 class TourStatus(models.TextChoices):
     SCHEDULED = "scheduled", "Scheduled"
+    TOURED = "toured", "Toured"
+    ENROLLED = "enrolled", "Enrolled"
+    CHURNED = "churned", "Churned"
+    NO_SHOW = "no_show", "No Show"
+
+
+class TourEventStatus(models.TextChoices):
+    SCHEDULED = "scheduled", "Scheduled"
     RESCHEDULED = "rescheduled", "Rescheduled"
     TOURED = "toured", "Toured"
     ENROLLED = "enrolled", "Enrolled"
@@ -25,6 +33,8 @@ class Tour(models.Model):
     student_name = models.CharField(max_length=150, blank=True)
     child_grade = models.CharField(max_length=50, blank=True)
     scheduled_tour_date = models.DateTimeField()
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancellation_reason = models.TextField(blank=True)
     current_status = models.CharField(
         max_length=20,
         choices=TourStatus.choices,
@@ -50,7 +60,7 @@ class Tour(models.Model):
 class TourEvent(models.Model):
     external_id = models.CharField(max_length=40, unique=True, null=True, blank=True)
     tour = models.ForeignKey(Tour, on_delete=models.CASCADE, related_name="events")
-    status = models.CharField(max_length=20, choices=TourStatus.choices)
+    status = models.CharField(max_length=20, choices=TourEventStatus.choices)
     event_timestamp = models.DateTimeField()
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

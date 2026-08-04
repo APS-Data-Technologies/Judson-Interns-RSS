@@ -4,17 +4,13 @@ export const statusOptions = [
   { value: "no_show", label: "No Show" },
   { value: "enrolled", label: "Enrolled" },
   { value: "churned", label: "Churned" },
-  { value: "rescheduled", label: "Rescheduled" },
-  { value: "cancelled", label: "Cancelled" },
 ];
 
 export const statusLabels = {
   scheduled: "Booked",
-  rescheduled: "Rescheduled",
   toured: "Toured",
   enrolled: "Enrolled",
   churned: "Churned",
-  cancelled: "Cancelled",
   no_show: "No Show",
 };
 
@@ -25,7 +21,10 @@ export const categoryOptions = [
 
 export const datePresetOptions = [
   { value: "all_time", label: "All Time" },
+  { value: "month_to_date", label: "MTD" },
+  { value: "year_to_date", label: "YTD" },
   { value: "today", label: "Today" },
+  { value: "yesterday", label: "Yesterday" },
   { value: "last_30_days", label: "Last 30 days" },
   { value: "last_n_days", label: "Last custom days" },
   { value: "next_n_days", label: "Next custom days" },
@@ -90,6 +89,16 @@ export function getDateRange(filters) {
       return { dateFrom: "", dateTo: "" };
     case "today":
       return { dateFrom: todayValue(), dateTo: todayValue() };
+    case "month_to_date":
+      return {
+        dateFrom: toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1)),
+        dateTo: todayValue(),
+      };
+    case "year_to_date":
+      return {
+        dateFrom: toDateInputValue(new Date(today.getFullYear(), 0, 1)),
+        dateTo: todayValue(),
+      };
     case "yesterday": {
       const value = toDateInputValue(addDays(today, -1));
       return { dateFrom: value, dateTo: value };

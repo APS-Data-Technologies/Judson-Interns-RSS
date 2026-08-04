@@ -239,7 +239,7 @@ function Home() {
           listTours({
             location: locationParam,
             search: searchParam,
-            status: "scheduled,rescheduled,toured",
+            status: "scheduled,toured",
           }),
           loadAverageDaysToEnroll({
             location: locationParam,

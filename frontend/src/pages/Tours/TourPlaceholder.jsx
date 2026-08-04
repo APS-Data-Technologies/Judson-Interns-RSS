@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { Button } from "../../components/ui";
 import {
+  cancelTour,
   getLeadSources,
   getLocations,
   getTour,
@@ -92,6 +94,7 @@ function TourPlaceholder({ mode }) {
   const [fieldErrors, setFieldErrors] = useState({});
   const [message, setMessage] = useState("");
   const [pendingAction, setPendingAction] = useState("");
+  const [cancellationReason, setCancellationReason] = useState("");
 
   const isDirty = useMemo(
     () => isEdit && form && initialForm && JSON.stringify(form) !== JSON.stringify(initialForm),
@@ -236,6 +239,27 @@ function TourPlaceholder({ mode }) {
     }
   }
 
+  async function confirmCancellation() {
+    setError("");
+    setIsSaving(true);
+    try {
+      const updatedTour = await cancelTour(id, { reason: cancellationReason });
+      const eventData = await getTourEvents(id);
+      const nextForm = getFormFromTour(updatedTour);
+      setTour(updatedTour);
+      setEvents(eventData);
+      setForm(nextForm);
+      setInitialForm(nextForm);
+      setPendingAction("");
+      setCancellationReason("");
+      navigate(`/tours/${id}`);
+    } catch {
+      setError("Unable to cancel tour.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   function requestCancel() {
     setPendingAction("");
     navigate("/tours");
@@ -262,8 +286,8 @@ function TourPlaceholder({ mode }) {
         <div className="tour-detail-hero__title">
           <h1>{familyDisplayName}</h1>
           <span className="tour-detail-status-cluster">
-            <span className={`tour-detail-hero__status status-color--${tour.current_status}`}>
-              {tour.status_label}
+            <span className={`tour-detail-hero__status status-color--${tour.operational_status || tour.current_status}`}>
+              {tour.operational_status_label || tour.status_label}
             </span>
             <TrackBadge trackInfo={trackInfo} />
           </span>
@@ -272,7 +296,7 @@ function TourPlaceholder({ mode }) {
           <Button type="button" variant="secondary" onClick={() => navigate("/tours")}>
             Back to Tours
           </Button>
-          {!isEdit && (
+          {!isEdit && !tour.cancelled_at && (
             <Button type="button" onClick={() => navigate(`/tours/${id}/edit`)}>
               Edit Tour
             </Button>
@@ -374,9 +398,34 @@ function TourPlaceholder({ mode }) {
               </div>
             </div>
           )}
+          {pendingAction === "cancel-tour" && (
+            createPortal(<div className="tour-cancel-overlay">
+              <div className="tour-detail-confirm tour-cancel-dialog" role="alertdialog" aria-modal="true" aria-labelledby="tour-cancel-title" aria-describedby="tour-cancel-message">
+                <strong id="tour-cancel-title">Cancel this tour?</strong>
+                <p id="tour-cancel-message">The tour will move to No Show and display a Cancelled badge. This cannot be undone.</p>
+                <label>
+                  <span>Cancellation reason (optional)</span>
+                  <textarea rows="3" value={cancellationReason} onChange={(event) => setCancellationReason(event.target.value)} />
+                </label>
+                <div>
+                  <Button type="button" variant="secondary" onClick={() => setPendingAction("")}>
+                    Keep Tour
+                  </Button>
+                  <Button type="button" className="tour-cancel-confirm" disabled={isSaving} onClick={confirmCancellation}>
+                    Confirm Cancellation
+                  </Button>
+                </div>
+              </div>
+            </div>, document.body)
+          )}
           <div className="tour-edit-form__actions">
+            {tour.current_status === "scheduled" && !tour.cancelled_at && (
+              <Button type="button" className="tour-cancel-action" onClick={() => setPendingAction("cancel-tour")}>
+                Cancel Tour
+              </Button>
+            )}
             <Button type="button" variant="secondary" onClick={requestCancel}>
-              Cancel
+              Exit Edit
             </Button>
             <Button type="submit" disabled={isSaving}>
               {isSaving ? "Saving..." : "Save Tour"}
