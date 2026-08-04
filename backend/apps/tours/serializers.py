@@ -53,6 +53,7 @@ class TourSerializer(serializers.ModelSerializer):
             "lead_source_name",
             "assigned_staff",
             "assigned_staff_name",
+            "student_name",
             "child_grade",
             "scheduled_tour_date",
             "current_status",
@@ -74,6 +75,16 @@ class TourSerializer(serializers.ModelSerializer):
 
 class TourCreateSerializer(serializers.Serializer):
     family_name = serializers.CharField(max_length=150)
+    existing_family = serializers.PrimaryKeyRelatedField(
+        queryset=Family.objects.all(),
+        required=False,
+        write_only=True,
+    )
+    create_new_family = serializers.BooleanField(
+        default=False,
+        required=False,
+        write_only=True,
+    )
     student_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     contact_email = serializers.EmailField(required=False, allow_blank=True)
     contact_phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
@@ -89,27 +100,57 @@ class TourCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError("You do not have access to this location.")
         return location
 
+    def validate(self, attrs):
+        request = self.context["request"]
+        family_name = attrs["family_name"].strip()
+        existing_family = attrs.get("existing_family")
+        create_new_family = attrs.get("create_new_family", False)
+
+        accessible_matches = Family.objects.filter(family_name__iexact=family_name)
+        if request.user.role == User.Role.STAFF:
+            accessible_matches = accessible_matches.filter(
+                tours__location_id=request.user.location_id,
+            ).distinct()
+
+        if existing_family is not None:
+            if not accessible_matches.filter(pk=existing_family.pk).exists():
+                raise serializers.ValidationError(
+                    {"existing_family": "Select an accessible family with the same name."}
+                )
+        elif not create_new_family and accessible_matches.exists():
+            raise serializers.ValidationError({
+                "family_matches": [
+                    {
+                        "id": family.id,
+                        "family_name": family.family_name,
+                        "contact_email": family.contact_email,
+                        "contact_phone": family.contact_phone,
+                    }
+                    for family in accessible_matches.order_by("family_name", "id")[:5]
+                ],
+            })
+
+        attrs["family_name"] = family_name
+        return attrs
+
     @transaction.atomic
     def create(self, validated_data):
         request = self.context["request"]
-        student_name = validated_data.pop("student_name", "")
+        existing_family = validated_data.pop("existing_family", None)
+        validated_data.pop("create_new_family", False)
         notes = validated_data.pop("notes", "")
         family_name = validated_data.pop("family_name").strip()
         contact_email = validated_data.pop("contact_email", "")
         contact_phone = validated_data.pop("contact_phone", "")
 
-        family_notes = notes
-        if student_name:
-            family_notes = f"Student: {student_name}\n{notes}".strip()
-
-        family, _ = Family.objects.update_or_create(
-            family_name=family_name,
-            defaults={
-                "contact_email": contact_email,
-                "contact_phone": contact_phone,
-                "notes": family_notes,
-            },
-        )
+        family = existing_family
+        if family is None:
+            family = Family.objects.create(
+                family_name=family_name,
+                contact_email=contact_email,
+                contact_phone=contact_phone,
+                notes=notes,
+            )
         tour = Tour.objects.create(
             family=family,
             assigned_staff=request.user,
@@ -142,6 +183,7 @@ class TourUpdateSerializer(serializers.ModelSerializer):
             "contact_phone",
             "location",
             "lead_source",
+            "student_name",
             "child_grade",
         )
 

@@ -122,6 +122,7 @@ class TourWorkflowApiTests(APITestCase):
             reverse("tour-list"),
             {
                 "family_name": "New Family",
+                "student_name": "Alex",
                 "location": self.downtown.id,
                 "lead_source": self.source.id,
                 "scheduled_tour_date": (timezone.now() + timedelta(days=3)).isoformat(),
@@ -134,8 +135,103 @@ class TourWorkflowApiTests(APITestCase):
         tour = Tour.objects.get(pk=response.data["id"])
         event = tour.events.get()
         self.assertEqual(tour.assigned_staff, self.staff)
+        self.assertEqual(tour.student_name, "Alex")
+        self.assertEqual(tour.family.notes, "Initial booking")
+        self.assertEqual(response.data["student_name"], "Alex")
         self.assertEqual(event.status, TourStatus.SCHEDULED)
         self.assertEqual(event.updated_by, self.staff)
+
+    def test_student_name_is_optional(self):
+        self.authenticate(self.staff)
+        response = self.client.post(
+            reverse("tour-list"),
+            {
+                "family_name": "No Student Name",
+                "location": self.downtown.id,
+                "lead_source": self.source.id,
+                "scheduled_tour_date": (timezone.now() + timedelta(days=3)).isoformat(),
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["student_name"], "")
+
+    def test_student_name_can_be_updated_on_a_tour(self):
+        self.authenticate(self.staff)
+        response = self.client.patch(
+            reverse("tour-detail", args=[self.downtown_tour.id]),
+            {"student_name": "Jordan"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.downtown_tour.refresh_from_db()
+        self.assertEqual(self.downtown_tour.student_name, "Jordan")
+        self.assertEqual(response.data["student_name"], "Jordan")
+
+    def test_same_family_name_requires_an_explicit_resolution(self):
+        self.authenticate(self.staff)
+        response = self.client.post(
+            reverse("tour-list"),
+            {
+                "family_name": "Downtown Family",
+                "location": self.downtown.id,
+                "lead_source": self.source.id,
+                "scheduled_tour_date": (timezone.now() + timedelta(days=3)).isoformat(),
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["family_matches"][0]["id"], str(self.downtown_tour.family_id))
+        self.assertEqual(Tour.objects.filter(family=self.downtown_tour.family).count(), 1)
+
+    def test_existing_family_can_be_reused_without_overwriting_contact_details(self):
+        family = self.downtown_tour.family
+        family.contact_email = "original@example.com"
+        family.contact_phone = "6305550100"
+        family.save(update_fields=["contact_email", "contact_phone"])
+        self.authenticate(self.staff)
+
+        response = self.client.post(
+            reverse("tour-list"),
+            {
+                "family_name": family.family_name,
+                "existing_family": family.id,
+                "contact_email": "replacement@example.com",
+                "contact_phone": "6305559999",
+                "location": self.downtown.id,
+                "lead_source": self.source.id,
+                "scheduled_tour_date": (timezone.now() + timedelta(days=3)).isoformat(),
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        family.refresh_from_db()
+        self.assertEqual(family.contact_email, "original@example.com")
+        self.assertEqual(family.contact_phone, "6305550100")
+        self.assertEqual(Tour.objects.filter(family=family).count(), 2)
+
+    def test_same_family_name_can_create_a_separate_family(self):
+        self.authenticate(self.staff)
+        response = self.client.post(
+            reverse("tour-list"),
+            {
+                "family_name": "Downtown Family",
+                "create_new_family": True,
+                "contact_email": "different@example.com",
+                "location": self.downtown.id,
+                "lead_source": self.source.id,
+                "scheduled_tour_date": (timezone.now() + timedelta(days=3)).isoformat(),
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Family.objects.filter(family_name="Downtown Family").count(), 2)
+        self.assertNotEqual(response.data["family"], self.downtown_tour.family_id)
 
     def test_normal_patch_rejects_status_and_schedule_changes(self):
         self.authenticate(self.admin)

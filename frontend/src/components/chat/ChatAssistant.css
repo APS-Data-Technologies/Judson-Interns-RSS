@@ -88,11 +88,12 @@
 .chat-assistant__suggestion-group > div { display: grid; gap: .4rem; }
 .chat-assistant__suggestions button { display: inline-flex; min-width: 0; align-items: center; justify-content: center; gap: .3rem; padding: .5rem .45rem; border: 1px solid #cae3f9; border-radius: .7rem; color: var(--brand-navy); background: #f8fbfe; font-size: .68rem; font-weight: 700; cursor: pointer; }.chat-assistant__suggestions button:hover { background: var(--action-blue-soft); }.chat-assistant__suggestions button:disabled { opacity: .55; cursor: wait; }
 
-.chat-assistant__composer { align-items: center; display: grid; grid-template-columns: 1.25rem minmax(0, 1fr) 2.25rem; gap: .45rem; padding: .75rem .85rem .85rem; border-top: 1px solid #e6eff7; background: white; }
+.chat-assistant__composer { align-items: center; display: grid; grid-template-columns: 1.25rem minmax(0, 1fr) 2.25rem; gap: .45rem; padding: .75rem .85rem .3rem; border-top: 1px solid #e6eff7; background: white; }
 .chat-assistant__composer > label { color: var(--brand-blue); display: grid; place-items: center; }
 .chat-assistant__composer > label svg { height: 1rem; width: 1rem; }
 .chat-assistant__composer input { min-width: 0; padding: .64rem .75rem; border: 1px solid #cbdde9; border-radius: .7rem; outline: none; color: var(--color-text-primary); background: #fbfdff; font-size: .8rem; }.chat-assistant__composer input:focus { border-color: var(--brand-blue); box-shadow: 0 0 0 3px rgba(11,115,218,.12); }
 .chat-assistant__composer button { display: grid; place-items: center; border: 0; border-radius: .7rem; color: white; background: var(--brand-blue); cursor: pointer; }.chat-assistant__composer button:disabled { color: #94a3b8; background: #e9eef4; cursor: not-allowed; }
+.chat-assistant__composer-help { background: #fff; color: var(--color-text-secondary); font-size: .62rem; margin: 0; padding: 0 .85rem .65rem 2.55rem; }
 
 .chat-assistant__launcher { position: relative; display: inline-flex; align-items: center; gap: .5rem; min-height: 3.25rem; padding: 0 .95rem; border: 0; border-radius: 999px; color: white; background: linear-gradient(125deg, var(--brand-navy), var(--brand-blue)); box-shadow: 0 .7rem 1.5rem rgba(11, 115, 218, .28); font-size: .84rem; font-weight: 800; cursor: grab; touch-action: none; transition: box-shadow .18s ease; }.chat-assistant__launcher:active { cursor: grabbing; }.chat-assistant__launcher:hover { box-shadow: 0 1rem 1.8rem rgba(11, 115, 218, .35); }.chat-assistant__launcher i { position: absolute; top: .22rem; right: .22rem; width: .5rem; height: .5rem; border: 2px solid white; border-radius: 50%; background: var(--rss-gold); }
 

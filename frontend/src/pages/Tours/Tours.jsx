@@ -12,6 +12,7 @@ import {
   statusLabels,
   todayValue,
 } from "../../features/tours/filterConfig";
+import { gradeOptions } from "../../features/tours/gradeOptions";
 import {
   getLeadSources,
   getLocations,
@@ -55,6 +56,7 @@ function toTimeInput(value) {
 function getTourForm(tour) {
   return {
     familyName: tour.family_name || "",
+    studentName: tour.student_name || "",
     contactEmail: tour.contact_email || "",
     contactPhone: tour.contact_phone || "",
     location: tour.location ? String(tour.location) : "",
@@ -113,9 +115,7 @@ function TourCard({ isSelected, onEdit, onSelect, onView, tour, trackInfo }) {
   const navigate = useNavigate();
   const statusLabel = statusLabels[tour.current_status] || tour.status_label;
   const StatusIcon = tourStatusIcons[tour.current_status];
-  const familyName = tour.family_name.endsWith("Family")
-    ? tour.family_name
-    : `${tour.family_name} Family`;
+  const familyName = tour.family_name;
 
   return (
     <article className={`tour-card ${isSelected ? "tour-card--selected" : ""}`}>
@@ -237,6 +237,7 @@ function TourDetailPane({
 
       await updateTour(tour.id, {
         family_name: form.familyName,
+        student_name: form.studentName,
         contact_email: form.contactEmail,
         contact_phone: form.contactPhone,
         location: Number(form.location),
@@ -281,9 +282,7 @@ function TourDetailPane({
     );
   }
 
-  const familyName = tour.family_name?.endsWith("Family")
-    ? tour.family_name
-    : `${tour.family_name} Family`;
+  const familyName = tour.family_name;
   const trackInfo = getTourTrackInfo({ ...tour, events }, averageDaysToEnroll);
 
   return (
@@ -321,11 +320,12 @@ function TourDetailPane({
       {mode === "edit" ? (
         <form className="tours-inline-form" onSubmit={handleSubmit}>
           <label><span>Family name</span><input value={form.familyName} onChange={(event) => updateForm("familyName", event.target.value)} required /></label>
+          <label><span>Student name</span><input value={form.studentName} onChange={(event) => updateForm("studentName", event.target.value)} /></label>
           <label><span>Email</span><input type="email" value={form.contactEmail} onChange={(event) => updateForm("contactEmail", event.target.value)} /></label>
           <label><span>Phone</span><input type="tel" value={form.contactPhone} onChange={(event) => updateForm("contactPhone", event.target.value)} /></label>
           <label><span>Location</span><select value={form.location} onChange={(event) => updateForm("location", event.target.value)} required>{locations.map((location) => <option key={location.id} value={location.id}>{toTitleCaseWords(location.location_name)}</option>)}</select></label>
           <label><span>Lead source</span><select value={form.leadSource} onChange={(event) => updateForm("leadSource", event.target.value)} required>{leadSources.map((source) => <option key={source.id} value={source.id}>{toTitleCaseWords(source.source_name)}</option>)}</select></label>
-          <label><span>Grade</span><input value={form.childGrade} onChange={(event) => updateForm("childGrade", event.target.value)} /></label>
+          <label><span>Grade</span><select value={form.childGrade} onChange={(event) => updateForm("childGrade", event.target.value)}><option value="">Select grade</option>{gradeOptions.map((grade) => <option key={grade} value={grade}>{grade}</option>)}</select></label>
           <label><span>Date</span><input type="date" value={form.tourDate} onChange={(event) => updateForm("tourDate", event.target.value)} required /></label>
           <label><span>Time</span><input type="time" value={form.tourTime} onChange={(event) => updateForm("tourTime", event.target.value)} required /></label>
           <label className="tours-inline-form__wide"><span>Notes</span><textarea rows="3" value={form.notes} onChange={(event) => updateForm("notes", event.target.value)} /></label>
@@ -342,6 +342,7 @@ function TourDetailPane({
               <div><dt>Scheduled</dt><dd>{formatTourDateTime(tour.scheduled_tour_date)}</dd></div>
               <div><dt>Location</dt><dd>{toTitleCaseWords(tour.location_name)}</dd></div>
               <div><dt>Lead source</dt><dd>{toTitleCaseWords(tour.lead_source_name)}</dd></div>
+              <div><dt>Student</dt><dd>{tour.student_name || "Not set"}</dd></div>
               <div><dt>Grade</dt><dd>{tour.child_grade || "Not set"}</dd></div>
               <div><dt>Assigned staff</dt><dd>{toTitleCaseWords(tour.assigned_staff_name) || "Not assigned"}</dd></div>
             </dl>

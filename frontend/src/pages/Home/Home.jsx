@@ -11,7 +11,6 @@ import {
 } from "../../features/tours/filterConfig";
 import { getHomeSummary, listTours } from "../../features/tours/tourApi";
 import {
-  formatAverageDays,
   getTourTrackInfo,
   loadAverageDaysToEnroll,
 } from "../../features/tours/tourTrackUtils";
@@ -28,10 +27,8 @@ const initialSummary = {
 };
 
 const initialPendingSummary = {
-  averageDaysToEnroll: null,
   pendingTourOutcome: [],
   pendingEnrollmentOutcome: [],
-  touredWithoutFinalOutcomeCount: 0,
 };
 
 function formatTourDateTime(value) {
@@ -114,69 +111,61 @@ function TourList({ title, tours, tone }) {
 }
 
 function ActionNeededInfo({
-  averageDaysToEnroll,
+  isLoading,
   pendingEnrollmentOutcome,
   pendingTourOutcome,
-  touredWithoutFinalOutcomeCount,
 }) {
   const navigate = useNavigate();
   const pendingTourCount = pendingTourOutcome.length;
   const pendingEnrollmentCount = pendingEnrollmentOutcome.length;
-  const reviewPath = "/pipeline?category=off_track";
+  const tourCountLabel = isLoading ? "…" : pendingTourCount;
+  const enrollmentCountLabel = isLoading ? "…" : pendingEnrollmentCount;
+  const tourReviewPath = "/pipeline?status=scheduled&category=off_track";
+  const enrollmentReviewPath = "/pipeline?status=toured&category=off_track";
 
   return (
-    <section className="home-action-info" aria-label="Action needed">
-      <div className="home-action-info__copy">
-        <div className="home-action-info__heading">
-          <h2>Action Needed</h2>
-          <span className="home-action-info__hint">
-            <button
-              type="button"
-              aria-label="Action needed guidance"
-              title="Go to Pipeline to see details, review these tours and update the status."
-            >
-              <Info aria-hidden="true" />
-            </button>
-            <span role="tooltip">
-              Go to Pipeline to see details, review these tours and update the status.
-            </span>
+    <section className="home-action-info" aria-label="Pending actions">
+      <div className="home-action-info__heading">
+        <h2>Pending Actions</h2>
+        <span className="home-action-info__hint">
+          <button
+            type="button"
+            aria-label="Pending actions guidance"
+            title="Review these tours in Pipeline and update their status."
+          >
+            <Info aria-hidden="true" />
+          </button>
+          <span role="tooltip">
+            Review these tours in Pipeline and update their status.
           </span>
-        </div>
-        <p>
-          <strong>{pendingTourCount}</strong> booked tours are past the tour date
-          without a toured or no-show outcome.
-        </p>
-        <p>
-          <strong>{pendingEnrollmentCount}</strong> out of{" "}
-          <strong>{touredWithoutFinalOutcomeCount}</strong> toured tours are beyond
-          the average enrollment time ({formatAverageDays(averageDaysToEnroll)})
-          without an enrolled or churned outcome.
-        </p>
+        </span>
       </div>
-      <div className="home-action-info__summary" aria-label="Pending outcome counts">
+      <div className="home-action-info__actions" aria-label="Pending status updates">
         <button
-          className="home-action-info__chip"
+          className="home-action-info__card"
           type="button"
-          onClick={() => navigate(reviewPath)}
+          onClick={() => navigate(tourReviewPath)}
         >
-          <span>{pendingTourCount}</span>
-          <small>Pending Toured / No Show</small>
+          <span className="home-action-info__card-title">
+            <strong>{tourCountLabel}</strong> scheduled tours past their tour date
+          </span>
+          <span className="home-action-info__card-action">
+            Set Toured / No Show
+            <ArrowRight aria-hidden="true" />
+          </span>
         </button>
         <button
-          className="home-action-info__chip"
+          className="home-action-info__card"
           type="button"
-          onClick={() => navigate(reviewPath)}
+          onClick={() => navigate(enrollmentReviewPath)}
         >
-          <span>{pendingEnrollmentCount}</span>
-          <small>Pending Enrolled / Churned</small>
-        </button>
-        <button
-          className="home-action-info__cta"
-          type="button"
-          onClick={() => navigate(reviewPath)}
-        >
-          Review in Pipeline
-          <ArrowRight aria-hidden="true" />
+          <span className="home-action-info__card-title">
+            <strong>{enrollmentCountLabel}</strong> completed tours past the average enrollment window
+          </span>
+          <span className="home-action-info__card-action">
+            Set Enrolled / Churned
+            <ArrowRight aria-hidden="true" />
+          </span>
         </button>
       </div>
     </section>
@@ -191,6 +180,7 @@ function Home() {
   );
   const [summary, setSummary] = useState(initialSummary);
   const [pendingSummary, setPendingSummary] = useState(initialPendingSummary);
+  const [isPendingLoading, setIsPendingLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const bookedTours = useMemo(
@@ -241,6 +231,7 @@ function Home() {
     let isCurrent = true;
 
     async function loadPendingTours() {
+      setIsPendingLoading(true);
       try {
         const locationParam = filters.locations[0] || undefined;
         const searchParam = filters.search || undefined;
@@ -268,15 +259,15 @@ function Home() {
 
         if (isCurrent) {
           setPendingSummary({
-            averageDaysToEnroll,
             pendingTourOutcome,
             pendingEnrollmentOutcome,
-            touredWithoutFinalOutcomeCount: touredWithoutFinalOutcome.length,
           });
+          setIsPendingLoading(false);
         }
       } catch {
         if (isCurrent) {
           setPendingSummary(initialPendingSummary);
+          setIsPendingLoading(false);
         }
       }
     }
@@ -329,10 +320,9 @@ function Home() {
       </div>
 
       <ActionNeededInfo
-        averageDaysToEnroll={pendingSummary.averageDaysToEnroll}
+        isLoading={isPendingLoading}
         pendingTourOutcome={pendingSummary.pendingTourOutcome}
         pendingEnrollmentOutcome={pendingSummary.pendingEnrollmentOutcome}
-        touredWithoutFinalOutcomeCount={pendingSummary.touredWithoutFinalOutcomeCount}
       />
 
       <div className="home-fixed-action">
