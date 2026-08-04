@@ -190,16 +190,29 @@ function NewTour() {
       {error && <p className="new-tour-state new-tour-state--error">{error}</p>}
       {isLoading && <p className="new-tour-state">Loading tour options...</p>}
       {navigationPrompt.isBlocked && (
-        <div className="new-tour-confirm" role="alert">
-          <strong>Leave New Tour?</strong>
-          <p>{navigationPrompt.message}</p>
-          <div>
-            <Button type="button" variant="secondary" onClick={navigationPrompt.reset}>
-              Stay
-            </Button>
-            <Button type="button" onClick={navigationPrompt.proceed}>
-              Leave Page
-            </Button>
+        <div className="new-tour-leave-overlay">
+          <div
+            className="new-tour-confirm new-tour-leave-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="new-tour-leave-title"
+            aria-describedby="new-tour-leave-message"
+          >
+            <strong id="new-tour-leave-title">Leave New Tour?</strong>
+            <p id="new-tour-leave-message">{navigationPrompt.message}</p>
+            <div>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={navigationPrompt.reset}
+                autoFocus
+              >
+                Stay
+              </Button>
+              <Button type="button" onClick={navigationPrompt.proceed}>
+                Leave Page
+              </Button>
+            </div>
           </div>
         </div>
       )}

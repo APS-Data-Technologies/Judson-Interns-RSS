@@ -20,14 +20,15 @@ import {
   currentYearValue,
   defaultDatePreset,
   datePresetOptions,
+  getDateRange,
   statusOptions,
 } from "../../features/tours/filterConfig";
 import { toTitleCaseWords } from "../../utils/displayText";
 import "./TourFilterControls.css";
 
 const datePresetRows = [
-  ["all_time", "today"],
-  ["last_30_days"],
+  ["all_time", "month_to_date", "year_to_date"],
+  ["today", "yesterday", "last_30_days"],
 ];
 
 function getSummary(values, options, fallback) {
@@ -66,15 +67,51 @@ function RelativeDayPreset({ active, label, onDaysChange, onSelect, value }) {
         type="number"
         value={value ?? 7}
         onFocus={onSelect}
-        onChange={(event) => onDaysChange(event.target.value)}
+        onChange={(event) => {
+          const nextValue = event.target.value;
+          if (nextValue === "") {
+            onDaysChange("");
+            return;
+          }
+          onDaysChange(String(Math.min(Math.max(Number.parseInt(nextValue, 10) || 1, 1), 3650)));
+        }}
       />
       <span>days</span>
     </div>
   );
 }
 
-function DateOptionsContent({ filters, onChange }) {
+function formatRangeLabel(datePreset) {
+  const { dateFrom, dateTo } = getDateRange({ datePreset });
+  const formatDate = (value) => new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(`${value}T12:00:00`));
+  return `${formatDate(dateFrom)} – ${formatDate(dateTo)}`;
+}
+
+function DateOptionsContent({ filters, onChange, onPresetSelect }) {
   const optionsByValue = new Map(datePresetOptions.map((option) => [option.value, option]));
+  const [draftDateFrom, setDraftDateFrom] = useState(filters.dateFrom || "");
+  const [draftDateTo, setDraftDateTo] = useState(filters.dateTo || "");
+  const [rangeError, setRangeError] = useState("");
+
+  function applyCustomRange() {
+    if (!draftDateFrom || !draftDateTo) {
+      setRangeError("Select both From and To dates.");
+      return;
+    }
+    if (draftDateTo < draftDateFrom) {
+      setRangeError("To date cannot be earlier than From date.");
+      return;
+    }
+    setRangeError("");
+    onChange("dateFrom", draftDateFrom);
+    onChange("dateTo", draftDateTo);
+    onChange("datePreset", "custom");
+    onPresetSelect?.();
+  }
 
   return (
     <>
@@ -88,7 +125,12 @@ function DateOptionsContent({ filters, onChange }) {
                 type="button"
                 key={option.value}
                 aria-pressed={filters.datePreset === option.value}
-                onClick={() => onChange("datePreset", option.value)}
+                aria-label={value === "month_to_date" || value === "year_to_date" ? `${option.label}: ${formatRangeLabel(value)}` : undefined}
+                title={value === "month_to_date" || value === "year_to_date" ? formatRangeLabel(value) : undefined}
+                onClick={() => {
+                  onChange("datePreset", option.value);
+                  onPresetSelect?.();
+                }}
               >
                 {option.label}
               </button>
@@ -125,13 +167,13 @@ function DateOptionsContent({ filters, onChange }) {
           <small>From</small>
           <input
             aria-label="Start date"
-            max="2030-12-31"
+            max={draftDateTo || "2030-12-31"}
             min="2020-01-01"
             type="date"
-            value={filters.dateFrom}
+            value={draftDateFrom}
             onChange={(event) => {
-              onChange("datePreset", "custom");
-              onChange("dateFrom", event.target.value);
+              setDraftDateFrom(event.target.value);
+              setRangeError("");
             }}
           />
         </label>
@@ -140,15 +182,19 @@ function DateOptionsContent({ filters, onChange }) {
           <input
             aria-label="End date"
             max="2030-12-31"
-            min="2020-01-01"
+            min={draftDateFrom || "2020-01-01"}
             type="date"
-            value={filters.dateTo}
+            value={draftDateTo}
             onChange={(event) => {
-              onChange("datePreset", "custom");
-              onChange("dateTo", event.target.value);
+              setDraftDateTo(event.target.value);
+              setRangeError("");
             }}
           />
         </label>
+        {rangeError && <p className="tour-filter__range-error" role="alert">{rangeError}</p>}
+        <button className="tour-filter__range-apply" type="button" onClick={applyCustomRange}>
+          Apply
+        </button>
       </div>
     </>
   );
@@ -304,7 +350,7 @@ function DateFilter({ filters, isMobileActive, isOpen, onChange, onToggle }) {
       summary={getDateSummary(filters)}
     >
       <div className="tour-filter__menu tour-filter__menu--date">
-        <DateOptionsContent filters={filters} onChange={onChange} />
+        <DateOptionsContent filters={filters} onChange={onChange} onPresetSelect={onToggle} />
       </div>
     </FilterShell>
   );
@@ -500,7 +546,7 @@ function TourFilterControls({
     }
     return (
       <div className="tour-filters__mobile-expanded">
-        <DateOptionsContent filters={filters} onChange={onChange} />
+        <DateOptionsContent filters={filters} onChange={onChange} onPresetSelect={() => setMobileActiveFilter("")} />
       </div>
     );
   }

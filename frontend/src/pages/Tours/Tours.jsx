@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CalendarCheck, Eye, GraduationCap, Pencil, UserRoundCheck, UserRoundX, X } from "lucide-react";
 
@@ -14,6 +15,7 @@ import {
 } from "../../features/tours/filterConfig";
 import { gradeOptions } from "../../features/tours/gradeOptions";
 import {
+  cancelTour,
   getLeadSources,
   getLocations,
   getTour,
@@ -113,7 +115,8 @@ function TrackBadge({ trackInfo }) {
 
 function TourCard({ isSelected, onEdit, onSelect, onView, tour, trackInfo }) {
   const navigate = useNavigate();
-  const statusLabel = statusLabels[tour.current_status] || tour.status_label;
+  const displayStatus = tour.operational_status || tour.current_status;
+  const statusLabel = tour.operational_status_label || statusLabels[tour.current_status] || tour.status_label;
   const StatusIcon = tourStatusIcons[tour.current_status];
   const familyName = tour.family_name;
 
@@ -127,7 +130,7 @@ function TourCard({ isSelected, onEdit, onSelect, onView, tour, trackInfo }) {
         </button>
         <div className="tour-card__side">
           <span className="tour-status-cluster">
-            <span className={`tour-status tour-card__status status-color--${tour.current_status}`}>
+            <span className={`tour-status tour-card__status status-color--${displayStatus}`}>
               {StatusIcon && <StatusIcon aria-hidden="true" />}
               <span>{statusLabel}</span>
             </span>
@@ -141,13 +144,15 @@ function TourCard({ isSelected, onEdit, onSelect, onView, tour, trackInfo }) {
             >
               <Eye aria-hidden="true" />
             </button>
-            <button
-              type="button"
-              aria-label={`Edit ${familyName}`}
-              onClick={onEdit || (() => navigate(`/tours/${tour.id}/edit`))}
-            >
-              <Pencil aria-hidden="true" />
-            </button>
+            {!tour.cancelled_at && (
+              <button
+                type="button"
+                aria-label={`Edit ${familyName}`}
+                onClick={onEdit || (() => navigate(`/tours/${tour.id}/edit`))}
+              >
+                <Pencil aria-hidden="true" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -171,6 +176,8 @@ function TourDetailPane({
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [isCancelPromptOpen, setIsCancelPromptOpen] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
 
   useEffect(() => {
     let isCurrent = true;
@@ -266,6 +273,28 @@ function TourDetailPane({
     }
   }
 
+  async function handleCancelTour() {
+    setIsSaving(true);
+    setError("");
+    try {
+      const updatedTour = await cancelTour(tour.id, { reason: cancellationReason });
+      const eventData = await getTourEvents(tour.id);
+      const nextForm = getTourForm(updatedTour);
+      setTour(updatedTour);
+      setEvents(eventData);
+      setForm(nextForm);
+      setInitialForm(nextForm);
+      setIsCancelPromptOpen(false);
+      setCancellationReason("");
+      onSaved(updatedTour);
+      onModeChange("view");
+    } catch {
+      setError("Unable to cancel tour.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   if (!selectedTour) {
     return (
       <aside className="tours-detail-pane">
@@ -291,8 +320,8 @@ function TourDetailPane({
         <div className="tours-detail-pane__title">
           <h2>{familyName}</h2>
           <span className="tour-status-cluster tour-status-cluster--detail">
-            <span className={`tour-status tour-status--power status-color--${tour.current_status}`}>
-              {statusLabels[tour.current_status] || tour.status_label}
+            <span className={`tour-status tour-status--power status-color--${tour.operational_status || tour.current_status}`}>
+              {tour.operational_status_label || statusLabels[tour.current_status] || tour.status_label}
             </span>
             <TrackBadge trackInfo={trackInfo} />
           </span>
@@ -305,13 +334,15 @@ function TourDetailPane({
           >
             Details
           </Button>
-          <Button
-            type="button"
-            variant={mode === "edit" ? "primary" : "secondary"}
-            onClick={() => onModeChange("edit")}
-          >
-            Edit
-          </Button>
+          {!tour.cancelled_at && (
+            <Button
+              type="button"
+              variant={mode === "edit" ? "primary" : "secondary"}
+              onClick={() => onModeChange("edit")}
+            >
+              Edit
+            </Button>
+          )}
         </div>
       </header>
 
@@ -329,8 +360,24 @@ function TourDetailPane({
           <label><span>Date</span><input type="date" value={form.tourDate} onChange={(event) => updateForm("tourDate", event.target.value)} required /></label>
           <label><span>Time</span><input type="time" value={form.tourTime} onChange={(event) => updateForm("tourTime", event.target.value)} required /></label>
           <label className="tours-inline-form__wide"><span>Notes</span><textarea rows="3" value={form.notes} onChange={(event) => updateForm("notes", event.target.value)} /></label>
+          {isCancelPromptOpen && (
+            createPortal(<div className="tour-cancel-overlay">
+              <div className="tours-cancel-confirm" role="alertdialog" aria-modal="true" aria-labelledby="tours-cancel-title" aria-describedby="tours-cancel-message">
+                <strong id="tours-cancel-title">Cancel this tour?</strong>
+                <p id="tours-cancel-message">The tour will move to No Show and display a Cancelled badge. This cannot be undone.</p>
+                <label><span>Cancellation reason (optional)</span><textarea rows="3" value={cancellationReason} onChange={(event) => setCancellationReason(event.target.value)} /></label>
+                <div>
+                  <Button type="button" variant="secondary" onClick={() => setIsCancelPromptOpen(false)}>Keep Tour</Button>
+                  <Button type="button" className="tour-cancel-confirm" disabled={isSaving} onClick={handleCancelTour}>Confirm Cancellation</Button>
+                </div>
+              </div>
+            </div>, document.body)
+          )}
           <div className="tours-inline-form__actions">
-            <Button type="button" variant="secondary" onClick={() => onModeChange("view")}>Cancel</Button>
+            {tour.current_status === "scheduled" && !tour.cancelled_at && (
+              <Button type="button" className="tour-cancel-action" onClick={() => setIsCancelPromptOpen(true)}>Cancel Tour</Button>
+            )}
+            <Button type="button" variant="secondary" onClick={() => onModeChange("view")}>Exit Edit</Button>
             <Button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save Tour"}</Button>
           </div>
         </form>

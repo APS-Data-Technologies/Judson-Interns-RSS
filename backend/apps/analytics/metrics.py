@@ -9,12 +9,10 @@ from .core import percent
 
 BOOKED_STATUSES = {
     TourStatus.SCHEDULED,
-    TourStatus.RESCHEDULED,
     TourStatus.TOURED,
     TourStatus.ENROLLED,
     TourStatus.CHURNED,
     TourStatus.NO_SHOW,
-    TourStatus.CANCELLED,
 }
 TOURED_STATUSES = {TourStatus.TOURED, TourStatus.ENROLLED, TourStatus.CHURNED}
 
@@ -304,7 +302,7 @@ def pending_counts(tours, average_days):
     for tour in tours:
         tour_date = tour.scheduled_tour_date.date()
         if (
-            tour.current_status in {TourStatus.SCHEDULED, TourStatus.RESCHEDULED}
+            tour.current_status == TourStatus.SCHEDULED
             and tour_date < today
             and not reached_status(tour, TourStatus.TOURED)
             and not reached_status(tour, TourStatus.NO_SHOW)

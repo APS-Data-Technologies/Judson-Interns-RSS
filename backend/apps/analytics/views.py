@@ -210,7 +210,7 @@ class AnalyticsDrillThroughView(APIView):
             for tour in cohort_tours:
                 tour_date = timezone.localtime(tour.scheduled_tour_date).date()
                 tour_outcome_matches = (
-                        tour.current_status in {TourStatus.SCHEDULED, TourStatus.RESCHEDULED}
+                        tour.current_status == TourStatus.SCHEDULED
                         and tour_date < today
                         and not reached_status(tour, TourStatus.TOURED)
                         and not reached_status(tour, TourStatus.NO_SHOW)

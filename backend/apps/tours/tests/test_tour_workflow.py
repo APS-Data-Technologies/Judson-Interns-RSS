@@ -284,7 +284,7 @@ class TourWorkflowApiTests(APITestCase):
         self.authenticate(self.admin)
         response = self.client.post(
             reverse("tour-transition-status", args=[self.downtown_tour.id]),
-            {"status": TourStatus.RESCHEDULED},
+            {"status": "rescheduled"},
             format="json",
         )
 
@@ -303,13 +303,30 @@ class TourWorkflowApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.downtown_tour.refresh_from_db()
         event = self.downtown_tour.events.get()
-        self.assertEqual(self.downtown_tour.current_status, TourStatus.RESCHEDULED)
+        self.assertEqual(self.downtown_tour.current_status, TourStatus.SCHEDULED)
         self.assertEqual(self.downtown_tour.scheduled_tour_date, new_date)
-        self.assertEqual(event.status, TourStatus.RESCHEDULED)
+        self.assertEqual(event.status, "rescheduled")
         self.assertEqual(event.notes, "Family request")
 
+    def test_cancel_moves_tour_to_no_show_with_operational_details(self):
+        self.authenticate(self.staff)
+        response = self.client.post(
+            reverse("tour-cancel", args=[self.downtown_tour.id]),
+            {"reason": "Family is no longer available."},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.downtown_tour.refresh_from_db()
+        self.assertEqual(self.downtown_tour.current_status, TourStatus.NO_SHOW)
+        self.assertIsNotNone(self.downtown_tour.cancelled_at)
+        self.assertEqual(self.downtown_tour.cancellation_reason, "Family is no longer available.")
+        self.assertEqual(response.data["operational_status"], "cancelled")
+        event = self.downtown_tour.events.get()
+        self.assertEqual(event.status, "cancelled")
+
     def test_terminal_tour_cannot_be_rescheduled(self):
-        self.downtown_tour.current_status = TourStatus.CANCELLED
+        self.downtown_tour.current_status = TourStatus.NO_SHOW
         self.downtown_tour.save(update_fields=["current_status", "updated_at"])
         self.authenticate(self.admin)
         response = self.client.post(

@@ -38,6 +38,8 @@ class TourSerializer(serializers.ModelSerializer):
     lead_source_name = serializers.CharField(source="lead_source.source_name", read_only=True)
     assigned_staff_name = serializers.SerializerMethodField()
     status_label = serializers.CharField(source="get_current_status_display", read_only=True)
+    operational_status = serializers.SerializerMethodField()
+    operational_status_label = serializers.SerializerMethodField()
 
     class Meta:
         model = Tour
@@ -58,6 +60,10 @@ class TourSerializer(serializers.ModelSerializer):
             "scheduled_tour_date",
             "current_status",
             "status_label",
+            "operational_status",
+            "operational_status_label",
+            "cancelled_at",
+            "cancellation_reason",
             "created_at",
             "updated_at",
         )
@@ -65,12 +71,34 @@ class TourSerializer(serializers.ModelSerializer):
             "assigned_staff",
             "scheduled_tour_date",
             "current_status",
+            "cancelled_at",
+            "cancellation_reason",
             "created_at",
             "updated_at",
         )
 
     def get_assigned_staff_name(self, obj):
         return obj.assigned_staff.get_full_name() or obj.assigned_staff.email
+
+    def get_operational_status(self, obj):
+        if obj.cancelled_at:
+            return "cancelled"
+        if obj.current_status == TourStatus.SCHEDULED:
+            prefetched_events = getattr(obj, "_prefetched_objects_cache", {}).get("events")
+            was_rescheduled = (
+                any(event.status == "rescheduled" for event in prefetched_events)
+                if prefetched_events is not None
+                else obj.events.filter(status="rescheduled").exists()
+            )
+            if was_rescheduled:
+                return "rescheduled"
+        return obj.current_status
+
+    def get_operational_status_label(self, obj):
+        return {
+            "cancelled": "Cancelled",
+            "rescheduled": "Rescheduled",
+        }.get(self.get_operational_status(obj), obj.get_current_status_display())
 
 
 class TourCreateSerializer(serializers.Serializer):
@@ -188,6 +216,10 @@ class TourUpdateSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
+        if self.instance and self.instance.cancelled_at:
+            raise serializers.ValidationError(
+                {"status": "Cancelled tours cannot be edited."}
+            )
         protected_fields = {"current_status", "scheduled_tour_date"}
         attempted_fields = protected_fields.intersection(self.initial_data)
         if attempted_fields:
@@ -240,11 +272,6 @@ class TourStatusTransitionSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=TourStatus.choices)
     notes = serializers.CharField(required=False, allow_blank=True)
 
-    def validate_status(self, status_value):
-        if status_value == TourStatus.RESCHEDULED:
-            raise serializers.ValidationError("Use the reschedule endpoint for this status.")
-        return status_value
-
 
 class TourRescheduleSerializer(serializers.Serializer):
     scheduled_tour_date = serializers.DateTimeField()
@@ -254,6 +281,10 @@ class TourRescheduleSerializer(serializers.Serializer):
         if scheduled_tour_date <= timezone.now():
             raise serializers.ValidationError("The new tour date must be in the future.")
         return scheduled_tour_date
+
+
+class TourCancelSerializer(serializers.Serializer):
+    reason = serializers.CharField(required=False, allow_blank=True)
 
 
 class TourEventSerializer(serializers.ModelSerializer):

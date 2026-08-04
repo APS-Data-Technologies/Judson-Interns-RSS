@@ -53,8 +53,6 @@ const searchDestinations = [
   { group: "Statuses", title: "Churned", keywords: "status churn lost", path: "/pipeline?status=churned", roles: ["staff", "admin", "super_admin"], parent: "Pipeline" },
   { group: "Statuses", title: "Churned", keywords: "status churn lost", path: "/tours?status=churned", roles: ["staff", "admin", "super_admin"], parent: "Tours" },
   { group: "Statuses", title: "Churned", keywords: "status churn lost", path: "/analytics/volume?focus=churned", roles: ["staff", "admin", "super_admin"], parent: "Analytics › Volume and Trend" },
-  { group: "Statuses", title: "Rescheduled", keywords: "status reschedule moved", path: "/tours?status=rescheduled", roles: ["staff", "admin", "super_admin"], parent: "Tours" },
-  { group: "Statuses", title: "Cancelled", keywords: "status canceled cancellation", path: "/tours?status=cancelled", roles: ["staff", "admin", "super_admin"], parent: "Tours" },
   { group: "Statuses", title: "Off Track", keywords: "status overdue follow-up awaiting outcome", path: "/pipeline?category=off_track", roles: ["staff", "admin", "super_admin"], parent: "Pipeline" },
   { group: "Statuses", title: "On Track", keywords: "status healthy current", path: "/pipeline?category=on_track", roles: ["staff", "admin", "super_admin"], parent: "Pipeline" },
   { group: "Actions", title: "Create a new tour", keywords: "add book schedule", path: "/tours/new", roles: ["staff", "admin", "super_admin"] },

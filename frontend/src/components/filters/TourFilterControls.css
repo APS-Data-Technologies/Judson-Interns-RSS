@@ -253,17 +253,13 @@
 }
 
 .tour-filter__menu--date {
-  min-width: min(320px, 92vw);
+  min-width: min(410px, 92vw);
 }
 
 .tour-filter__preset-row {
   display: grid;
   gap: var(--space-2);
-  grid-template-columns: 1fr;
-}
-
-.tour-filter__preset-row:first-child {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .tour-filter__relative-grid {
@@ -358,6 +354,7 @@
   min-height: 38px;
   padding: 0 var(--space-3);
   text-align: left;
+  white-space: normal;
 }
 
 .tour-filter__preset[aria-pressed="true"] {
@@ -399,6 +396,31 @@
   padding-top: var(--space-3);
 }
 
+.tour-filter__range-error {
+  color: var(--rss-red);
+  font-size: 0.72rem;
+  font-weight: 800;
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.tour-filter__range-apply {
+  background: var(--color-action);
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 900;
+  grid-column: 1 / -1;
+  min-height: 40px;
+}
+
+.tour-filter__range-apply:hover {
+  background: var(--brand-blue-dark);
+}
+
 .tour-filter__range label {
   display: grid;
   gap: var(--space-1);
@@ -433,8 +455,16 @@
   .tour-filter--search,
   .tour-filter--cost,
   .tour-filter-assigned-location {
-    min-height: clamp(48px, 4.6vw, 53px);
+    min-height: clamp(46px, 4vw, 50px);
     padding-inline: clamp(0.52rem, 0.72vw, 0.7rem);
+  }
+
+  .tour-filters__sort > span,
+  .tour-filter__summary > span,
+  .tour-filter--search > span,
+  .tour-filter-assigned-location > div {
+    display: grid;
+    gap: 0.08rem;
   }
 
   .tour-filters__sort {
@@ -456,7 +486,7 @@
   .tour-filters__sort small,
   .tour-filter small,
   .tour-filter-assigned-location span {
-    font-size: clamp(0.61rem, 0.66vw, 0.68rem);
+    font-size: clamp(0.58rem, 0.62vw, 0.64rem);
   }
 
   .tour-filters__sort strong,
@@ -464,7 +494,8 @@
   .tour-filter select,
   .tour-filter input,
   .tour-filter-assigned-location strong {
-    font-size: clamp(0.76rem, 0.82vw, 0.84rem);
+    font-size: clamp(0.72rem, 0.78vw, 0.8rem);
+    line-height: 1.08;
   }
 }
 
@@ -841,6 +872,8 @@
   }
 
   .tour-filter__preset {
+    font-size: 0.78rem;
+    line-height: 1.1;
     min-height: 44px;
     padding: 0 var(--space-2);
     text-align: center;

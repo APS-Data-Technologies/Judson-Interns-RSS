@@ -84,6 +84,8 @@ function PipelineCard({ tour, onMove, isMoving, trackInfo }) {
   const [isMoveMenuOpen, setIsMoveMenuOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState("");
   const status = pipelineStatuses.find((item) => item.value === tour.current_status);
+  const displayStatus = tour.operational_status || tour.current_status;
+  const displayStatusLabel = tour.operational_status_label || status?.label || tour.status_label;
   const StatusIcon = status?.icon;
   const familyName = tour.family_name;
   const moveOptions = nextStageActions[tour.current_status] || [];
@@ -107,9 +109,9 @@ function PipelineCard({ tour, onMove, isMoving, trackInfo }) {
         </div>
         <div className="pipeline-card__side">
           <span className="pipeline-status-cluster">
-            <span className={`pipeline-card__badge status-color--${tour.current_status}`}>
+            <span className={`pipeline-card__badge status-color--${displayStatus}`}>
               {StatusIcon && <StatusIcon aria-hidden="true" />}
-              <span>{status?.label || tour.status_label}</span>
+              <span>{displayStatusLabel}</span>
             </span>
             <TrackBadge trackInfo={trackInfo} />
           </span>
@@ -121,13 +123,15 @@ function PipelineCard({ tour, onMove, isMoving, trackInfo }) {
             >
               <Eye aria-hidden="true" />
             </button>
-            <button
-              type="button"
-              aria-label={`Edit ${familyName}`}
-              onClick={() => navigate(`/tours/${tour.id}/edit`)}
-            >
-              <Pencil aria-hidden="true" />
-            </button>
+            {!tour.cancelled_at && (
+              <button
+                type="button"
+                aria-label={`Edit ${familyName}`}
+                onClick={() => navigate(`/tours/${tour.id}/edit`)}
+              >
+                <Pencil aria-hidden="true" />
+              </button>
+            )}
             {moveOptions.length > 0 && (
               <button
                 className="pipeline-card__move-trigger"
@@ -191,6 +195,8 @@ function PipelineKanbanCard({ tour, onMove, isMoving, onTouchDrop, trackInfo }) 
   const [touchPreview, setTouchPreview] = useState(null);
   const [pendingStatus, setPendingStatus] = useState("");
   const status = pipelineStatuses.find((item) => item.value === tour.current_status);
+  const displayStatus = tour.operational_status || tour.current_status;
+  const displayStatusLabel = tour.operational_status_label || status?.label || tour.status_label;
   const StatusIcon = status?.icon;
   const familyName = tour.family_name;
   const moveOptions = nextStageActions[tour.current_status] || [];
@@ -263,7 +269,7 @@ function PipelineKanbanCard({ tour, onMove, isMoving, onTouchDrop, trackInfo }) 
       className={`pipeline-kanban-card pipeline-kanban-card--${tour.current_status} ${
         isTouchDragging ? "is-touch-dragging" : ""
       }`}
-      draggable={!isMoving}
+      draggable={!isMoving && moveOptions.length > 0}
       onDragStart={(event) => {
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData("text/plain", String(tour.id));
@@ -273,7 +279,7 @@ function PipelineKanbanCard({ tour, onMove, isMoving, onTouchDrop, trackInfo }) 
         className="pipeline-kanban-card__grab"
         type="button"
         aria-label={`Drag ${familyName}`}
-        disabled={isMoving}
+        disabled={isMoving || moveOptions.length === 0}
         onPointerDown={beginTouchDrag}
         onPointerMove={continueTouchDrag}
         onPointerCancel={finishTouchDrag}
@@ -285,9 +291,9 @@ function PipelineKanbanCard({ tour, onMove, isMoving, onTouchDrop, trackInfo }) 
         <div className="pipeline-kanban-card__heading">
           <h3>{familyName}</h3>
           <span className="pipeline-status-cluster pipeline-status-cluster--kanban">
-            <span className={`pipeline-kanban-card__badge status-color--${tour.current_status}`}>
+            <span className={`pipeline-kanban-card__badge status-color--${displayStatus}`}>
               {StatusIcon && <StatusIcon aria-hidden="true" />}
-              <span>{status?.label || tour.status_label}</span>
+              <span>{displayStatusLabel}</span>
             </span>
             <TrackBadge trackInfo={trackInfo} />
           </span>
@@ -302,13 +308,15 @@ function PipelineKanbanCard({ tour, onMove, isMoving, onTouchDrop, trackInfo }) 
           >
             <Eye aria-hidden="true" />
           </button>
-          <button
-            type="button"
-            aria-label={`Edit ${familyName}`}
-            onClick={() => navigate(`/tours/${tour.id}/edit`)}
-          >
-            <Pencil aria-hidden="true" />
-          </button>
+          {!tour.cancelled_at && (
+            <button
+              type="button"
+              aria-label={`Edit ${familyName}`}
+              onClick={() => navigate(`/tours/${tour.id}/edit`)}
+            >
+              <Pencil aria-hidden="true" />
+            </button>
+          )}
           {moveOptions.length > 0 && (
             <button
               type="button"

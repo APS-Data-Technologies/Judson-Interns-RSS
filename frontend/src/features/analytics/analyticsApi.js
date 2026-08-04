@@ -1,4 +1,6 @@
 import api from "../../services/api/api";
+import readySetStemLogo from "../../assets/brand/rss-logo-horizontal.png";
+import { buildAnalyticsPaginationBoundaries } from "./analyticsPagination";
 
 const analyticsPageLabels = {
   overview: "Overview",
@@ -198,10 +200,66 @@ async function captureAnalyticsPage(element, html2canvas, reportTitle, viewTitle
       windowWidth: Math.max(1280, element.scrollWidth),
     });
     const scaleY = canvas.height / Math.max(1, captureHeight);
+    const rangeForElements = (startElement, endElement = startElement, startBleed = 0) => {
+      if (!startElement || !endElement) return null;
+      const startRect = startElement.getBoundingClientRect();
+      const endRect = endElement.getBoundingClientRect();
+      const start = Math.max(0, Math.round((startRect.top - rootRect.top - startBleed) * scaleY));
+      const end = Math.min(canvas.height, Math.round((endRect.bottom - rootRect.top) * scaleY));
+      return end > start ? { start, end } : null;
+    };
     const breakpoints = Array.from(breakElements)
       .map((child) => Math.round((child.getBoundingClientRect().top - rootRect.top) * scaleY))
       .filter((position) => position > 0 && position < canvas.height)
       .sort((first, second) => first - second);
+    const keepTogetherRanges = Array.from(element.querySelectorAll([
+      ":scope > .analytics-workspace h2",
+      ":scope > .analytics-workspace h3",
+      ":scope > .costs-margin-workspace h2",
+      ":scope > .costs-margin-workspace h3",
+    ].join(",")))
+      .map((heading) => {
+        const block = heading.closest("section, article");
+        if (!block || !element.contains(block)) return null;
+        const blockRect = block.getBoundingClientRect();
+        const headingRect = heading.getBoundingClientRect();
+        return {
+          start: Math.max(0, Math.round((blockRect.top - rootRect.top) * scaleY)),
+          headingEnd: Math.min(canvas.height, Math.round((headingRect.bottom - rootRect.top) * scaleY)),
+          end: Math.min(canvas.height, Math.round((blockRect.bottom - rootRect.top) * scaleY)),
+        };
+      })
+      .filter((range) => range && range.end > range.start)
+      .filter((range, index, ranges) => (
+        ranges.findIndex((candidate) => candidate.start === range.start && candidate.end === range.end) === index
+      ))
+      .sort((first, second) => (
+        first.start - second.start || (first.end - first.start) - (second.end - second.start)
+      ));
+    const atomicRanges = [
+      ...Array.from(element.querySelectorAll(".analytics-volume-performance-rankings"))
+        .map((section) => rangeForElements(section, section, 8)),
+      ...Array.from(element.querySelectorAll(".analytics-cohort-ranking-banner"))
+        .map((banner) => rangeForElements(
+          banner,
+          banner.nextElementSibling?.classList.contains("analytics-cohort-performance-rankings")
+            ? banner.nextElementSibling
+            : banner,
+          8,
+        )),
+      ...Array.from(element.querySelectorAll(".location-performance-section"))
+        .map((section) => {
+          const firstRowCards = Array.from(section.querySelectorAll(".location-performance-cards > article")).slice(0, 3);
+          return rangeForElements(section, firstRowCards.at(-1) || section, 8);
+        }),
+      ...Array.from(element.querySelectorAll(".analytics-summary-grid"))
+        .map((summary) => rangeForElements(reportHeading, summary, 8)),
+    ]
+      .filter(Boolean)
+      .filter((range, index, ranges) => (
+        ranges.findIndex((candidate) => candidate.start === range.start && candidate.end === range.end) === index
+      ))
+      .sort((first, second) => first.start - second.start || first.end - second.end);
     const repeatingHeaders = Array.from(element.querySelectorAll(".analytics-location-health"))
       .map((section) => {
         const heading = section.querySelector(".analytics-location-health__scroll > header");
@@ -224,7 +282,7 @@ async function captureAnalyticsPage(element, html2canvas, reportTitle, viewTitle
         && header.headerY >= 0
         && header.sourceEnd <= canvas.height
       ));
-    return { breakpoints, canvas, repeatingHeaders };
+    return { atomicRanges, breakpoints, canvas, keepTogetherRanges, repeatingHeaders };
   } finally {
     element.classList.remove("is-layout-pdf-export");
     element.classList.remove("is-layout-pdf-export--compact-variant");
@@ -270,20 +328,28 @@ function exportViewVariants(page, viewScope) {
 }
 
 function appendCanvasPages(pdf, capture, hasExistingPage, pageLabel, pageContexts) {
-  const { breakpoints, canvas, repeatingHeaders = [] } = capture;
+  const { atomicRanges = [], breakpoints, canvas, keepTogetherRanges = [], repeatingHeaders = [] } = capture;
   const margin = 18;
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const imageWidth = pageWidth - margin * 2;
   const usableHeight = pageHeight - margin * 2;
   const sourcePageHeight = Math.max(1, Math.floor((usableHeight * canvas.width) / imageWidth));
-  const segmentEdges = [0, ...breakpoints, canvas.height]
-    .filter((position, index, positions) => index === 0 || position > positions[index - 1])
-    .filter((position) => position >= 0 && position <= canvas.height);
+  const segmentEdges = buildAnalyticsPaginationBoundaries({
+    atomicRanges,
+    breakpoints,
+    canvasHeight: canvas.height,
+    keepTogetherStarts: keepTogetherRanges.map((range) => range.start),
+    sourcePageHeight,
+  });
   let cursorY = 0;
   let hasPage = hasExistingPage;
+  let lastContentEnd = 0;
 
-  const addSlice = (sourceY, currentSliceHeight) => {
+  const addSlice = (sourceY, currentSliceHeight, isRepeatedHeader = false) => {
+    if (!isRepeatedHeader && sourceY < lastContentEnd) {
+      throw new Error("Analytics PDF pagination cannot repeat or move backward through content.");
+    }
     const slice = document.createElement("canvas");
     slice.width = canvas.width;
     slice.height = currentSliceHeight;
@@ -313,10 +379,14 @@ function appendCanvasPages(pdf, capture, hasExistingPage, pageLabel, pageContext
       "FAST",
     );
     cursorY += renderedHeight;
+    if (!isRepeatedHeader) lastContentEnd = sourceY + currentSliceHeight;
   };
 
   const continuationHeaderFor = (sourceY) => repeatingHeaders.find((header) => (
     sourceY >= header.contentStart && sourceY < header.sourceEnd
+  ));
+  const keepTogetherRangeFor = (sourceY) => keepTogetherRanges.find((range) => (
+    Math.abs(range.start - sourceY) <= 2
   ));
 
   const startPage = (sourceY = null) => {
@@ -326,7 +396,7 @@ function appendCanvasPages(pdf, capture, hasExistingPage, pageLabel, pageContext
     pageContexts.set(pdf.internal.getCurrentPageInfo().pageNumber, pageLabel);
     const continuationHeader = sourceY === null ? null : continuationHeaderFor(sourceY);
     if (continuationHeader) {
-      addSlice(continuationHeader.headerY, continuationHeader.headerHeight);
+      addSlice(continuationHeader.headerY, continuationHeader.headerHeight, true);
     }
   };
 
@@ -348,11 +418,32 @@ function appendCanvasPages(pdf, capture, hasExistingPage, pageLabel, pageContext
       const freshPageCapacity = sourcePageHeight - (continuationHeader?.headerHeight || 0);
       const fitsOnFreshPage = remainingSourceHeight <= freshPageCapacity;
       const availableSpaceIsTooSmall = availableSourceHeight < sourcePageHeight * 0.14;
+      const keepTogetherRange = keepTogetherRangeFor(sourceY);
+      const keepTogetherHeight = keepTogetherRange
+        ? keepTogetherRange.end - keepTogetherRange.start
+        : 0;
+      const headingHeight = keepTogetherRange
+        ? Math.max(1, keepTogetherRange.headingEnd - keepTogetherRange.start)
+        : 0;
+      const requiredHeadingAndVisualHeight = keepTogetherRange
+        ? Math.min(
+          keepTogetherHeight,
+          freshPageCapacity,
+          Math.max(headingHeight * 2, Math.floor(freshPageCapacity * 0.42)),
+        )
+        : 0;
+      const shouldMoveHeadingAndVisual = (
+        cursorY > 0
+        && requiredHeadingAndVisualHeight > availableSourceHeight
+      );
 
       if (
-        segmentRenderedHeight > availableRenderedHeight
-        && cursorY > 0
-        && (fitsOnFreshPage || availableSpaceIsTooSmall)
+        shouldMoveHeadingAndVisual
+        || (
+          segmentRenderedHeight > availableRenderedHeight
+          && cursorY > 0
+          && (fitsOnFreshPage || availableSpaceIsTooSmall)
+        )
       ) {
         startPage(sourceY);
         continue;
@@ -376,12 +467,38 @@ function appendCanvasPages(pdf, capture, hasExistingPage, pageLabel, pageContext
   return hasPage;
 }
 
-function addExecutiveCover(pdf, options, pages, views) {
+function loadCoverLogo() {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image), { once: true });
+    image.addEventListener("error", () => reject(new Error("Unable to load the Ready Set STEM logo.")), { once: true });
+    image.src = readySetStemLogo;
+  });
+}
+
+function userDisplayName(user) {
+  const combinedName = [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim();
+  return user?.name || user?.full_name || combinedName || user?.email || "Authorized user";
+}
+
+function roleDisplayName(role) {
+  return String(role || "user")
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function addExecutiveCover(pdf, options, pages, views, user, logo) {
   const width = pdf.internal.pageSize.getWidth();
   const height = pdf.internal.pageSize.getHeight();
   const generatedAt = new Intl.DateTimeFormat("en-US", {
-    dateStyle: "long",
-    timeStyle: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    month: "long",
+    timeZoneName: "short",
+    year: "numeric",
   }).format(new Date());
   const coverage = options.coverage === "all"
     ? "All authorized analytics pages"
@@ -391,54 +508,67 @@ function addExecutiveCover(pdf, options, pages, views) {
     ? "All authorized data"
     : "Current filtered data";
 
-  pdf.setFillColor(10, 42, 86);
+  const navy = [10, 42, 86];
+  const gold = [255, 190, 24];
+  const body = [48, 62, 82];
+  const border = [218, 226, 236];
+
+  pdf.setFillColor(255, 255, 255);
   pdf.rect(0, 0, width, height, "F");
-  pdf.setFillColor(15, 111, 211);
-  pdf.rect(width * 0.62, 0, width * 0.38, height, "F");
-  pdf.setTextColor(255, 190, 24);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(12);
-  pdf.text("CONFIDENTIAL - EXECUTIVE ANALYTICS", 48, 66);
-  pdf.setFontSize(34);
-  pdf.text("RSS Analytics", 48, 122);
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(22);
-  pdf.text("Leadership Performance Report", 48, 156);
+  pdf.addImage(logo, "PNG", 48, 38, 209, 47, undefined, "FAST");
+  pdf.setDrawColor(...gold);
+  pdf.setLineWidth(2);
+  pdf.line(48, 105, width - 48, 105);
+
+  pdf.setTextColor(...navy);
   pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(11);
-  pdf.text(`Generated ${generatedAt}`, 48, 194);
+  pdf.setFontSize(27);
+  pdf.text("Tour-to-Enrollment", 48, 158);
+  pdf.setTextColor(...gold);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(38);
+  pdf.text("Analytics Report", 48, 202);
+
+  pdf.setTextColor(...navy);
+  pdf.setFontSize(13);
+  pdf.text("Report Details", 48, 262);
 
   const details = [
-    ["Coverage", coverage],
-    ["Views", viewScope],
-    ["Data scope", dataScope],
-    ["Included report views", String(views.length)],
+    ["Report Coverage", coverage],
+    ["Views Included", viewScope],
+    ["Data Scope", dataScope],
+    ["Report Views", String(views.length)],
   ];
   details.forEach(([label, value], index) => {
-    const y = 262 + index * 50;
-    pdf.setTextColor(190, 211, 235);
+    const cardGap = 12;
+    const cardWidth = (width - 96 - cardGap * 3) / 4;
+    const x = 48 + index * (cardWidth + cardGap);
+    pdf.setFillColor(249, 251, 254);
+    pdf.setDrawColor(...border);
+    pdf.setLineWidth(0.8);
+    pdf.roundedRect(x, 282, cardWidth, 88, 7, 7, "FD");
+    pdf.setTextColor(...navy);
     pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(8);
-    pdf.text(label.toUpperCase(), 48, y);
-    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(7.5);
+    pdf.text(label.toUpperCase(), x + 12, 306);
+    pdf.setTextColor(...body);
     pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(12);
-    pdf.text(value, 48, y + 18);
+    pdf.setFontSize(11);
+    const valueLines = pdf.splitTextToSize(value, cardWidth - 24);
+    pdf.text(valueLines, x + 12, 334);
   });
-  pdf.setTextColor(10, 42, 86);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(17);
-  pdf.text("Decision-ready analytics", width * 0.68, 120);
+
+  pdf.setDrawColor(...border);
+  pdf.setLineWidth(0.8);
+  pdf.line(48, height - 76, width - 48, height - 76);
+  pdf.setTextColor(...body);
   pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(10);
-  const note = pdf.splitTextToSize(
-    "This report summarizes current performance, historical comparisons, operational trends, rankings, and financial outcomes for authorized RSS data.",
-    width * 0.24,
-  );
-  pdf.text(note, width * 0.68, 150);
+  pdf.setFontSize(9);
+  pdf.text(`Generated by ${userDisplayName(user)} · ${roleDisplayName(user?.role)}`, 48, height - 48);
+  pdf.text(generatedAt, width - 48, height - 48, { align: "right" });
 }
 
-export async function exportAnalyticsLayoutPdf({ filters, onProgress, options, page, role }) {
+export async function exportAnalyticsLayoutPdf({ filters, onProgress, options, page, role, user }) {
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
     import("html2canvas-pro"),
     import("jspdf"),
@@ -467,7 +597,8 @@ export async function exportAnalyticsLayoutPdf({ filters, onProgress, options, p
     subject: "Leadership performance analytics",
     title: analyticsPdfFallbackFilename({ ...options, page }).replace(/\.pdf$/i, ""),
   });
-  addExecutiveCover(pdf, options, pages, views);
+  const coverLogo = await loadCoverLogo();
+  addExecutiveCover(pdf, options, pages, views, user, coverLogo);
   const pageContexts = new Map([[1, "Executive report cover"]]);
   let hasPage = true;
 

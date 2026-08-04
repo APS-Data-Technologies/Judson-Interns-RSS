@@ -1,7 +1,7 @@
 import { getTourEvents, listTours } from "./tourApi";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const TOUR_OUTCOME_STATUSES = ["scheduled", "rescheduled"];
+const TOUR_OUTCOME_STATUSES = ["scheduled"];
 
 export function parseTourTimestamp(value) {
   if (!value) return null;
@@ -137,4 +137,3 @@ export function filterToursByTrackCategory(tours, categories, averageDaysToEnrol
     categories.includes(getTourTrackInfo(tour, averageDaysToEnroll).category)
   ));
 }
-

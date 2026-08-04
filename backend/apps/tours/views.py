@@ -10,12 +10,13 @@ from apps.accounts.models import User
 from apps.accounts.permissions import filter_queryset_by_location
 from apps.leads.models import LeadSource
 from apps.sites.models import Location
-from apps.tours.models import Tour, TourEvent, TourStatus
+from apps.tours.models import Tour, TourEvent, TourEventStatus, TourStatus
 
 from .serializers import (
     HomeSummaryQuerySerializer,
     HomeTourSerializer,
     TourCreateSerializer,
+    TourCancelSerializer,
     TourEventSerializer,
     TourRescheduleSerializer,
     TourSerializer,
@@ -28,12 +29,6 @@ ALLOWED_STATUS_TRANSITIONS = {
     TourStatus.SCHEDULED: {
         TourStatus.TOURED,
         TourStatus.NO_SHOW,
-        TourStatus.CANCELLED,
-    },
-    TourStatus.RESCHEDULED: {
-        TourStatus.TOURED,
-        TourStatus.NO_SHOW,
-        TourStatus.CANCELLED,
     },
     TourStatus.TOURED: {
         TourStatus.ENROLLED,
@@ -57,7 +52,7 @@ class TourViewSet(
             "location",
             "lead_source",
             "assigned_staff",
-        ).order_by("scheduled_tour_date", "family__family_name")
+        ).prefetch_related("events").order_by("scheduled_tour_date", "family__family_name")
         queryset = filter_queryset_by_location(queryset, self.request.user)
 
         locations = self._param_list("location")
@@ -103,6 +98,8 @@ class TourViewSet(
             return TourStatusTransitionSerializer
         if self.action == "reschedule":
             return TourRescheduleSerializer
+        if self.action == "cancel":
+            return TourCancelSerializer
         if self.action == "events":
             return TourEventSerializer
         return TourSerializer
@@ -151,26 +148,48 @@ class TourViewSet(
 
         with transaction.atomic():
             tour = self._get_locked_tour()
-            if tour.current_status not in {
-                TourStatus.SCHEDULED,
-                TourStatus.RESCHEDULED,
-            }:
+            if tour.current_status != TourStatus.SCHEDULED or tour.cancelled_at:
                 return Response(
                     {"status": [f"Cannot reschedule a {tour.current_status} tour."]},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
             tour.scheduled_tour_date = serializer.validated_data["scheduled_tour_date"]
-            tour.current_status = TourStatus.RESCHEDULED
-            tour.save(
-                update_fields=["scheduled_tour_date", "current_status", "updated_at"]
-            )
+            tour.save(update_fields=["scheduled_tour_date", "updated_at"])
             TourEvent.objects.create(
                 tour=tour,
-                status=TourStatus.RESCHEDULED,
+                status=TourEventStatus.RESCHEDULED,
                 event_timestamp=timezone.now(),
                 updated_by=request.user,
                 notes=serializer.validated_data.get("notes", ""),
+            )
+
+        return Response(TourSerializer(tour, context={"request": request}).data)
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        with transaction.atomic():
+            tour = self._get_locked_tour()
+            if tour.current_status != TourStatus.SCHEDULED or tour.cancelled_at:
+                return Response(
+                    {"status": [f"Cannot cancel a {tour.current_status} tour."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            reason = serializer.validated_data.get("reason", "").strip()
+            tour.current_status = TourStatus.NO_SHOW
+            tour.cancelled_at = timezone.now()
+            tour.cancellation_reason = reason
+            tour.save(update_fields=["current_status", "cancelled_at", "cancellation_reason", "updated_at"])
+            TourEvent.objects.create(
+                tour=tour,
+                status=TourEventStatus.CANCELLED,
+                event_timestamp=tour.cancelled_at,
+                updated_by=request.user,
+                notes=reason,
             )
 
         return Response(TourSerializer(tour, context={"request": request}).data)

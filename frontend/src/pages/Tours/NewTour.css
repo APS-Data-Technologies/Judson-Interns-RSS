@@ -157,6 +157,30 @@
   gap: var(--space-2);
 }
 
+.new-tour-leave-overlay {
+  align-items: center;
+  background: rgb(10 24 50 / 58%);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: var(--space-4);
+  position: fixed;
+  z-index: 1000;
+}
+
+.new-tour-leave-dialog {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  box-shadow: 0 24px 60px rgb(10 24 50 / 30%);
+  max-width: 30rem;
+  padding: var(--space-5);
+  width: 100%;
+}
+
+.new-tour-leave-dialog > div {
+  justify-content: flex-end;
+}
+
 .new-tour-family-match__list {
   display: grid !important;
   gap: var(--space-2);
