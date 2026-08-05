@@ -3562,6 +3562,57 @@
   grid-template-columns: 1fr !important;
 }
 
+/*
+ * Mobile Safari preserves coarse-pointer media queries inside an off-screen
+ * iframe even when that frame is 1440px wide. Reassert the desktop report
+ * composition so exports are identical from phones, tablets, and laptops.
+ */
+.analytics-page.is-layout-pdf-export .analytics-temporal-rankings__title {
+  grid-column: auto !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-temporal-rankings__title > span {
+  display: block !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-temporal-rankings__mobile-info {
+  display: none !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-temporal-rankings__grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-temporal-rankings__grid article {
+  min-height: 20rem !important;
+  padding: 0.65rem !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-temporal-rankings__card-heading {
+  display: block !important;
+  width: auto !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-temporal-rankings__card-heading > strong {
+  display: none !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-temporal-line-plot svg {
+  overflow: hidden !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-ranking-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  min-width: 0 !important;
+}
+
+.analytics-page.is-layout-pdf-export .analytics-ranking {
+  gap: var(--space-2) !important;
+  grid-template-rows: auto 342px !important;
+  min-height: 454px !important;
+  padding: 0 !important;
+}
+
 .analytics-page.is-layout-pdf-export--compact-variant > .tour-filter-controls,
 .analytics-page.is-layout-pdf-export--compact-variant > .executive-brief {
   display: none !important;
