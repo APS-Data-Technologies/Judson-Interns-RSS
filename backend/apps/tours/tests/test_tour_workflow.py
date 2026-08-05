@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as datetime_timezone
 from unittest.mock import patch
 
 from django.urls import reverse
@@ -140,6 +140,42 @@ class TourWorkflowApiTests(APITestCase):
         self.assertEqual(response.data["student_name"], "Alex")
         self.assertEqual(event.status, TourStatus.SCHEDULED)
         self.assertEqual(event.updated_by, self.staff)
+
+    def test_naive_tour_times_are_interpreted_in_chicago_and_stored_as_utc(self):
+        self.authenticate(self.staff)
+
+        cases = (
+            (
+                "Winter Family",
+                "2030-01-15T21:19:00",
+                datetime(2030, 1, 16, 3, 19, tzinfo=datetime_timezone.utc),
+            ),
+            (
+                "Summer Family",
+                "2030-07-15T21:19:00",
+                datetime(2030, 7, 16, 2, 19, tzinfo=datetime_timezone.utc),
+            ),
+        )
+
+        for family_name, submitted_time, expected_utc in cases:
+            with self.subTest(submitted_time=submitted_time):
+                response = self.client.post(
+                    reverse("tour-list"),
+                    {
+                        "family_name": family_name,
+                        "location": self.downtown.id,
+                        "lead_source": self.source.id,
+                        "scheduled_tour_date": submitted_time,
+                    },
+                    format="json",
+                )
+
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                tour = Tour.objects.get(pk=response.data["id"])
+                self.assertEqual(
+                    tour.scheduled_tour_date.astimezone(datetime_timezone.utc),
+                    expected_utc,
+                )
 
     def test_create_tour_accepts_exactly_ten_phone_digits(self):
         self.authenticate(self.staff)

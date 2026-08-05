@@ -10,6 +10,7 @@ import {
 import { gradeOptions } from "../../features/tours/gradeOptions";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
 import { toTitleCaseWords } from "../../utils/displayText";
+import { APPLICATION_TIME_ZONE_LABEL, buildApplicationDateTime } from "../../utils/timeZone";
 import "./NewTour.css";
 
 function getInitialForm() {
@@ -167,7 +168,7 @@ function NewTour() {
         location: Number(form.location),
         lead_source: Number(form.leadSource),
         child_grade: form.childGrade,
-        scheduled_tour_date: `${form.tourDate}T${form.tourTime}:00`,
+        scheduled_tour_date: buildApplicationDateTime(form.tourDate, form.tourTime),
         notes: form.notes,
         ...resolutionPayload,
       });
@@ -352,7 +353,7 @@ function NewTour() {
           {fieldErrors.tourDate && <small>{fieldErrors.tourDate}</small>}
         </label>
         <label>
-          <span>Time *</span>
+          <span>Time ({APPLICATION_TIME_ZONE_LABEL}) *</span>
           <input
             type="time"
             value={form.tourTime}

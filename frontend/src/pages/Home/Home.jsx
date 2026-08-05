@@ -15,6 +15,7 @@ import {
   loadAverageDaysToEnroll,
 } from "../../features/tours/tourTrackUtils";
 import { toTitleCaseWords } from "../../utils/displayText";
+import { addApplicationCalendarDays, formatApplicationDateTime } from "../../utils/timeZone";
 import "./Home.css";
 
 const initialSummary = {
@@ -32,19 +33,11 @@ const initialPendingSummary = {
 };
 
 function formatTourDateTime(value) {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return formatApplicationDateTime(value);
 }
 
 function yesterdayValue() {
-  const date = new Date();
-  date.setDate(date.getDate() - 1);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return addApplicationCalendarDays(todayValue(), -1);
 }
 
 function sortToursByTime(tours) {

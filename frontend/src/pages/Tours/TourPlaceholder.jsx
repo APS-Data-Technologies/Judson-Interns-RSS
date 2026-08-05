@@ -19,22 +19,25 @@ import {
 import { gradeOptions } from "../../features/tours/gradeOptions";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
 import { toTitleCaseWords } from "../../utils/displayText";
+import {
+  APPLICATION_TIME_ZONE_LABEL,
+  buildApplicationDateTime,
+  formatApplicationDateTime,
+  toApplicationDateInput,
+  toApplicationTimeInput,
+} from "../../utils/timeZone";
 import "./TourPlaceholder.css";
 
 function formatDateTime(value) {
-  if (!value) return "";
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return formatApplicationDateTime(value);
 }
 
 function toDateInput(value) {
-  return value ? new Date(value).toISOString().slice(0, 10) : "";
+  return toApplicationDateInput(value);
 }
 
 function toTimeInput(value) {
-  return value ? new Date(value).toISOString().slice(11, 16) : "";
+  return toApplicationTimeInput(value);
 }
 
 function getFormFromTour(tour) {
@@ -207,7 +210,7 @@ function TourPlaceholder({ mode }) {
     setIsSaving(true);
 
     try {
-      const scheduledTourDate = `${form.tourDate}T${form.tourTime}:00`;
+      const scheduledTourDate = buildApplicationDateTime(form.tourDate, form.tourTime);
       const didReschedule =
         form.tourDate !== initialForm.tourDate ||
         form.tourTime !== initialForm.tourTime;
@@ -376,7 +379,7 @@ function TourPlaceholder({ mode }) {
             {fieldErrors.tourDate && <small>{fieldErrors.tourDate}</small>}
           </label>
           <label>
-            <span>Time *</span>
+            <span>Time ({APPLICATION_TIME_ZONE_LABEL}) *</span>
             <input type="time" value={form.tourTime} onChange={(event) => updateForm("tourTime", event.target.value)} aria-invalid={Boolean(fieldErrors.tourTime)} />
             {fieldErrors.tourTime && <small>{fieldErrors.tourTime}</small>}
           </label>

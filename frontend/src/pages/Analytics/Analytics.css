@@ -3495,6 +3495,13 @@
   padding: 0.85rem !important;
 }
 
+.analytics-page.is-layout-pdf-export .analytics-overview-links {
+  align-items: stretch !important;
+  gap: var(--space-3) !important;
+  grid-auto-rows: auto !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
 .analytics-page.is-layout-pdf-export .analytics-overview-links .analytics-preview-card h3 {
   margin: 0 !important;
 }

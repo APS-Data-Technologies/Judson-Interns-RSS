@@ -33,6 +33,7 @@ import {
   loadAverageDaysToEnroll,
 } from "../../features/tours/tourTrackUtils";
 import { toTitleCaseWords } from "../../utils/displayText";
+import { formatApplicationDateTime } from "../../utils/timeZone";
 import "./Pipeline.css";
 
 const pipelineStatuses = [
@@ -55,10 +56,7 @@ const nextStageActions = {
 };
 
 function formatTourDateTime(value) {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return formatApplicationDateTime(value);
 }
 
 function sortToursByTime(tours, direction) {

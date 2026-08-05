@@ -1,7 +1,7 @@
 # Judson Interns RSS Analytics Pages Handoff
 
 Date: July 21, 2026
-Purpose: detailed continuation context for a new Codex chat in the same project
+Purpose: detailed continuation context for a future development session in the same project
 
 ## Start Here
 
@@ -26,7 +26,7 @@ feature/additional-analytics-pages
 Current HEAD when this handoff was written:
 
 ```text
-7007539 Merge pull request #34 from APS-Data-Technologies/codex/cohort-analytics
+7007539 Merge pull request #34 for cohort analytics
 ```
 
 Branch state at handoff creation:
@@ -45,7 +45,7 @@ git status --short --branch
 git fetch origin
 ```
 
-Do not assume the desktop workspace shown to Codex is the repository. The active shell may open under `/Users/jagadeshkumarparanthaman/Documents/RSS`, but the actual repository used throughout this work is the path above.
+Do not assume the configured desktop workspace is the repository. The active shell may open under `/Users/jagadeshkumarparanthaman/Documents/RSS`, but the actual repository used throughout this work is the path above.
 
 ## Immediate Pending Request
 

@@ -1,3 +1,8 @@
+import {
+  addApplicationCalendarDays,
+  applicationTodayValue,
+} from "../../utils/timeZone";
+
 export const statusOptions = [
   { value: "scheduled", label: "Booked" },
   { value: "toured", label: "Toured" },
@@ -33,26 +38,12 @@ export const datePresetOptions = [
 
 export const defaultDatePreset = "last_30_days";
 
-function toDateInputValue(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function addDays(date, days) {
-  const nextDate = new Date(date);
-  nextDate.setDate(nextDate.getDate() + days);
-  return nextDate;
-}
-
 function getMonthRange(monthValue) {
   const [year, month] = monthValue.split("-").map(Number);
-  const firstDay = new Date(year, month - 1, 1);
-  const lastDay = new Date(year, month, 0);
+  const nextMonth = month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, "0")}-01`;
   return {
-    dateFrom: toDateInputValue(firstDay),
-    dateTo: toDateInputValue(lastDay),
+    dateFrom: `${year}-${String(month).padStart(2, "0")}-01`,
+    dateTo: addApplicationCalendarDays(nextMonth, -1),
   };
 }
 
@@ -70,7 +61,7 @@ function normalizedDayCount(value) {
 }
 
 export function todayValue() {
-  return toDateInputValue(new Date());
+  return applicationTodayValue();
 }
 
 export function currentMonthValue() {
@@ -82,7 +73,8 @@ export function currentYearValue() {
 }
 
 export function getDateRange(filters) {
-  const today = new Date();
+  const today = todayValue();
+  const [year, month] = today.split("-");
 
   switch (filters.datePreset) {
     case "all_time":
@@ -91,33 +83,33 @@ export function getDateRange(filters) {
       return { dateFrom: todayValue(), dateTo: todayValue() };
     case "month_to_date":
       return {
-        dateFrom: toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1)),
-        dateTo: todayValue(),
+        dateFrom: `${year}-${month}-01`,
+        dateTo: today,
       };
     case "year_to_date":
       return {
-        dateFrom: toDateInputValue(new Date(today.getFullYear(), 0, 1)),
-        dateTo: todayValue(),
+        dateFrom: `${year}-01-01`,
+        dateTo: today,
       };
     case "yesterday": {
-      const value = toDateInputValue(addDays(today, -1));
+      const value = addApplicationCalendarDays(today, -1);
       return { dateFrom: value, dateTo: value };
     }
     case "tomorrow": {
-      const value = toDateInputValue(addDays(today, 1));
+      const value = addApplicationCalendarDays(today, 1);
       return { dateFrom: value, dateTo: value };
     }
     case "last_7_days":
-      return { dateFrom: toDateInputValue(addDays(today, -6)), dateTo: todayValue() };
+      return { dateFrom: addApplicationCalendarDays(today, -6), dateTo: today };
     case "last_30_days":
-      return { dateFrom: toDateInputValue(addDays(today, -29)), dateTo: todayValue() };
+      return { dateFrom: addApplicationCalendarDays(today, -29), dateTo: today };
     case "last_n_days": {
       const dayCount = normalizedDayCount(filters.lastDays);
-      return { dateFrom: toDateInputValue(addDays(today, -(dayCount - 1))), dateTo: todayValue() };
+      return { dateFrom: addApplicationCalendarDays(today, -(dayCount - 1)), dateTo: today };
     }
     case "next_n_days": {
       const dayCount = normalizedDayCount(filters.nextDays);
-      return { dateFrom: todayValue(), dateTo: toDateInputValue(addDays(today, dayCount - 1)) };
+      return { dateFrom: today, dateTo: addApplicationCalendarDays(today, dayCount - 1) };
     }
     case "month":
       return getMonthRange(filters.month || currentMonthValue());
