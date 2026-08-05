@@ -18,7 +18,7 @@ import {
 } from "../../features/tours/tourTrackUtils";
 import { gradeOptions } from "../../features/tours/gradeOptions";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
-import { toTitleCaseWords } from "../../utils/displayText";
+import { toTitleCaseWords } from "../../utils/textFormatting";
 import {
   APPLICATION_TIME_ZONE_LABEL,
   buildApplicationDateTime,
@@ -26,7 +26,7 @@ import {
   toApplicationDateInput,
   toApplicationTimeInput,
 } from "../../utils/timeZone";
-import "./TourPlaceholder.css";
+import "./TourDetails.css";
 
 function formatDateTime(value) {
   return formatApplicationDateTime(value);
@@ -80,7 +80,7 @@ function TrackBadge({ trackInfo }) {
   );
 }
 
-function TourPlaceholder({ mode }) {
+function TourDetails({ mode }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = mode === "edit";
@@ -480,4 +480,4 @@ function TourPlaceholder({ mode }) {
   );
 }
 
-export default TourPlaceholder;
+export default TourDetails;

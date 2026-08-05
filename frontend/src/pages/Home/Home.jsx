@@ -14,7 +14,7 @@ import {
   getTourTrackInfo,
   loadAverageDaysToEnroll,
 } from "../../features/tours/tourTrackUtils";
-import { toTitleCaseWords } from "../../utils/displayText";
+import { toTitleCaseWords } from "../../utils/textFormatting";
 import { addApplicationCalendarDays, formatApplicationDateTime } from "../../utils/timeZone";
 import "./Home.css";
 

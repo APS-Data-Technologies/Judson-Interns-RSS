@@ -6,7 +6,7 @@ import ResetPassword from "./pages/Login/ResetPassword";
 import Home from "./pages/Home/Home";
 import Tours from "./pages/Tours/Tours";
 import NewTour from "./pages/Tours/NewTour";
-import TourPlaceholder from "./pages/Tours/TourPlaceholder";
+import TourDetails from "./pages/Tours/TourDetails";
 import Pipeline from "./pages/Pipeline/Pipeline";
 import Analytics from "./pages/Analytics/Analytics";
 import CostsMarginAnalytics from "./pages/Analytics/CostsMarginAnalytics";
@@ -51,11 +51,11 @@ const router = createBrowserRouter([
       },
       {
         path: "/tours/:id",
-        element: <TourPlaceholder mode="details" />,
+        element: <TourDetails mode="details" />,
       },
       {
         path: "/tours/:id/edit",
-        element: <TourPlaceholder mode="edit" />,
+        element: <TourDetails mode="edit" />,
       },
       {
         path: "/pipeline",

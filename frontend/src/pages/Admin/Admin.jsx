@@ -19,7 +19,7 @@ import {
   updateLeadSource as saveLeadSource,
 } from "../../features/admin/leadSourceApi";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
-import { formatPersonName, toTitleCaseWords } from "../../utils/displayText";
+import { formatPersonName, toTitleCaseWords } from "../../utils/textFormatting";
 import "./Admin.css";
 
 const emptyForm = {

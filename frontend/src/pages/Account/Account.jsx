@@ -14,7 +14,7 @@ import {
 
 import useAuth from "../../features/auth/useAuth";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
-import { formatPersonName, toTitleCaseWords } from "../../utils/displayText";
+import { formatPersonName, toTitleCaseWords } from "../../utils/textFormatting";
 import "./Account.css";
 
 function SettingsPanel({ children, icon: Icon, isOpen, onToggle, title }) {

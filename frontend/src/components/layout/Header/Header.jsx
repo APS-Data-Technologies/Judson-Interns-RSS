@@ -1,7 +1,7 @@
 import "./Header.css";
 import { Link, useNavigate } from "react-router-dom";
 import useAuth from "../../../features/auth/useAuth";
-import { toTitleCaseWords } from "../../../utils/displayText";
+import { toTitleCaseWords } from "../../../utils/textFormatting";
 
 function Header() {
   const { user, logout } = useAuth();

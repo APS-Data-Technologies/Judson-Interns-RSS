@@ -29,7 +29,7 @@ import {
   getTourTrackInfo,
   loadAverageDaysToEnroll,
 } from "../../features/tours/tourTrackUtils";
-import { toTitleCaseWords } from "../../utils/displayText";
+import { toTitleCaseWords } from "../../utils/textFormatting";
 import {
   APPLICATION_TIME_ZONE_LABEL,
   buildApplicationDateTime,

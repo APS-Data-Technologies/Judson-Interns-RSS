@@ -1,5 +1,5 @@
 import api from "../../services/api/api";
-import readySetStemLogo from "../../assets/brand/rss-logo-horizontal.png";
+import readySetStemLogo from "../../assets/brand/logo-horizontal.png";
 import { APPLICATION_TIME_ZONE } from "../../utils/timeZone";
 import { buildAnalyticsPaginationBoundaries } from "./analyticsPagination";
 
