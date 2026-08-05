@@ -690,14 +690,17 @@ When the user says `kr commit`, complete all steps:
 10. Resolve conflicts carefully without discarding user work.
 11. Re-run validation after the merge even if Git reports “Already up to date.”
 12. Push the feature branch.
-13. Provide a professional PR title and detailed description.
+13. Create a pull request targeting `develop` with a professional title and a
+    detailed description covering implementation, validation,
+    migrations/database impact, and deployment checks.
+14. Wait for the required frontend and backend checks.
+15. Merge only after both checks succeed, then record the PR URL and merge commit.
+16. Complete the Railway deployment monitoring workflow in Section 23.
 
 Never push directly to `develop` unless the user explicitly requests it.
 
-If PR handling is also requested, the PR targets `develop`, documents implementation,
-validation, migrations/database impact, and deployment checks; waits for required
-frontend/backend checks; merges only after success; and records the URL and merge
-commit.
+PR creation, required checks, merge, and post-merge Railway monitoring are mandatory
+parts of `kr commit`; they are not optional follow-up steps.
 
 After a merge to `develop`, Railway monitoring records the merge commit, waits for
 development frontend/backend success and PostgreSQL online status, repeats for
