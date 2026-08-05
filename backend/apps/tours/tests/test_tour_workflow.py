@@ -141,6 +141,45 @@ class TourWorkflowApiTests(APITestCase):
         self.assertEqual(event.status, TourStatus.SCHEDULED)
         self.assertEqual(event.updated_by, self.staff)
 
+    def test_create_tour_accepts_exactly_ten_phone_digits(self):
+        self.authenticate(self.staff)
+        response = self.client.post(
+            reverse("tour-list"),
+            {
+                "family_name": "Ten Digit Phone",
+                "contact_phone": "3125550199",
+                "location": self.downtown.id,
+                "lead_source": self.source.id,
+                "scheduled_tour_date": (timezone.now() + timedelta(days=3)).isoformat(),
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["contact_phone"], "3125550199")
+
+    def test_create_tour_rejects_phone_that_is_not_ten_digits(self):
+        self.authenticate(self.staff)
+        for phone in ("312555019", "312-555-0199", "31255501999"):
+            with self.subTest(phone=phone):
+                response = self.client.post(
+                    reverse("tour-list"),
+                    {
+                        "family_name": f"Invalid Phone {phone}",
+                        "contact_phone": phone,
+                        "location": self.downtown.id,
+                        "lead_source": self.source.id,
+                        "scheduled_tour_date": (timezone.now() + timedelta(days=3)).isoformat(),
+                    },
+                    format="json",
+                )
+
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertEqual(
+                    str(response.data["contact_phone"][0]),
+                    "Phone must contain exactly 10 digits.",
+                )
+
     def test_student_name_is_optional(self):
         self.authenticate(self.staff)
         response = self.client.post(

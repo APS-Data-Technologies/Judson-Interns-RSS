@@ -9,6 +9,12 @@ from apps.sites.models import Location
 from apps.tours.models import Tour, TourEvent, TourStatus
 
 
+def validate_phone_number(value):
+    if value and (len(value) != 10 or not value.isdigit()):
+        raise serializers.ValidationError("Phone must contain exactly 10 digits.")
+    return value
+
+
 class HomeSummaryQuerySerializer(serializers.Serializer):
     date = serializers.DateField(required=False)
     date_from = serializers.DateField(required=False)
@@ -115,7 +121,12 @@ class TourCreateSerializer(serializers.Serializer):
     )
     student_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     contact_email = serializers.EmailField(required=False, allow_blank=True)
-    contact_phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    contact_phone = serializers.CharField(
+        max_length=10,
+        required=False,
+        allow_blank=True,
+        validators=[validate_phone_number],
+    )
     location = serializers.PrimaryKeyRelatedField(queryset=Location.objects.filter(is_active=True))
     lead_source = serializers.PrimaryKeyRelatedField(queryset=LeadSource.objects.filter(is_active=True))
     child_grade = serializers.CharField(max_length=50, required=False, allow_blank=True)
@@ -201,7 +212,12 @@ class TourCreateSerializer(serializers.Serializer):
 class TourUpdateSerializer(serializers.ModelSerializer):
     family_name = serializers.CharField(max_length=150, required=False)
     contact_email = serializers.EmailField(required=False, allow_blank=True)
-    contact_phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    contact_phone = serializers.CharField(
+        max_length=10,
+        required=False,
+        allow_blank=True,
+        validators=[validate_phone_number],
+    )
 
     class Meta:
         model = Tour

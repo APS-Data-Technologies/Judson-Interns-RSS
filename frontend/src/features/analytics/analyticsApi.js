@@ -151,6 +151,15 @@ async function loadAnalyticsPageForExport(page, filters, routeParams = {}) {
     frame.addEventListener("error", () => reject(new Error(`Unable to load ${page} analytics.`)), { once: true });
   });
   const preparedPage = await waitForAnalyticsPage(frame);
+  const frameDocument = frame.contentDocument;
+  const viewportMeta = frameDocument?.querySelector('meta[name="viewport"]');
+  if (viewportMeta) viewportMeta.setAttribute("content", "width=1440, initial-scale=1");
+  if (frameDocument?.documentElement) {
+    frameDocument.documentElement.style.cssText += "width:1440px!important;min-width:1440px!important;max-width:1440px!important;";
+  }
+  if (frameDocument?.body) {
+    frameDocument.body.style.cssText += "width:1440px!important;min-width:1440px!important;max-width:1440px!important;";
+  }
   // Mobile Safari can omit linked stylesheet rules when html2canvas clones an
   // iframe document. An inline copy keeps the export faithful to the app UI.
   copyApplicationStylesToFrame(frame);
@@ -237,6 +246,10 @@ async function captureAnalyticsPage(element, html2canvas, reportTitle, viewTitle
         first.start - second.start || (first.end - first.start) - (second.end - second.start)
       ));
     const atomicRanges = [
+      ...Array.from(element.querySelectorAll(":scope > .analytics-workspace > .analytics-period"))
+        .map((period) => rangeForElements(period, period.nextElementSibling || period, 8)),
+      ...Array.from(element.querySelectorAll(".analytics-temporal-rankings"))
+        .map((section) => rangeForElements(section, section, 8)),
       ...Array.from(element.querySelectorAll(".analytics-volume-performance-rankings"))
         .map((section) => rangeForElements(section, section, 8)),
       ...Array.from(element.querySelectorAll(".analytics-cohort-ranking-banner"))

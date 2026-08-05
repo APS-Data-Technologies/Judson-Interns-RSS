@@ -126,6 +126,9 @@ function NewTour() {
         nextErrors[fieldName] = message;
       }
     });
+    if (form.phone && !/^\d{10}$/.test(form.phone)) {
+      nextErrors.phone = "Phone must contain exactly 10 digits.";
+    }
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       setError("Please complete the required fields before saving.");
@@ -149,6 +152,13 @@ function NewTour() {
     setIsSubmitting(true);
 
     try {
+      const resolutionPayload = {};
+      if (familyResolution.existing_family) {
+        resolutionPayload.existing_family = familyResolution.existing_family;
+      }
+      if (familyResolution.create_new_family === true) {
+        resolutionPayload.create_new_family = true;
+      }
       await createTour({
         family_name: form.familyName,
         student_name: form.studentName,
@@ -159,7 +169,7 @@ function NewTour() {
         child_grade: form.childGrade,
         scheduled_tour_date: `${form.tourDate}T${form.tourTime}:00`,
         notes: form.notes,
-        ...familyResolution,
+        ...resolutionPayload,
       });
       setIsSaved(true);
       navigate("/tours");
@@ -268,8 +278,11 @@ function NewTour() {
           <span>Phone *</span>
           <input
             type="tel"
+            inputMode="numeric"
+            maxLength="10"
+            pattern="[0-9]{10}"
             value={form.phone}
-            onChange={(event) => updateForm("phone", event.target.value)}
+            onChange={(event) => updateForm("phone", event.target.value.replace(/\D/g, "").slice(0, 10))}
             aria-invalid={Boolean(fieldErrors.phone)}
           />
           {fieldErrors.phone && <small>{fieldErrors.phone}</small>}
@@ -365,7 +378,7 @@ function NewTour() {
               <Button type="button" variant="secondary" onClick={() => setPendingAction("")}>
                 Cancel
               </Button>
-              <Button type="button" disabled={isSubmitting || isLoading} onClick={saveTour}>
+              <Button type="button" disabled={isSubmitting || isLoading} onClick={() => saveTour()}>
                 Confirm Save
               </Button>
             </div>
