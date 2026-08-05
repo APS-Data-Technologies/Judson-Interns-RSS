@@ -30,6 +30,13 @@ import {
   loadAverageDaysToEnroll,
 } from "../../features/tours/tourTrackUtils";
 import { toTitleCaseWords } from "../../utils/displayText";
+import {
+  APPLICATION_TIME_ZONE_LABEL,
+  buildApplicationDateTime,
+  formatApplicationDateTime,
+  toApplicationDateInput,
+  toApplicationTimeInput,
+} from "../../utils/timeZone";
 import "./Tours.css";
 
 const tourStatusIcons = {
@@ -41,18 +48,15 @@ const tourStatusIcons = {
 };
 
 function formatTourDateTime(value) {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return formatApplicationDateTime(value);
 }
 
 function toDateInput(value) {
-  return value ? new Date(value).toISOString().slice(0, 10) : "";
+  return toApplicationDateInput(value);
 }
 
 function toTimeInput(value) {
-  return value ? new Date(value).toISOString().slice(11, 16) : "";
+  return toApplicationTimeInput(value);
 }
 
 function getTourForm(tour) {
@@ -237,7 +241,7 @@ function TourDetailPane({
     setError("");
 
     try {
-      const scheduledTourDate = `${form.tourDate}T${form.tourTime}:00`;
+      const scheduledTourDate = buildApplicationDateTime(form.tourDate, form.tourTime);
       const didReschedule =
         form.tourDate !== initialForm.tourDate ||
         form.tourTime !== initialForm.tourTime;
@@ -358,7 +362,7 @@ function TourDetailPane({
           <label><span>Lead source</span><select value={form.leadSource} onChange={(event) => updateForm("leadSource", event.target.value)} required>{leadSources.map((source) => <option key={source.id} value={source.id}>{toTitleCaseWords(source.source_name)}</option>)}</select></label>
           <label><span>Grade</span><select value={form.childGrade} onChange={(event) => updateForm("childGrade", event.target.value)}><option value="">Select grade</option>{gradeOptions.map((grade) => <option key={grade} value={grade}>{grade}</option>)}</select></label>
           <label><span>Date</span><input type="date" value={form.tourDate} onChange={(event) => updateForm("tourDate", event.target.value)} required /></label>
-          <label><span>Time</span><input type="time" value={form.tourTime} onChange={(event) => updateForm("tourTime", event.target.value)} required /></label>
+          <label><span>Time ({APPLICATION_TIME_ZONE_LABEL})</span><input type="time" value={form.tourTime} onChange={(event) => updateForm("tourTime", event.target.value)} required /></label>
           <label className="tours-inline-form__wide"><span>Notes</span><textarea rows="3" value={form.notes} onChange={(event) => updateForm("notes", event.target.value)} /></label>
           {isCancelPromptOpen && (
             createPortal(<div className="tour-cancel-overlay">

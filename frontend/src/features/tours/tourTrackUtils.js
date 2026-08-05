@@ -1,4 +1,10 @@
 import { getTourEvents, listTours } from "./tourApi";
+import {
+  addApplicationCalendarDays,
+  applicationTodayValue,
+  differenceInApplicationCalendarDays,
+  toApplicationDateInput,
+} from "../../utils/timeZone";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TOUR_OUTCOME_STATUSES = ["scheduled"];
@@ -73,28 +79,17 @@ export function formatAverageDays(value) {
   return `${value} day${value === 1 ? "" : "s"}`;
 }
 
-function getStartOfDay(value) {
-  const date = value instanceof Date ? new Date(value) : parseTourTimestamp(value);
-  if (!date) return null;
-  date.setHours(0, 0, 0, 0);
-  return date;
-}
-
-function getTodayStart() {
-  return getStartOfDay(new Date());
-}
-
 function pluralizeDays(value) {
   return `${value} day${value === 1 ? "" : "s"}`;
 }
 
 export function getTourTrackInfo(tour, averageDaysToEnroll) {
   const status = tour?.current_status;
-  const tourDate = getStartOfDay(getTourDate(tour));
-  const today = getTodayStart();
+  const tourDate = toApplicationDateInput(getTourDate(tour));
+  const today = applicationTodayValue();
 
   if (TOUR_OUTCOME_STATUSES.includes(status) && tourDate && today && tourDate < today) {
-    const daysPast = Math.max(1, Math.floor((today - tourDate) / DAY_MS));
+    const daysPast = Math.max(1, differenceInApplicationCalendarDays(today, tourDate));
     return {
       category: "off_track",
       daysPast,
@@ -105,10 +100,11 @@ export function getTourTrackInfo(tour, averageDaysToEnroll) {
   }
 
   if (status === "toured" && Number.isFinite(averageDaysToEnroll)) {
-    const dueDate = getStartOfDay(getTourDate(tour));
+    const dueDate = tourDate
+      ? addApplicationCalendarDays(tourDate, Math.ceil(averageDaysToEnroll))
+      : null;
     if (dueDate && today) {
-      dueDate.setDate(dueDate.getDate() + Math.ceil(averageDaysToEnroll));
-      const daysPast = Math.floor((today - dueDate) / DAY_MS);
+      const daysPast = differenceInApplicationCalendarDays(today, dueDate);
       if (daysPast >= 1) {
         return {
           category: "off_track",

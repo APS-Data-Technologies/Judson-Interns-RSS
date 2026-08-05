@@ -1,5 +1,6 @@
 import api from "../../services/api/api";
 import readySetStemLogo from "../../assets/brand/rss-logo-horizontal.png";
+import { APPLICATION_TIME_ZONE } from "../../utils/timeZone";
 import { buildAnalyticsPaginationBoundaries } from "./analyticsPagination";
 
 const analyticsPageLabels = {
@@ -260,6 +261,8 @@ async function captureAnalyticsPage(element, html2canvas, reportTitle, viewTitle
             : banner,
           8,
         )),
+      ...Array.from(element.querySelectorAll(".analytics-workspace--overview > .analytics-overview-section"))
+        .map((section) => rangeForElements(section, section, 8)),
       ...Array.from(element.querySelectorAll(".location-performance-section"))
         .map((section) => {
           const firstRowCards = Array.from(section.querySelectorAll(".location-performance-cards > article")).slice(0, 3);
@@ -510,6 +513,7 @@ function addExecutiveCover(pdf, options, pages, views, user, logo) {
     hour: "numeric",
     minute: "2-digit",
     month: "long",
+    timeZone: APPLICATION_TIME_ZONE,
     timeZoneName: "short",
     year: "numeric",
   }).format(new Date());
