@@ -208,10 +208,8 @@
 .executive-brief__figures strong { color: #ffffff; font-size: clamp(0.9rem, 1.4vw, 1.2rem); }
 .executive-brief__sections { display: grid; gap: var(--space-3); grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .executive-brief__section { background: #ffffff; border-left: 4px solid #6b8aac; border-radius: var(--radius-sm); color: var(--brand-navy-dark); padding: 0.75rem 0.85rem; }
-.executive-brief__section--working { border-left-color: var(--status-enrolled); }
-.executive-brief__section--attention { border-left-color: var(--rss-gold); }
-.executive-brief__section--actions { border-left-color: var(--brand-blue); }
-.executive-brief__section--alerts { border-left-color: var(--rss-red); }
+.executive-brief__section--highlights { border-left-color: var(--status-enrolled); }
+.executive-brief__section--risks { border-left-color: var(--rss-gold); }
 .executive-brief__section h3 { font-family: var(--font-family-heading); font-size: 0.76rem; margin: 0 0 0.4rem; }
 .executive-brief__section ul { display: grid; gap: 0.35rem; margin: 0; padding-left: 1rem; }
 .executive-brief__section li { color: var(--color-text-secondary); font-size: 0.68rem; font-weight: 750; line-height: 1.35; }
