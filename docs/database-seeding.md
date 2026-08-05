@@ -4,7 +4,10 @@ PostgreSQL schema changes are managed through Django migrations. Repository seed
 
 ## Seed Script
 
-`database/seeds/rss_seed_data.sql` contains validated dummy data for users, locations, lead sources, families, tours, tour events, and cost basis records.
+`backend/seeds/rss_seed_data.sql` is the single canonical seed script. It contains
+validated dummy data for users, locations, lead sources, families, tours, tour
+events, and cost basis records. It lives under `backend/` so it is available within
+the backend deployment context.
 
 The script:
 
@@ -26,7 +29,7 @@ Load environment variables and execute the seed script:
 set -a
 source .env
 set +a
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/seeds/rss_seed_data.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/seeds/rss_seed_data.sql
 ```
 
 Do not commit `.env`, database credentials, production exports, or XLSX seed files.

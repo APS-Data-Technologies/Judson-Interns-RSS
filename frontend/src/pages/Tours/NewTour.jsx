@@ -9,7 +9,7 @@ import {
 } from "../../features/tours/tourApi";
 import { gradeOptions } from "../../features/tours/gradeOptions";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
-import { toTitleCaseWords } from "../../utils/displayText";
+import { toTitleCaseWords } from "../../utils/textFormatting";
 import { APPLICATION_TIME_ZONE_LABEL, buildApplicationDateTime } from "../../utils/timeZone";
 import "./NewTour.css";
 

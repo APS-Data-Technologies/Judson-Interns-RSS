@@ -9,7 +9,7 @@ import {
 import { listLocations } from "../../features/admin/locationApi";
 import useAuth from "../../features/auth/useAuth";
 import useUnsavedChangesPrompt from "../../hooks/useUnsavedChangesPrompt";
-import { toTitleCaseWords } from "../../utils/displayText";
+import { toTitleCaseWords } from "../../utils/textFormatting";
 import "./Admin.css";
 
 const emptyForm = {

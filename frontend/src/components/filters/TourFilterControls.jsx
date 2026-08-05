@@ -23,7 +23,7 @@ import {
   getDateRange,
   statusOptions,
 } from "../../features/tours/filterConfig";
-import { toTitleCaseWords } from "../../utils/displayText";
+import { toTitleCaseWords } from "../../utils/textFormatting";
 import "./TourFilterControls.css";
 
 const datePresetRows = [

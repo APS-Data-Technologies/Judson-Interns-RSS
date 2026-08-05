@@ -8,7 +8,7 @@ import BrandSection from "../../components/auth/BrandSection";
 import ProductSection from "../../components/auth/ProductSection";
 import HeroSection from "../../components/auth/HeroSection";
 import LoginCard from "../../components/auth/LoginCard";
-import loginBackgroundVideo from "../../assets/brand/rss-login-background.mp4";
+import loginBackgroundVideo from "../../assets/brand/login-background.mp4";
 
 import "./Login.css";
 

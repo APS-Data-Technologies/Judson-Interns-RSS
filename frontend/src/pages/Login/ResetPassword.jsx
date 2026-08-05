@@ -8,8 +8,8 @@ import HeroSection from "../../components/auth/HeroSection";
 import { Input } from "../../components/form";
 import { Button, Card } from "../../components/ui";
 import { confirmPasswordReset } from "../../features/auth/authApi";
-import brandLockup from "../../assets/brand/rss-logo-horizontal.png";
-import loginBackgroundVideo from "../../assets/brand/rss-login-background.mp4";
+import brandLockup from "../../assets/brand/logo-horizontal.png";
+import loginBackgroundVideo from "../../assets/brand/login-background.mp4";
 
 import "./PasswordReset.css";
 

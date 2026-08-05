@@ -1,6 +1,7 @@
-# Railway Deployment
+# Deployment and Rollback
 
-This project is deployed to Railway as three services in one project:
+This project uses separate Railway development and staging environments. Each
+environment contains three services:
 
 - `postgres`: Railway PostgreSQL
 - `backend`: Django API
@@ -22,12 +23,14 @@ The frontend now supports Railway deployment with:
 - `npm run build` to generate `dist`
 - `npm run start` to serve the SPA from `dist`
 
-## 2. Create the Railway project
+Production is not covered by these instructions and requires separate company
+authorization, configuration, ownership, and validation.
 
-1. In Railway, create a new project from the GitHub repository.
-2. Add a `PostgreSQL` service to the project.
-3. Add a `backend` service from the same repository.
-4. Add a `frontend` service from the same repository.
+## 2. Railway project structure
+
+Each environment must have a PostgreSQL service plus backend and frontend services
+connected to the company GitHub repository. Keep environment variables and data
+isolated between development and staging.
 
 ## 3. Backend service settings
 
@@ -113,7 +116,7 @@ Recommended layout:
 - frontend public URL: `https://app.<your-domain>`
 - backend public URL: `https://api.<your-domain>`
 
-## 6. First deployment steps
+## 6. Initial environment setup
 
 After the backend service is deployed:
 
@@ -124,13 +127,15 @@ After the backend service is deployed:
 python manage.py migrate
 ```
 
-3. Create the first super admin:
+3. Create the first Super Admin only when company authorization has been provided:
 
 ```bash
 python manage.py createsuperuser
 ```
 
-4. If required, load the SQL seed data into the Railway PostgreSQL database using your normal database client.
+4. Do not load seed data unless the company explicitly approves it for that specific
+   environment. The canonical optional seed file is
+   `backend/seeds/rss_seed_data.sql`.
 
 ## 7. Ongoing deploy flow
 
@@ -179,9 +184,26 @@ Check these URLs after deployment:
 - Django admin: `https://<backend-domain>/admin/`
 - API auth/login flow from the frontend
 
+Also confirm a protected endpoint returns HTTP 401 when requested without
+authentication.
+
 ## 10. Common issues
 
 - `DisallowedHost`: add the deployed backend domain to `ALLOWED_HOSTS`
 - CORS errors: add the frontend domain to `CORS_ALLOWED_ORIGINS`
 - Admin login CSRF failure: add the backend HTTPS domain to `CSRF_TRUSTED_ORIGINS`
 - Failed deploy health check: ensure Django is listening on `$PORT` and `/api/health` returns `200`
+
+## 11. Rollback
+
+1. Record the environment, failed merge commit, symptoms, and deployment identifiers.
+2. Preserve deployment and application logs.
+3. For an application-only regression, redeploy the last company-approved known-good
+   commit through Railway.
+4. Do not reverse an applied database migration without an explicit, reviewed data
+   recovery plan. Prefer a tested forward corrective migration.
+5. After recovery, verify frontend and backend deployment success, PostgreSQL online
+   status, public routes, authentication boundaries, and the affected workflow.
+6. Record the recovered commit and follow-up work.
+
+Production rollback and database restoration require separate company approval.

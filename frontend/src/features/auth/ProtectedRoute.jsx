@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppShell } from "../../components/layout";
-import { toTitleCaseWords } from "../../utils/displayText";
+import { toTitleCaseWords } from "../../utils/textFormatting";
 import useAuth from "./useAuth";
 
 const routeTitles = {

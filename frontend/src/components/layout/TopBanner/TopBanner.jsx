@@ -1,4 +1,4 @@
-import brandLockup from "../../../assets/brand/rss-logo-horizontal.png";
+import brandLockup from "../../../assets/brand/logo-horizontal.png";
 import "./TopBanner.css";
 
 function TopBanner() {

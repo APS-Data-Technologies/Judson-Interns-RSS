@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Button, Card } from "../ui";
 import { Input } from "../form";
-import brandLockup from "../../assets/brand/rss-logo-horizontal.png";
+import brandLockup from "../../assets/brand/logo-horizontal.png";
 
 function LoginCard({
   id,
