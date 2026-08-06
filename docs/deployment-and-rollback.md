@@ -1,7 +1,7 @@
 # Deployment and Rollback
 
-This project uses separate Railway development and staging environments. Each
-environment contains three services:
+This project uses separate Railway development, staging, and production
+environments. Each environment contains three services:
 
 - `postgres`: Railway PostgreSQL
 - `backend`: Django API
@@ -23,14 +23,31 @@ The frontend now supports Railway deployment with:
 - `npm run build` to generate `dist`
 - `npm run start` to serve the SPA from `dist`
 
-Production is not covered by these instructions and requires separate company
-authorization, configuration, ownership, and validation.
+Production deploys from `main`. Development and staging deploy from `develop`.
+Ready Set STEM company production must be recreated in a company-owned Railway
+workspace with company-owned secrets, domains, billing, database, and accounts. See
+`docs/company-deployment-handover.md` for the complete company deployment package.
+
+## Current production release
+
+- source branch: `main`
+- release commit: `2181fdcb8a0c72dd9b9a31d027acc8ae8bceb540`
+- release commit short form: `2181fdc`
+- release tree: identical to validated `develop` commit
+  `8b567f075b5d8539e7e179da120989e4cc5fd2ff`
+- frontend: `https://frontend-production-e358.up.railway.app`
+- backend: `https://backend-production-7988.up.railway.app`
+- deployment validation: frontend and backend successful, PostgreSQL online,
+  backend health HTTP 200, and unauthenticated protected endpoint HTTP 401
+
+This release record contains no credentials. Account passwords and environment
+variable values must never be added to this document.
 
 ## 2. Railway project structure
 
 Each environment must have a PostgreSQL service plus backend and frontend services
-connected to the company GitHub repository. Keep environment variables and data
-isolated between development and staging.
+connected to the company GitHub repository. Keep environment variables, secrets,
+accounts, and data isolated between development, staging, and production.
 
 ## 3. Backend service settings
 
@@ -139,9 +156,12 @@ python manage.py createsuperuser
 
 ## 7. Ongoing deploy flow
 
-- Merge changes into `develop`
-- Railway auto-deploys the updated backend and frontend services
-- Railway waits for the backend health check to return `200`
+- Feature pull requests target `develop`.
+- Railway deploys validated changes to development and staging from `develop`.
+- A reviewed release merge updates `main` only after required checks and staging
+  acceptance succeed.
+- Production backend and frontend deploy from `main`.
+- Railway waits for required GitHub checks and the backend health check to succeed.
 
 ## 8. GitHub Actions and Railway autodeploy
 
@@ -174,6 +194,9 @@ Recommended Railway service settings:
   - GitHub branch: `develop`
   - Root directory: `/frontend`
   - Wait for CI: enabled
+
+Production uses the same settings except both web services connect to `main` and
+use production-only variables, domains, database, and secrets.
 
 ## 9. Manual verification
 
