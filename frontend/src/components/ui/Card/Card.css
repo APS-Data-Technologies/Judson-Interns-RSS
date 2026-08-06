@@ -1,0 +1,42 @@
+.rss-card {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: box-shadow 150ms ease, transform 150ms ease;
+}
+
+.rss-card--default {
+  color: var(--color-text-primary);
+}
+
+.rss-card--soft {
+  background: var(--color-background);
+}
+
+.rss-card--borderless {
+  border: none;
+}
+
+.rss-card--padding-sm {
+  padding: 12px;
+}
+
+.rss-card--padding-md {
+  padding: 16px;
+}
+
+.rss-card--padding-lg {
+  padding: 24px;
+}
+
+.rss-card--shadow-none {
+  box-shadow: none;
+}
+
+.rss-card--shadow-sm {
+  box-shadow: var(--shadow-card);
+}
+
+.rss-card--shadow-md {
+  box-shadow: var(--shadow-soft);
+}

@@ -1,0 +1,150 @@
+.app-shell {
+  width: 100vw;
+  height: 100svh;
+  height: 100dvh;
+  background: var(--color-background);
+  overflow: hidden;
+  max-width: none;
+  margin: 0;
+}
+
+.app-shell,
+.app-shell * {
+  box-sizing: border-box;
+}
+
+.app-shell__main {
+  min-width: 0;
+  min-height: 0;
+}
+
+.app-shell__title-bar {
+  min-width: 0;
+}
+
+.app-shell__content {
+  min-width: 0;
+  min-height: 0;
+  background: var(--color-background);
+  padding: var(--page-pad-y) var(--page-pad-x);
+  overflow: auto;
+  scroll-padding-top: 120px;
+}
+
+/* Phones and portrait tablets use the compact composition. */
+@media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
+  .app-shell {
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    gap: clamp(0.25rem, 0.7vmin, 0.4rem);
+    padding: clamp(0.3rem, 0.8vmin, 0.45rem);
+  }
+
+  .app-shell__sidebar {
+    display: none;
+  }
+
+  .app-shell__main {
+    display: grid;
+    grid-template-rows: 1fr;
+    gap: clamp(0.25rem, 0.7vmin, 0.4rem);
+    min-height: 0;
+    padding-bottom: clamp(5rem, 10.5vmin, 5.8rem);
+  }
+
+  .app-shell__top-banner {
+    display: block;
+    position: relative;
+    top: auto;
+    z-index: 45;
+  }
+
+  .app-shell__title-bar {
+    position: relative;
+    top: auto;
+    z-index: 40;
+  }
+
+  .app-shell__bottom-nav {
+    display: block;
+    position: fixed;
+    right: clamp(0.35rem, 1vmin, 0.65rem);
+    bottom: clamp(0.35rem, 1vmin, 0.65rem);
+    left: clamp(0.35rem, 1vmin, 0.65rem);
+    z-index: 10;
+    min-width: 0;
+  }
+
+  .app-shell__content {
+    border-radius: var(--radius-md);
+    padding: clamp(0.55rem, 1.8vw, 0.8rem) clamp(0.55rem, 1.8vw, 0.8rem);
+  }
+}
+
+/* Landscape tablets and wider screens use the full laptop composition. */
+@media (min-width: 1181px), (min-width: 768px) and (max-width: 1180px) and (orientation: landscape) {
+  .app-shell {
+    display: grid;
+    grid-template-columns: 256px minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    gap: 0;
+    padding: 0;
+  }
+
+  .app-shell__top-banner {
+    display: block;
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .app-shell__sidebar {
+    display: block;
+    grid-column: 1;
+    grid-row: 3;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .app-shell__main {
+    grid-column: 2;
+    grid-row: 3;
+    display: grid;
+    grid-template-rows: 1fr;
+    gap: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-shell__title-bar {
+    display: block;
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .app-shell__bottom-nav {
+    display: none !important;
+  }
+
+  .app-shell__content {
+    border-radius: 0;
+    padding:
+      clamp(0.42rem, 0.62vw, 0.62rem)
+      var(--page-pad-x)
+      clamp(0.72rem, 0.9vw, 0.95rem);
+  }
+
+  .top-banner {
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .app-shell {
+    overflow: auto;
+  }
+
+  .app-shell__content {
+    overflow-x: hidden;
+  }
+}

@@ -1,0 +1,322 @@
+.admin-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  margin: 0 auto;
+  max-width: 1120px;
+  width: 100%;
+}
+
+.admin-tabs {
+  display: grid;
+  gap: var(--spacing-sm);
+  grid-auto-columns: minmax(120px, 1fr);
+  grid-auto-flow: column;
+  overflow-x: auto;
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  scrollbar-width: none;
+}
+
+.admin-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-tabs a,
+.admin-primary-link,
+.admin-route-list a {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-weight: 800;
+}
+
+.admin-tabs a {
+  padding: 0 16px;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.admin-tabs a.active {
+  background: var(--color-action);
+  border-color: var(--color-action);
+  color: #ffffff;
+}
+
+.admin-heading,
+.form-heading,
+.user-status-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.admin-heading p,
+.user-summary span {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.empty-state {
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  border-radius: var(--radius-sm);
+  color: var(--info-text);
+  font-size: 0.875rem;
+  font-weight: 800;
+  padding: var(--space-3) var(--space-4);
+}
+
+.admin-heading button,
+.admin-primary-link,
+.form-heading button,
+.user-status-actions button {
+  border: 0;
+  background: transparent;
+  color: var(--color-primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.form-heading button {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.admin-heading > button {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-action);
+  color: #ffffff;
+}
+
+.admin-primary-link {
+  min-height: 40px;
+  padding: 0 12px;
+  background: var(--color-action);
+  color: #ffffff;
+}
+
+.admin-route-list {
+  display: grid;
+  gap: var(--spacing-sm);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.admin-route-list a {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-action);
+}
+
+.user-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-sm);
+  padding-block: var(--spacing-lg);
+  border-block: 1px solid var(--color-border);
+}
+
+.form-heading {
+  margin-bottom: var(--spacing-sm);
+}
+
+.user-form label {
+  margin-top: var(--spacing-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.user-form .admin-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+.user-form .admin-checkbox input {
+  width: auto;
+  min-height: auto;
+}
+
+.user-form input,
+.user-form select,
+.user-form textarea,
+.user-form .primary-action {
+  width: 100%;
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+}
+
+.user-form input,
+.user-form select,
+.user-form textarea {
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-soft);
+  color: var(--color-text-primary);
+}
+
+.user-form textarea {
+  min-height: 112px;
+  padding: 12px;
+  resize: vertical;
+}
+
+.user-form .primary-action {
+  margin-top: var(--spacing-md);
+  border: 0;
+  background: var(--color-action);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.user-list {
+  border-top: 1px solid var(--color-border);
+}
+
+.user-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.user-summary {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-summary strong,
+.user-summary span {
+  overflow-wrap: anywhere;
+}
+
+.user-status-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.status-active,
+.status-inactive {
+  margin-right: auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.status-active { color: var(--color-success); }
+.status-inactive { color: var(--status-cancelled); }
+
+.user-status-actions .admin-row-action {
+  color: var(--color-action);
+}
+
+.user-status-actions .admin-row-action--edit {
+  color: var(--brand-blue);
+}
+
+.user-status-actions .admin-row-action--deactivate {
+  color: var(--color-danger);
+}
+
+.user-status-actions .admin-row-action--reactivate {
+  color: var(--color-success);
+}
+
+@media (max-width: 767px), (min-width: 768px) and (max-width: 1180px) and (orientation: portrait) {
+  .admin-page {
+    gap: var(--space-3);
+  }
+
+  .admin-tabs {
+    grid-auto-columns: minmax(104px, 1fr);
+    margin-inline: calc(var(--spacing-md) * -0.25);
+    padding-bottom: var(--space-2);
+  }
+
+  .admin-tabs a {
+    min-height: 48px;
+  }
+
+  .admin-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-heading > button,
+  .admin-primary-link {
+    min-height: 48px;
+    width: 100%;
+  }
+
+  .user-form input,
+  .user-form select,
+  .user-form textarea,
+  .user-form .primary-action {
+    min-height: 50px;
+  }
+}
+
+@media (min-width: 1181px), (min-width: 768px) and (max-width: 1180px) and (orientation: landscape) {
+  .user-row {
+    align-items: center;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .user-status-actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-tabs {
+    grid-auto-columns: minmax(92px, 1fr);
+  }
+
+  .admin-tabs a {
+    font-size: 0.86rem;
+    min-height: 46px;
+    padding: 0 10px;
+  }
+
+  .form-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .form-heading button {
+    min-height: 42px;
+    text-align: left;
+  }
+
+  .user-status-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .user-status-actions span {
+    grid-column: 1 / -1;
+  }
+
+  .user-status-actions button {
+    background: var(--color-surface-soft);
+    border-radius: var(--radius-sm);
+    min-height: 42px;
+  }
+}

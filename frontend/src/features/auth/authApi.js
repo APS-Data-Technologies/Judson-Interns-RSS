@@ -1,0 +1,33 @@
+import api from "../../services/api/api";
+
+export async function loginRequest(credentials) {
+  const response = await api.post("/auth/login/", credentials);
+  return response.data;
+}
+
+export async function logoutRequest() {
+  await api.post("/auth/logout/");
+}
+
+export async function currentUserRequest() {
+  const response = await api.get("/auth/me/");
+  return response.data;
+}
+
+export async function changePasswordRequest(passwords) {
+  const response = await api.post("/auth/change-password/", passwords);
+  return response.data;
+}
+
+export async function requestPasswordReset(email) {
+  const response = await api.post("/auth/password-reset/", { email });
+  return response.data;
+}
+
+export async function confirmPasswordReset({ token, newPassword }) {
+  const response = await api.post("/auth/password-reset/confirm/", {
+    token,
+    new_password: newPassword,
+  });
+  return response.data;
+}

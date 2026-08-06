@@ -1,0 +1,45 @@
+.rss-section {
+  margin-bottom: 32px;
+}
+
+.rss-section__header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.rss-section__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.rss-section__subtitle {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.rss-section__action {
+  display: flex;
+  width: 100%;
+}
+
+.rss-section__content {
+  width: 100%;
+}
+
+@media (min-width: 1181px), (min-width: 768px) and (max-width: 1180px) and (orientation: landscape) {
+  .rss-section__header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .rss-section__action {
+    width: auto;
+  }
+}

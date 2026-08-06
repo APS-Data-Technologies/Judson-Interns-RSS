@@ -1,0 +1,60 @@
+# System
+.DS_Store
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Local credentials and private keys
+secrets/
+credentials/
+credentials*.json
+service-account*.json
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Django
+staticfiles/
+media/
+db.sqlite3
+
+# Seed source files and database exports
+database/seeds/*.xlsx
+database/seeds/*.xls
+database/seeds/*.csv
+database/seeds/*.dump
+database/seeds/*.backup
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+coverage/
+
+# Logs
+*.log
+
+# Local working artifacts and personal progress records
+tmp/
+output/
+database/backups/
+docs/handoff-*.md
+docs/week-*-report.md
+docs/week-*-task-inventory.md
+
+# IDE
+.idea/
+.vscode/

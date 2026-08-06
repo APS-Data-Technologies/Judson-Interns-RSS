@@ -1,0 +1,59 @@
+.rss-page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.rss-page-header__title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-text-primary);
+}
+
+.rss-page-header__subtitle {
+  margin: 8px 0 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.rss-page-header__actions {
+  display: flex;
+  width: 100%;
+}
+
+.rss-page-header__actions .btn,
+.rss-page-header__actions .rss-button {
+  width: 100%;
+}
+
+@media (min-width: 1181px), (min-width: 768px) and (max-width: 1180px) and (orientation: landscape) {
+  .rss-page-header {
+    align-items: flex-start;
+    flex-direction: row;
+    gap: clamp(10px, 1vw, 14px);
+    justify-content: space-between;
+    margin-bottom: clamp(18px, 2vw, 24px);
+  }
+
+  .rss-page-header__title {
+    font-size: clamp(23px, 2vw, 27px);
+  }
+
+  .rss-page-header__subtitle {
+    font-size: clamp(13px, 1.1vw, 15px);
+    margin-top: 5px;
+  }
+
+  .rss-page-header__actions {
+    width: auto;
+  }
+
+  .rss-page-header__actions .btn,
+  .rss-page-header__actions .rss-button {
+    width: auto;
+  }
+}

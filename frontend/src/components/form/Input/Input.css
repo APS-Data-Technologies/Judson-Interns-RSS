@@ -1,0 +1,81 @@
+.rss-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.rss-input {
+  width: 100%;
+  height: clamp(2.75rem, 5.7vmin, 3.1rem);
+
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+
+  padding: 0 clamp(0.75rem, 1.8vmin, 1rem);
+
+  font-size: clamp(0.82rem, 2vmin, 1rem);
+  color: var(--color-text-primary);
+  background: #ffffff;
+
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.rss-input--full {
+  width: 100%;
+}
+
+.rss-input--has-left-icon {
+  padding-left: clamp(2.55rem, 5.8vmin, 3.2rem);
+}
+
+.rss-input--has-right-element {
+  padding-right: clamp(2.55rem, 5.8vmin, 3.2rem);
+}
+
+.rss-input-icon,
+.rss-input-right {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+
+  color: var(--color-text-muted);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rss-input-icon {
+  left: clamp(0.8rem, 1.9vmin, 1rem);
+}
+
+.rss-input-right {
+  right: clamp(0.8rem, 1.9vmin, 1rem);
+}
+
+.rss-input::placeholder {
+  color: #94a3b8;
+}
+
+.rss-input:hover {
+  border-color: #94a3b8;
+}
+
+.rss-input:focus {
+  border-color: var(--brand-navy);
+  box-shadow: 0 0 0 3px rgba(26, 54, 93, 0.14);
+}
+
+.rss-input--error {
+  border-color: #dc2626;
+}
+
+.rss-input--error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.rss-input:disabled {
+  background: #f1f5f9;
+  cursor: not-allowed;
+}
